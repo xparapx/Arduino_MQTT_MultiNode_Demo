@@ -1,0 +1,14 @@
+[Unit]
+Description=Sensor Hub (MQTT to SQLite)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/home/arduino/multinode_sensor_demo/.venv/bin/python /home/arduino/multinode_sensor_demo/hub.py
+WorkingDirectory=/home/arduino/multinode_sensor_demo
+Restart=always
+RestartSec=5
+User=arduino
+
+[Install]
+WantedBy=multi-user.target
