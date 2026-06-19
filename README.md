@@ -1,6 +1,12 @@
-# Arduino MQTT MultiNode Demo (멀티노드 환경 센싱 모니터)
+# Arduino MQTT MultiNode Demo — 멀티노드 환경 센싱 모니터
 
 > 여러 공간에 둔 **센서 노드**가 환경변수(온도·습도·기압·가스)를 측정해 **MQTT**로 보내면, **허브**가 한 데이터베이스에 모아 웹 대시보드로 실시간 표시하는 멀티노드 IoT 프로젝트.
+
+🔗 **프로젝트 개요:** https://xparapx.github.io/Arduino_MQTT_MultiNode_Demo/
+
+`Arduino UNO R4 WiFi` · `Nano ESP32` · `BME688` · `MQTT` · `mosquitto · HiveMQ` · `Arduino UNO Q` · `SQLite` · `Streamlit`
+
+---
 
 MQTT·온디바이스 센싱·실시간 대시보드를 한 번에 경험해보고 싶은 누구나 따라 할 수 있는 입문용 데모입니다. **센서 측정 → 무선 발행(MQTT) → 수집·저장 → 시각화**의 전 과정을 직접 구성하며, 노드를 늘리면 대시보드에 칸이 자동으로 추가됩니다.
 
