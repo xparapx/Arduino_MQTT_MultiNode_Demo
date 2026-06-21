@@ -2,7 +2,7 @@
 
 > 여러 공간에 둔 **센서 노드**가 환경변수(온도·습도·기압·가스)를 측정해 **MQTT**로 보내면, **허브**가 한 데이터베이스에 모아 웹 대시보드로 실시간 표시하는 멀티노드 IoT 프로젝트.
 
-🔗 **프로젝트 개요:** https://xparapx.github.io/Arduino_MQTT_MultiNode_Demo/
+🔗 **프로젝트 매뉴얼:** https://xparapx.github.io/Arduino_MQTT_MultiNode_Demo/
 
 `Arduino UNO R4 WiFi` · `Nano ESP32` · `BME688` · `MQTT` · `mosquitto · HiveMQ` · `Arduino UNO Q` · `SQLite` · `Streamlit`
 
