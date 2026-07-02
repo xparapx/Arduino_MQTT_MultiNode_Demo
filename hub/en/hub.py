@@ -1,40 +1,51 @@
 """
-Sensor Hub  --  MQTT subscriber + SQLite writer
-- subscribe : local mosquitto broker (localhost), topic multinode_sensor_demo/+/bme688
-- store     : SQLite (sensor_data.db)
+Sensor Hub [LOCAL]  --  MQTT subscriber + SQLite writer  (SEN55 + SCD30)
+- broker    : local mosquitto (localhost:1883)
+- subscribe : topic multinode_sensor_demo/+/env   (combined SEN55+SCD30 node)
+- store     : SQLite (sensor_data.db), table readings
 - pair      : dashboard.py (read-only)
-- run       : via App Lab app, or as a systemd service for 24/7 unattended operation
-- data      : one averaged record from a node = one DB row
+- vars(11)  : SEN55 -> pm1p0 pm2p5 pm4p0 pm10p0 (ug/m3), sen_temp(C), sen_hum(%),
+                       voc(idx), nox(idx)
+              SCD30 -> co2(ppm), scd_temp(C), scd_hum(%)   [scd = representative T/H]
+- policy    : temp/hum representative = SCD30 (sen_temp/sen_hum kept for comparison)
 """
 import json, sqlite3, signal, sys
 import paho.mqtt.client as mqtt
 
-# ---- Config ----
-BROKER = "localhost"             # runs on the Q board itself -> local broker
-PORT   = 1883
-TOPIC  = "multinode_sensor_demo/+/bme688"        # + = all nodes
-DB     = "sensor_data.db"             # data file (auto-created if absent)
+# ---- Config (HiveMQ Cloud) ----
+BROKER   = "localhost"
+PORT     = 1883
+TOPIC    = "multinode_sensor_demo/+/env"       # + = all nodes ; combined env topic
+DB       = "sensor_data.db"
 
-# line-buffered stdout -> print() shows up immediately in journalctl
 sys.stdout.reconfigure(line_buffering=True)
 
-# ---- DB init (schema) ----
+# ---- DB init (SEN55 + SCD30 schema, 11 vars) ----
 conn = sqlite3.connect(DB, check_same_thread=False)
 conn.execute("""
 CREATE TABLE IF NOT EXISTS readings(
-  id    INTEGER PRIMARY KEY AUTOINCREMENT,
-  ts    TEXT    DEFAULT CURRENT_TIMESTAMP,    -- time (UTC); +9h for KST in analysis
-  node  TEXT,
-  temp  REAL,
-  hum   REAL,
-  press REAL,
-  gas   REAL,
-  n     INTEGER,                               -- sample count in the average (quality)
-  co2   REAL                                   -- optional future SCD30 label (NULL if unused)
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts       TEXT    DEFAULT CURRENT_TIMESTAMP,   -- UTC; +9h KST in analysis
+  node     TEXT,
+  pm1p0    REAL,                                -- SEN55 PM1.0  (ug/m3)
+  pm2p5    REAL,                                -- SEN55 PM2.5  (ug/m3)
+  pm4p0    REAL,                                -- SEN55 PM4.0  (ug/m3)
+  pm10p0   REAL,                                -- SEN55 PM10   (ug/m3)
+  sen_temp REAL,                                -- SEN55 temp (C) -- comparison only
+  sen_hum  REAL,                                -- SEN55 humidity (%) -- comparison
+  voc      REAL,                                -- SEN55 VOC index
+  nox      REAL,                                -- SEN55 NOx index
+  co2      REAL,                                -- SCD30 CO2 (ppm)
+  scd_temp REAL,                                -- SCD30 temp (C) -- REPRESENTATIVE
+  scd_hum  REAL,                                -- SCD30 humidity (%) -- REPRESENTATIVE
+  n        INTEGER                              -- sample count (quality)
 )""")
 conn.commit()
 
-# ---- MQTT callbacks (paho 2.x VERSION2 signature) ----
+COLS = ["pm1p0","pm2p5","pm4p0","pm10p0","sen_temp","sen_hum","voc","nox",
+        "co2","scd_temp","scd_hum"]
+
+# ---- MQTT callbacks (paho 2.x VERSION2) ----
 def on_connect(client, userdata, flags, reason_code, properties):
     print(f"broker connect: {reason_code}")
     client.subscribe(TOPIC)
@@ -45,23 +56,22 @@ def on_message(client, userdata, msg):
     except Exception as e:
         print(f"parse failed: {e}")
         return
-    # If measurement time (t, UTC) is present, store it as ts (node NTP sync).
-    # If absent (NTP-fail fallback), omit ts -> DB fills arrival time (CURRENT_TIMESTAMP).
+    vals = [d.get(c) for c in COLS]
     t = d.get("t")
+    cols_sql = ",".join(COLS)
+    ph = ",".join(["?"] * len(COLS))
     if t:
         conn.execute(
-            "INSERT INTO readings(ts,node,temp,hum,press,gas,n) VALUES(?,?,?,?,?,?,?)",
-            (t, d.get("node"), d.get("temp"), d.get("hum"),
-             d.get("press"), d.get("gas"), d.get("n")))
+            f"INSERT INTO readings(ts,node,{cols_sql},n) VALUES(?,?,{ph},?)",
+            (t, d.get("node"), *vals, d.get("n")))
     else:
         conn.execute(
-            "INSERT INTO readings(node,temp,hum,press,gas,n) VALUES(?,?,?,?,?,?)",
-            (d.get("node"), d.get("temp"), d.get("hum"),
-             d.get("press"), d.get("gas"), d.get("n")))
+            f"INSERT INTO readings(node,{cols_sql},n) VALUES(?,{ph},?)",
+            (d.get("node"), *vals, d.get("n")))
     conn.commit()
     print(f"saved: {d}")
 
-# ---- graceful shutdown (SIGTERM on systemd stop/restart) ----
+# ---- graceful shutdown ----
 def shutdown(signum, frame):
     print("shutting down...")
     try: client.disconnect()
@@ -74,7 +84,7 @@ signal.signal(signal.SIGTERM, shutdown)
 signal.signal(signal.SIGINT,  shutdown)
 
 # ---- MQTT client ----
-client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)   # no deprecation warning
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 client.on_connect = on_connect
 client.on_message = on_message
 client.connect(BROKER, PORT, keepalive=60)

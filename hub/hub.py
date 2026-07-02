@@ -1,40 +1,51 @@
 """
-환경 센싱 Hub  —  MQTT subscriber + SQLite writer  (실수집용)
-- 수신   : 로컬 mosquitto broker (localhost), 토픽 multinode_sensor_demo/+/bme688
-- 저장   : SQLite (sensor_data.db)
-- 페어   : dashboard.py(읽기 전용)
-- 실행   : App Lab 앱으로 / 또는 systemd 서비스로 24/7 무인 운영
-- 데이터 : 노드가 보낸 5분 평균 1건 = DB 1행
+Sensor Hub [LOCAL]  --  MQTT subscriber + SQLite writer  (SEN55 + SCD30)
+- broker    : local mosquitto (localhost:1883)
+- subscribe : topic multinode_sensor_demo/+/env   (combined SEN55+SCD30 node)
+- store     : SQLite (sensor_data.db), table readings
+- pair      : dashboard.py (read-only)
+- vars(11)  : SEN55 -> pm1p0 pm2p5 pm4p0 pm10p0 (ug/m3), sen_temp(C), sen_hum(%),
+                       voc(idx), nox(idx)
+              SCD30 -> co2(ppm), scd_temp(C), scd_hum(%)   [scd = representative T/H]
+- policy    : temp/hum representative = SCD30 (sen_temp/sen_hum kept for comparison)
 """
 import json, sqlite3, signal, sys
 import paho.mqtt.client as mqtt
 
-# ── 설정 ─────────────────────────────────────────
-BROKER = "localhost"             # Q보드에서 직접 돌리므로 로컬 브로커
-PORT   = 1883
-TOPIC  = "multinode_sensor_demo/+/bme688"        # + = 모든 노드
-DB     = "sensor_data.db"             # 실수집용 새 파일 (없으면 자동 생성)
+# ---- Config (HiveMQ Cloud) ----
+BROKER   = "localhost"
+PORT     = 1883
+TOPIC    = "multinode_sensor_demo/+/env"       # + = all nodes ; combined env topic
+DB       = "sensor_data.db"
 
-# stdout 라인버퍼링 → systemd journalctl에 print가 즉시 보임
 sys.stdout.reconfigure(line_buffering=True)
 
-# ── DB 초기화 (확정 스키마) ─────────────────────
+# ---- DB init (SEN55 + SCD30 schema, 11 vars) ----
 conn = sqlite3.connect(DB, check_same_thread=False)
 conn.execute("""
 CREATE TABLE IF NOT EXISTS readings(
-  id    INTEGER PRIMARY KEY AUTOINCREMENT,
-  ts    TEXT    DEFAULT CURRENT_TIMESTAMP,    -- 도착시각(UTC). 분석 시 +9h(KST)
-  node  TEXT,
-  temp  REAL,
-  hum   REAL,
-  press REAL,
-  gas   REAL,
-  n     INTEGER,                               -- 평균에 쓴 샘플 수(품질지표)
-  co2   REAL                                   -- 추후 SCD30 라벨(없으면 NULL)
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts       TEXT    DEFAULT CURRENT_TIMESTAMP,   -- UTC; +9h KST in analysis
+  node     TEXT,
+  pm1p0    REAL,                                -- SEN55 PM1.0  (ug/m3)
+  pm2p5    REAL,                                -- SEN55 PM2.5  (ug/m3)
+  pm4p0    REAL,                                -- SEN55 PM4.0  (ug/m3)
+  pm10p0   REAL,                                -- SEN55 PM10   (ug/m3)
+  sen_temp REAL,                                -- SEN55 temp (C) -- comparison only
+  sen_hum  REAL,                                -- SEN55 humidity (%) -- comparison
+  voc      REAL,                                -- SEN55 VOC index
+  nox      REAL,                                -- SEN55 NOx index
+  co2      REAL,                                -- SCD30 CO2 (ppm)
+  scd_temp REAL,                                -- SCD30 temp (C) -- REPRESENTATIVE
+  scd_hum  REAL,                                -- SCD30 humidity (%) -- REPRESENTATIVE
+  n        INTEGER                              -- sample count (quality)
 )""")
 conn.commit()
 
-# ── MQTT 콜백 (paho 2.x VERSION2 시그니처) ──────
+COLS = ["pm1p0","pm2p5","pm4p0","pm10p0","sen_temp","sen_hum","voc","nox",
+        "co2","scd_temp","scd_hum"]
+
+# ---- MQTT callbacks (paho 2.x VERSION2) ----
 def on_connect(client, userdata, flags, reason_code, properties):
     print(f"broker connect: {reason_code}")
     client.subscribe(TOPIC)
@@ -43,19 +54,26 @@ def on_message(client, userdata, msg):
     try:
         d = json.loads(msg.payload.decode())
     except Exception as e:
-        print(f"parse 실패: {e}")
+        print(f"parse failed: {e}")
         return
-    conn.execute(
-        "INSERT INTO readings(node,temp,hum,press,gas,n) VALUES(?,?,?,?,?,?)",
-        (d.get("node"), d.get("temp"), d.get("hum"),
-         d.get("press"), d.get("gas"), d.get("n"))
-    )
+    vals = [d.get(c) for c in COLS]
+    t = d.get("t")
+    cols_sql = ",".join(COLS)
+    ph = ",".join(["?"] * len(COLS))
+    if t:
+        conn.execute(
+            f"INSERT INTO readings(ts,node,{cols_sql},n) VALUES(?,?,{ph},?)",
+            (t, d.get("node"), *vals, d.get("n")))
+    else:
+        conn.execute(
+            f"INSERT INTO readings(node,{cols_sql},n) VALUES(?,{ph},?)",
+            (d.get("node"), *vals, d.get("n")))
     conn.commit()
-    print(f"저장: {d}")
+    print(f"saved: {d}")
 
-# ── 우아한 종료 (systemd stop·재시작 시 SIGTERM) ─
+# ---- graceful shutdown ----
 def shutdown(signum, frame):
-    print("종료 중...")
+    print("shutting down...")
     try: client.disconnect()
     except Exception: pass
     try: conn.close()
@@ -65,8 +83,8 @@ def shutdown(signum, frame):
 signal.signal(signal.SIGTERM, shutdown)
 signal.signal(signal.SIGINT,  shutdown)
 
-# ── MQTT 클라이언트 ─────────────────────────────
-client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)   # ★ deprecation 없음
+# ---- MQTT client ----
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 client.on_connect = on_connect
 client.on_message = on_message
 client.connect(BROKER, PORT, keepalive=60)

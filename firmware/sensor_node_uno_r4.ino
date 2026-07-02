@@ -1,69 +1,75 @@
 /*
  * ============================================================
- *  멀티노드 환경 센싱 펌웨어  ★ Arduino UNO R4 WiFi 판
- *  (Nano ESP32 판과 동일 동작 — WiFi/NTP 부분만 R4 방식)
- *  - 센서 : Grove BME688 (I2C 0x76)  ← Grove 실드의 I2C 포트
- *  - 전송 : WiFi -> MQTT (Q보드 mosquitto 브로커)
- *  - 시각 : NTP(WiFi.getTime, UTC) → 정각 격자 측정·발행
- *  - 방식 : SAMPLE_MS 마다 샘플 → PUBLISH_MIN 분 평균 → 정각 발행
- *           페이로드에 측정시각(t, UTC) 포함 → 노드 간 정렬
+ *  멀티노드 환경 센싱 펌웨어  ★ UNO R4 WiFi 판  (SEN55 + SCD30, 로컬)
+ *  - 센서1 SEN55(0x69): PM1.0/2.5/4.0/10, 습도, 온도, VOC지수, NOx지수
+ *  - 센서2 SCD30(0x61): CO2(ppm), 온도, 습도  ← 온습도 대표값으로 사용
+ *  - 전송 : WiFi -> MQTT (로컬 mosquitto, 1883, TLS/인증 없음)
+ *  - 시각 : NTP(WiFi.getTime, UTC) -> 정각 격자 측정·발행
  * ============================================================
- *  ⚠️ 하드웨어 주의 — Nano ESP32 와 반대!
- *    UNO R4 WiFi 는 [5V] 보드 → Grove Shield 전압 스위치를 [5V] 로!
- *    (Nano ESP32 는 3.3V 였지만, R4 는 5V 입니다)
- *  전원 : USB-C 또는 배럴잭(DC, 7~12V, KC인증 아두이노 전용 어댑터) 사용 가능
+ *  온습도 정책:
+ *    - SCD30 온습도 = 대표값(정확, CO2 보정용). 대시보드 표시.
+ *    - SEN55 온습도 = 내부발열로 2~5도 높음. DB에 비교용 저장(sen_temp/sen_hum).
+ * ------------------------------------------------------------
+ *  HW 주의:
+ *    1) UNO R4 WiFi 5V 보드 -> Grove Base Shield 토글 5V
+ *    2) SEN55 I2C 5V/3.3V 모두 정상(실측). 5V 권장(배럴잭 일관).
+ *    3) SCD30 은 5V VIN 권장(Uno 등 5V 보드). I2C 0x61, 클럭스트레칭 필요
+ *       (SparkFun 라이브러리가 처리). 두 센서 같은 I2C 버스 공유.
+ *    4) SCD30 첫 CO2 유효값까지 수초~수십초. 자동보정(ASC)은 수일 필요.
+ *  전원 : USB-C 또는 배럴잭(DC 7~12V)
  * ============================================================
- *  보드 매니저:  "Arduino UNO R4 Boards"  (보드: Arduino UNO R4 WiFi)
- *  필요 라이브러리:
+ *  보드매니저: "Arduino UNO R4 Boards"
+ *  라이브러리:
  *    - PubSubClient            (by Nick O'Leary)
- *    - Adafruit BME680 Library (+ Adafruit Unified Sensor 동반)
- *    ※ WiFiS3 는 UNO R4 보드 패키지에 내장 — 따로 설치 안 함
+ *    - Sensirion I2C SEN5X     (+ Sensirion Core 동반)
+ *    - SparkFun SCD30          (SCD30, UNO R4/ESP32 지원)
+ *    ※ WiFiS3 는 보드패키지 내장
+ *  [로컬 버전] 격리 없는 망에서만. 학교망이면 클라우드 버전.
  * ============================================================
  */
 
-#include <WiFiS3.h>          // ★ R4 WiFi 전용 (ESP32의 WiFi.h 아님)
+#include <WiFiS3.h>
 #include <PubSubClient.h>
 #include <Wire.h>
-#include "Adafruit_BME680.h"
-#include <time.h>            // gmtime/strftime (측정시각 문자열 변환)
+#include <SensirionI2CSen5x.h>
+#include <SparkFun_SCD30_Arduino_Library.h>   // ★ SCD30
+#include <time.h>
 
 // ===================== 사용자 설정 =====================
-const char* WIFI_SSID = "your-wifi-ssid";      // ★ 현장 WiFi 이름 (영문 권장)
-const char* WIFI_PASS = "your-wifi-password";  // ★ WiFi 암호
+const char* WIFI_SSID = "your-wifi-ssid";
+const char* WIFI_PASS = "your-wifi-password";
 
-// ★ 브로커 주소 = Q보드.
-//   · systemd 트랙(호스트 직접 실행) : "<BoardName>.local" 또는 "192.168.x.x"
-//   · App Lab 트랙(컨테이너 실행)     : Q보드의 Docker 게이트웨이 IP (예 172.19.0.1)
-//   확인: Q보드에서  hostname -I  /  docker exec <c> ip route | grep default
-const char* BROKER    = "192.168.0.21";        // ★ 환경에 맞게 교체 (끝 공백 주의!)
-const int   PORT      = 1883;
+const char* BROKER    = "192.168.0.21";        // ★ 허브(UNO Q) IP (hostname -I)
+const int   PORT      = 1883;                  // 로컬 mosquitto (TLS 아님)
 
-// ★ 발행 주기(분). 1 / 5 / 10 등. 모든 노드를 같은 값으로!
 const int           PUBLISH_MIN = 5;
-const unsigned long SAMPLE_MS   = 10000;       // 샘플 간격(10초)
+const unsigned long SAMPLE_MS   = 10000;
 // ======================================================
 
-WiFiClient   net;
-PubSubClient client(net);
-Adafruit_BME680 bme;
+WiFiClient   net;             // 로컬: TLS 아님
+PubSubClient  client(net);
+SensirionI2CSen5x sen5x;
+SCD30 scd30;                       // ★ SCD30 인스턴스
 
 String nodeId, topic;
-double  sT=0, sH=0, sP=0, sG=0;  int n = 0;
-bool    bmeOK = false;
-bool    timeOK = false;                          // NTP→RTC 동기화 성공 여부
-long    curBucket = -1;
+// SEN55 누적(8) + SCD30 누적(3: co2, scd_temp, scd_hum)
+double sPm1=0, sPm25=0, sPm4=0, sPm10=0, sHum=0, sTemp=0, sVoc=0, sNox=0;
+double sCo2=0, sScdT=0, sScdH=0;
+int n = 0;        // SEN55 샘플 수
+int nC = 0;       // SCD30 샘플 수 (측정 주기 달라 별도 카운트)
+bool senOK  = false;
+bool scdOK  = false;
+bool timeOK = false;
+long curBucket = -1;
 unsigned long lastSample = 0;
 
-// nodeId = MAC 끝 3바이트
 void makeNodeId() {
   byte mac[6];
   WiFi.macAddress(mac);
   char id[16];
-  // R4 WiFi.macAddress 는 mac[0]이 끝 바이트인 구현이 있어 역순 주의.
-  // 보드마다 고유하기만 하면 되므로 끝 3바이트 사용.
-  snprintf(id, sizeof(id), "node_%02X%02X%02X", mac[2], mac[1], mac[0]);
+  snprintf(id, sizeof(id), "node_%02X%02X%02X", mac[5], mac[4], mac[3]);  // 앞3바이트=고유
   nodeId = String(id);
-  topic  = "multinode_sensor_demo/" + nodeId + "/bme688";
+  topic  = "multinode_sensor_demo/" + nodeId + "/env";    // ★ 통합 토픽 env
 }
 
 void connectWiFi() {
@@ -82,14 +88,11 @@ void connectBroker() {
     connectWiFi();
     String cid = nodeId + "-" + String(random(0xffff), HEX);
     Serial.print("MQTT");
-    if (client.connect(cid.c_str())) Serial.println(" OK");
+    if (client.connect(cid.c_str())) Serial.println(" OK");   // 로컬: 인증 없음
     else { Serial.print(" rc="); Serial.println(client.state()); delay(2000); }
   }
 }
 
-// NTP(UTC epoch) 동기화 확인. R4 WiFi는 WiFi.getTime()이 현재 UTC epoch 반환.
-// → RTC 객체에 굳이 안 넣고 WiFi.getTime()을 직접 시각원으로 사용(단순·안전).
-//   (RTCTime 생성자/분해 API의 보드패키지 버전차를 피함)
 void syncTime() {
   Serial.print("NTP 동기화");
   unsigned long epoch = 0;
@@ -97,23 +100,15 @@ void syncTime() {
   while ((epoch = WiFi.getTime()) == 0 && millis() - t0 < 10000) {
     Serial.print("."); delay(500);
   }
-  if (epoch > 0) {
-    timeOK = true;
+  if (epoch > 0) { timeOK = true;
     Serial.print(" OK (UTC epoch "); Serial.print(epoch); Serial.println(")");
-  } else {
-    timeOK = false;
-    Serial.println(" FAIL -> 정각정렬 없이 동작(측정시각은 허브 도착시각 사용)");
+  } else { timeOK = false;
+    Serial.println(" FAIL -> 정각정렬 없이 동작");
   }
 }
 
-// 현재 epoch초 (UTC) — WiFi.getTime() 직접 사용
-long nowEpoch() {
-  unsigned long e = WiFi.getTime();
-  return (long)e;
-}
+long nowEpoch() { return (long)WiFi.getTime(); }
 
-// 버킷 epoch초 → "YYYY-MM-DD HH:MM:SS" (UTC)
-// RTCTime 분해 API(버전차) 대신 표준 C gmtime 사용 → 안전·이식적
 String epochToStr(long epoch) {
   time_t t = (time_t)epoch;
   struct tm *tm_utc = gmtime(&t);
@@ -124,57 +119,83 @@ String epochToStr(long epoch) {
 
 void publishAverage(long bucketEpoch) {
   if (n <= 0) return;
-  char p[220];
+  int cdiv = (nC > 0) ? nC : 1;              // SCD30 평균 분모(없으면 1)
+  char p[420];
+  // SEN55(8) + SCD30(3) = 11변수 JSON
+  // sen_temp/sen_hum = SEN55 온습도(비교용), scd_temp/scd_hum = SCD30(대표)
   if (timeOK) {
     String ts = epochToStr(bucketEpoch);
     snprintf(p, sizeof(p),
-      "{\"node\":\"%s\",\"t\":\"%s\",\"temp\":%.2f,\"hum\":%.2f,"
-      "\"press\":%.2f,\"gas\":%lu,\"n\":%d}",
-      nodeId.c_str(), ts.c_str(), sT/n, sH/n, sP/n,
-      (unsigned long)(sG/n), n);
+      "{\"node\":\"%s\",\"t\":\"%s\","
+      "\"pm1p0\":%.1f,\"pm2p5\":%.1f,\"pm4p0\":%.1f,\"pm10p0\":%.1f,"
+      "\"sen_temp\":%.2f,\"sen_hum\":%.2f,\"voc\":%.1f,\"nox\":%.1f,"
+      "\"co2\":%.1f,\"scd_temp\":%.2f,\"scd_hum\":%.2f,\"n\":%d}",
+      nodeId.c_str(), ts.c_str(),
+      sPm1/n, sPm25/n, sPm4/n, sPm10/n,
+      sTemp/n, sHum/n, sVoc/n, sNox/n,
+      sCo2/cdiv, sScdT/cdiv, sScdH/cdiv, n);
   } else {
     snprintf(p, sizeof(p),
-      "{\"node\":\"%s\",\"temp\":%.2f,\"hum\":%.2f,"
-      "\"press\":%.2f,\"gas\":%lu,\"n\":%d}",
-      nodeId.c_str(), sT/n, sH/n, sP/n, (unsigned long)(sG/n), n);
+      "{\"node\":\"%s\","
+      "\"pm1p0\":%.1f,\"pm2p5\":%.1f,\"pm4p0\":%.1f,\"pm10p0\":%.1f,"
+      "\"sen_temp\":%.2f,\"sen_hum\":%.2f,\"voc\":%.1f,\"nox\":%.1f,"
+      "\"co2\":%.1f,\"scd_temp\":%.2f,\"scd_hum\":%.2f,\"n\":%d}",
+      nodeId.c_str(),
+      sPm1/n, sPm25/n, sPm4/n, sPm10/n,
+      sTemp/n, sHum/n, sVoc/n, sNox/n,
+      sCo2/cdiv, sScdT/cdiv, sScdH/cdiv, n);
   }
   client.publish(topic.c_str(), p);
   Serial.print("PUB: "); Serial.println(p);
 }
 
 void takeSample() {
-  if (bmeOK && bme.performReading()) {
-    sT += bme.temperature;
-    sH += bme.humidity;
-    sP += bme.pressure / 100.0;     // Pa -> hPa
-    sG += bme.gas_resistance;       // Ohm
-    n++;
+  // SEN55
+  if (senOK) {
+    float pm1, pm25, pm4, pm10, hum, temp, voc, nox;
+    uint16_t err = sen5x.readMeasuredValues(pm1, pm25, pm4, pm10, hum, temp, voc, nox);
+    if (!err && !isnan(pm25) && !isnan(temp)) {
+      sPm1 += pm1; sPm25 += pm25; sPm4 += pm4; sPm10 += pm10;
+      sHum += hum; sTemp += temp; sVoc += voc; sNox += nox;
+      n++;
+    }
+  }
+  // SCD30 (자체 dataAvailable 주기, 준비됐을 때만 누적)
+  if (scdOK && scd30.dataAvailable()) {
+    float c = scd30.getCO2();
+    float t = scd30.getTemperature();
+    float h = scd30.getHumidity();
+    if (c > 0 && !isnan(t)) { sCo2 += c; sScdT += t; sScdH += h; nC++; }
   }
 }
 
-void resetAccum() { sT=sH=sP=sG=0; n=0; }
+void resetAccum() {
+  sPm1=sPm25=sPm4=sPm10=sHum=sTemp=sVoc=sNox=0; n=0;
+  sCo2=sScdT=sScdH=0; nC=0;
+}
 
 void setup() {
   Serial.begin(115200);
   delay(300);
 
   Wire.begin();
-  Wire.setClock(100000);
+  Wire.setClock(50000);          // 50kHz: SCD30 클럭스트레칭 여유(두 센서 공유 버스)
 
-  bmeOK = bme.begin(0x76);
-  if (bmeOK) {
-    bme.setTemperatureOversampling(BME680_OS_8X);
-    bme.setHumidityOversampling(BME680_OS_2X);
-    bme.setPressureOversampling(BME680_OS_4X);
-    bme.setIIRFilterSize(BME680_FILTER_SIZE_3);
-    bme.setGasHeater(320, 150);
-  } else {
-    Serial.println("BME688 not found @0x76 - 배선/전압스위치(5V) 확인");
-  }
+  // SEN55
+  sen5x.begin(Wire);
+  uint16_t err = sen5x.deviceReset();
+  if (err) Serial.println("SEN55 deviceReset 실패 - 배선/전압토글/0x69 확인");
+  err = sen5x.startMeasurement();
+  senOK = (err == 0);
+  Serial.println(senOK ? "SEN55 측정 시작" : "SEN55 startMeasurement 실패");
+
+  // SCD30
+  if (scd30.begin()) { scdOK = true;  Serial.println("SCD30 시작 (CO2 첫값까지 수초~수십초)"); }
+  else               { scdOK = false; Serial.println("SCD30 begin 실패 - 0x61/배선/5V 확인"); }
 
   connectWiFi();
   makeNodeId();
-  syncTime();                // ★ NTP → RTC
+  syncTime();
   client.setServer(BROKER, PORT);
   connectBroker();
 
@@ -182,10 +203,7 @@ void setup() {
   Serial.print("Topic: "); Serial.println(topic);
   Serial.print("발행주기: "); Serial.print(PUBLISH_MIN); Serial.println("분");
 
-  if (timeOK) {
-    long sec = PUBLISH_MIN * 60L;
-    curBucket = (nowEpoch() / sec) * sec;
-  }
+  if (timeOK) { long sec = PUBLISH_MIN * 60L; curBucket = (nowEpoch()/sec)*sec; }
 }
 
 void loop() {
@@ -196,10 +214,8 @@ void loop() {
   long sec = PUBLISH_MIN * 60L;
 
   if (timeOK) {
-    // ── 정각 정렬 모드 (NTP 성공) ──
     long epoch  = nowEpoch();
     long bucket = (epoch / sec) * sec;
-
     if (curBucket < 0) curBucket = bucket;
     if (bucket != curBucket) {
       publishAverage(curBucket);
@@ -208,15 +224,16 @@ void loop() {
     }
     if (now - lastSample >= SAMPLE_MS) {
       lastSample = now; takeSample();
-      Serial.print("sample "); Serial.print(n);
+      Serial.print("sample sen="); Serial.print(n);
+      Serial.print(" scd="); Serial.print(nC);
       Serial.print(" (bucket "); Serial.print(epochToStr(curBucket)); Serial.println(")");
     }
   } else {
-    // ── fallback (NTP 실패) — millis 기준 주기 발행 ──
     static unsigned long lastPub = 0;
     if (now - lastSample >= SAMPLE_MS) {
       lastSample = now; takeSample();
-      Serial.print("sample "); Serial.print(n); Serial.println(" (no-NTP)");
+      Serial.print("sample sen="); Serial.print(n);
+      Serial.print(" scd="); Serial.print(nC); Serial.println(" (no-NTP)");
     }
     if (now - lastPub >= (unsigned long)PUBLISH_MIN * 60000UL) {
       lastPub = now; publishAverage(0); resetAccum();
