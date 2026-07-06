@@ -1837,7 +1837,7 @@ PUB: {"node":"node_8C8B35","t":"2026-06-17 00:05:00","pm1p0":8.2,"pm2p5":12.5,"p
     <h2 class="title"><span class="badge">7</span>허브 — 수신 테스트</h2>
     <p class="lead">DB·대시보드를 만들기 전에, 노드 → 브로커 전송이 실제로 되는지 먼저 눈으로 확인합니다.</p>
 
-    <div class="box"><span class="lbl">🔀 로컬 / 클라우드 — 확인 방법이 다름</span><b>로컬(mosquitto)</b>: 아래 <code class="in">mosquitto_sub</code>로 허브에서 직접 확인. <b>클라우드(HiveMQ)</b>: 허브에 mosquitto가 없으니, HiveMQ 콘솔의 <b>Web Client</b> 탭에서 토픽 <code class="in">multinode_sensor_demo/#</code>을 구독해 확인하거나, <code class="in">hub_cloud.py</code>를 실행해 <code class="in">saved:</code> 로그로 확인합니다.</div>
+    <div class="box"><span class="lbl">🔀 로컬 / 클라우드 — 확인 방법이 다름</span><b>로컬(mosquitto)</b>: 아래 <code class="in">mosquitto_sub</code>로 허브에서 직접 확인. <b>클라우드(HiveMQ)</b>: ① HiveMQ 콘솔의 <b>Web Client</b> 탭에서 토픽 <code class="in">multinode_sensor_demo/#</code> 구독, ② 아래처럼 허브에 <code class="in">mosquitto-clients</code>를 설치해 <b>CLI로 직접 구독</b>(TLS), ③ <code class="in">hub_cloud.py</code>의 <code class="in">saved:</code> 로그 — 세 가지 중 편한 방법으로 확인합니다.</div>
 
     <h3>모든 노드 메시지 엿보기 (로컬)</h3>
     <p>UNO Q 터미널에서:</p>
@@ -1848,6 +1848,22 @@ multinode_sensor_demo/node_F04050/bme688 {"node":"node_F04050","temp":24.31,"hum
 
     <div class="box tip"><span class="lbl">💡 명령 풀이</span><code class="in">-h localhost</code> 같은 보드의 브로커 · <code class="in">-t "multinode_sensor_demo/#"</code> 구독할 토픽(#=그 아래 전부) · <code class="in">-v</code> 토픽도 함께 표시. <b>Ctrl+C</b>로 빠져나옵니다.</div>
     <div class="box warn"><span class="lbl">⚠️ 아무것도 안 찍히면</span>① 노드 시리얼 모니터에 <code class="in">MQTT OK</code>가 떴는지 ② 노드의 <code class="in">BROKER</code> 주소가 이 UNO Q를 정확히 가리키는지(mDNS 이름/IP) ③ 노드와 UNO Q가 <b>같은 WiFi</b>인지 확인. mDNS(<code class="in">.local</code>)가 안 되면 노드 코드의 BROKER를 UNO Q의 고정 IP로 바꾸세요(<code class="in">hostname -I</code>로 확인).</div>
+
+    <h3>모든 노드 메시지 엿보기 (클라우드 — CLI)</h3>
+    <p>HiveMQ Cloud도 허브 터미널에서 직접 구독할 수 있습니다. 구독 도구만 설치하고(브로커 설치 아님), TLS 포트(8883)와 계정으로 접속합니다:</p>
+<pre><span class="c"># 구독 도구 설치 (mosquitto 브로커가 아니라 클라이언트 명령만)</span>
+sudo apt install -y mosquitto-clients
+
+<span class="c"># 클라우드 구독 — 노드 펌웨어의 BROKER/계정과 동일한 값 사용</span>
+mosquitto_sub -h xxxxx.s1.eu.hivemq.cloud -p 8883 \
+  --capath /etc/ssl/certs \
+  -u "MQTT_USER" -P "MQTT_PASS" \
+  -t "multinode_sensor_demo/#" -v</pre>
+    <p>노드가 발행할 때마다 이렇게 찍히면 클라우드 경유 전송까지 성공입니다:</p>
+<pre>multinode_sensor_demo/node_E860C7/sen55 {"node":"node_E860C7","t":"2026-07-06 05:35:00","pm1p0":8.2,"pm2p5":12.4,"pm4p0":13.0,"pm10p0":13.5,"temp":26.85,"hum":51.20,"voc":88.0,"nox":1.0,"n":30}</pre>
+
+    <div class="box tip"><span class="lbl">💡 명령 풀이</span><code class="in">-p 8883</code> TLS 포트(클라우드는 1883 아님) · <code class="in">--capath /etc/ssl/certs</code> 서버 인증서 검증용 CA 경로(리눅스 표준 위치) · <code class="in">-u/-P</code> HiveMQ <b>Access Management</b>에서 만든 계정. 노드 펌웨어에 넣은 것과 같은 계정을 써도 됩니다.</div>
+    <div class="box warn"><span class="lbl">⚠️ 클라우드 구독이 안 될 때 — 에러별 원인</span><code class="in">Error: A TLS error occurred</code> → <code class="in">--capath</code> 누락 또는 포트를 1883으로 씀 · <code class="in">Connection error: Not authorized</code> → 계정/비밀번호 오류(Access Management에서 재확인) · <b>접속은 되는데 무반응</b> → 토픽 오타이거나 노드가 발행을 안 하는 것(노드 시리얼에 <code class="in">PUB:</code> 확인). 브로커 주소는 HiveMQ Overview의 <b>Host</b>를 그대로(끝 공백 주의).</div>
     <div class="box ok"><span class="lbl">✅ 여기까지 되면</span>가장 어려운 "무선 전송" 고비를 넘긴 겁니다. 이제 받은 데이터를 저장·표시만 하면 됩니다.</div>
   </section>
 
