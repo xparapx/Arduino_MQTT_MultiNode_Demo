@@ -103,6 +103,17 @@
   .tabB:checked ~ .tab-labels .lab-N2{color:#fff; background:var(--primary); border-color:var(--primary); border-bottom:3px solid;}
   .tabA:checked ~ .tab-bodies .tab-A.body-N{display:block; background:#eef4fb; border-color:var(--primary);}
   .tabB:checked ~ .tab-bodies .tab-B.body-N{display:block; background:#eef4fb; border-color:var(--primary);}
+  /* 코드 접기 토글 */
+  .fold-btn{display:block; width:100%; text-align:left; background:var(--code-bg); color:#aebdd0; border:1px solid rgba(255,255,255,.12); border-radius:9px; padding:9px 14px; font-size:12px; font-weight:700; cursor:pointer; font-family:'JetBrains Mono','Consolas','D2Coding',monospace,'Pretendard',sans-serif; margin:10px 0; transition:background .12s;}
+  .fold-btn:hover{background:#2c3a4e; color:#e8eef6;}
+  .fold-btn .cnt{color:#7d8aa0; font-weight:400; margin-left:8px;}
+  .ftag + .fold-btn{margin-top:0; border-radius:0 9px 9px 9px;}
+  pre.folded{display:none;}
+  .fold-btn.open{margin-bottom:0; border-radius:9px 9px 0 0;}
+  .ftag + .fold-btn.open{border-radius:0 9px 0 0;}
+  .fold-btn.open + pre{margin-top:0; border-radius:0 0 9px 9px;}
+  .fold-btn.bottom{margin-top:0; border-radius:0 0 9px 9px; text-align:center; display:none;}
+  .fold-btn.bottom.show{display:block;}
   .nav-btns{display:flex; justify-content:space-between; margin-top:22px; padding-top:14px; border-top:1px solid var(--line);}
   .nav-btns button{background:var(--primary); color:#fff; border:0; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;}
   .nav-btns button:disabled{background:#bdc3c7; cursor:default;}
@@ -133,7 +144,7 @@
     <div class="nav-group">② Node</div>
     <div class="nav-item" data-target="s2"><span class="n">4</span>구성 (Grove 체결)</div>
     <div class="nav-item" data-target="s3"><span class="n">5</span>Arduino IDE 준비</div>
-    <div class="nav-item" data-target="s4"><span class="n">6</span>펌웨어 (R4/ESP32/Nicla)</div>
+    <div class="nav-item" data-target="s4"><span class="n">6</span>펌웨어 (R4/ESP32/Nicla/H7)</div>
 
     <div class="nav-group">③ 검증 · 운영</div>
     <div class="nav-item" data-target="s6"><span class="n">7</span>수신 테스트</div>
@@ -798,7 +809,7 @@ client.loop_forever()
 
   <section class="panel" id="s4">
     <h2 class="title"><span class="badge">6</span>노드 — 펌웨어 업로드 (기종 선택)</h2>
-    <p class="lead">허브 준비(패널 1~3)가 끝났으면 노드 펌웨어를 올립니다. <b>기종을 먼저 고르세요</b> — UNO R4 WiFi(기본) 또는 Nano ESP32. 각 기종마다 <b>클라우드(HiveMQ)</b> 코드를 기본으로 싣고, 로컬(mosquitto)은 접어뒀습니다. 이 장은 두 부로 나뉩니다 — <b>6-1 환경 노드</b>(R4/ESP32, SEN55+SCD30), <b>6-2 비전 노드</b>(Nicla Vision, FOMO 재실 — 선택).</p>
+    <p class="lead">허브 준비(패널 1~3)가 끝났으면 노드 펌웨어를 올립니다. <b>기종을 먼저 고르세요</b> — UNO R4 WiFi(기본) 또는 Nano ESP32. 각 기종마다 <b>클라우드(HiveMQ)</b> 코드를 기본으로 싣고, 로컬(mosquitto)은 접어뒀습니다. 이 장은 두 부로 나뉩니다 — <b>6-1 환경 노드</b>(R4/ESP32, SEN55+SCD30), <b>6-2 비전 노드</b>(Nicla Vision / Portenta H7+Vision Shield, FOMO 재실 — 선택).</p>
       <h3 style="border-left:4px solid var(--accent);padding-left:10px">6-1. 환경 노드 펌웨어 (UNO R4 WiFi / Nano ESP32)</h3>
 
     <div class="box warn"><span class="lbl">⚠️ BROKER 값은 패널 2에서</span>펌웨어의 <code class="in">BROKER</code>에 넣을 값은 <b>패널 2(브로커)</b>에서 정해집니다 — <b>클라우드</b>면 HiveMQ Host·8883·계정, <b>로컬</b>이면 허브 IP·1883. 아직이면 패널 1~3을 먼저 하세요.</div>
@@ -1872,15 +1883,21 @@ PUB: {"node":"node_8C8B35","t":"2026-06-17 00:05:00","pm1p0":8.2,"pm2p5":12.5,"p
     <div class="box warn"><span class="lbl">⚠️ "MQTT rc=-2" 가 반복되면</span><b>클라우드</b>: 8883이 막혔거나 HiveMQ 정보 오타 → Host·User·Pass 확인. <b>로컬</b>: 브로커(허브)가 아직 준비 안 됨(패널 2) 또는 <b>학교망 격리</b> → 트러블슈팅 진단법 → 클라우드로.</div>
     <div class="box warn"><span class="lbl">⚠️ "sample 0" 에서 안 늘면</span>센서 읽기 실패 — <b>전압 스위치</b>(R4=5V, ESP32=3.3V) · SEN55 I2C 케이블 · 0x69 주소 확인. <code class="in">sample</code> 숫자가 늘어야 정상(발행 주기 되면 <code class="in">PUB:</code>).</div>
   
-      <h3 style="border-left:4px solid #FFB300;padding-left:10px">6-2. 비전 노드 펌웨어 (Nicla Vision — 선택)</h3>
+      <h3 style="border-left:4px solid #FFB300;padding-left:10px">6-2. 비전 노드 펌웨어 (Nicla Vision / Portenta H7 — 선택)</h3>
       <p>FOMO 사람 탐지로 <b>재실 인원</b>을 발행하는 9번째 노드 유형입니다. 배경·설계·운용은 <b>V장(비전 노드)</b> 참조 — 여기서는 펌웨어 전문과 준비만 다룹니다.</p>
-      <div class="box"><span class="lbl">준비</span>보드매니저 <b>Arduino Mbed OS Nicla Boards</b> 설치 → 최초 1회 <code class="in">Examples → STM32H747_System → WiFiFirmwareUpdater</code> 실행(WiFi 펌웨어·인증서) → 라이브러리 <b>ArduinoMqttClient</b> 설치 → Edge Impulse에서 <b>경량 재학습 모델</b>(FOMO 0.1 + Grayscale) Arduino library zip 설치. 조준·방향은 <code class="in">Nicla_AimingStream</code> 펌웨어로 먼저 확정.</div>
-
+      <div class="box"><span class="lbl">준비 — 기종을 먼저 고르세요 (아래 탭과 동일)</span>
+      <table style="margin:8px 0 2px;"><thead><tr><th>항목</th><th>A. Nicla Vision</th><th>B. Portenta H7 + Vision Shield</th></tr></thead><tbody>
+      <tr><td>보드매니저</td><td><b>Arduino Mbed OS Nicla Boards</b></td><td><b>Arduino Mbed OS Portenta Boards</b> (보드 전환 시 캐시 삭제)</td></tr>
+      <tr><td>WiFi 펌웨어 (최초 1회)</td><td colspan="2"><code class="in">Examples → STM32H747_System → WiFiFirmwareUpdater</code> 실행 (WiFi 펌웨어·TLS 인증서)</td></tr>
+      <tr><td>라이브러리</td><td colspan="2"><b>ArduinoMqttClient</b> + Edge Impulse <b>경량 재학습 모델</b>(FOMO 0.1 + Grayscale) Arduino library zip</td></tr>
+      <tr><td>카메라 센서</td><td>GC2145 (컬러) — <code class="in">gc2145.h</code></td><td>⚠️ 실드 <b>Rev2 = HM0360</b> → <code class="in">hm0360.h</code> · 구형(HM01B0)은 <code class="in">himax.h</code>. <b>드라이버가 다르면 begin OK인데 grabFrame -1</b>(I2C 주소 동일 0x24)</td></tr>
+      <tr><td>업로드 팁</td><td colspan="2">WiFi 펌웨어 구동 중엔 <b>리셋 더블탭</b>(부트로더 진입) 후 업로드</td></tr>
+      </tbody></table></div>
       <div class="box tip"><span class="lbl">💡 작업 순서 — 반드시 조준 테스트 먼저</span>
-      비전 노드는 <b>두 단계</b>로 올립니다. <b>STEP 1</b>: 조준 테스트 펌웨어(<code class="in">Nicla_AimingStream_cool.ino</code>)로 화각·방향·추론을 UI에서 확인 → <b>STEP 2</b>: 확정값을 반영해 운용 펌웨어(<code class="in">occ_node_nicla_cloud.ino</code>) 업로드. 운용 펌웨어는 화면이 없어서, 조준 없이 올리면 "잘 찍히고 있는지"를 확인할 방법이 없습니다.</div>
+      비전 노드는 <b>두 단계</b>로 올립니다. <b>STEP 1</b>: 조준 테스트 펌웨어(기종별 <code class="in">*_AimingStream_cool.ino</code>)로 화각·방향·추론을 UI에서 확인 → <b>STEP 2</b>: 확정값을 반영해 운용 펌웨어(기종별 <code class="in">occ_node_*_cloud.ino</code>) 업로드. 운용 펌웨어는 화면이 없어서, 조준 없이 올리면 "잘 찍히고 있는지"를 확인할 방법이 없습니다.</div>
 
       <h3>STEP 1 — 조준 테스트: 화각·스트리밍·추론 확인 (UI)</h3>
-      <p><code class="in">Nicla_AimingStream_cool.ino</code>를 업로드하고 <code class="in">aiming_dashboard.html</code>(Chrome/Edge)로 확인합니다. 펌웨어와 뷰어 코드 전문은 아래 체크리스트 다음에 있습니다. 체크리스트:</p>
+      <p>기종별 조준 테스트 펌웨어(아래 탭)를 업로드하고 <code class="in">aiming_dashboard.html</code>(Chrome/Edge)로 확인합니다. 펌웨어와 뷰어 코드 전문은 아래 체크리스트 다음에 있습니다. 체크리스트:</p>
       <table><thead><tr><th>확인 항목</th><th>UI에서 보는 것</th><th>합격 기준 / 조치</th></tr></thead><tbody>
       <tr><td>① 스트리밍</td><td>라이브 영상이 1~2초 간격 갱신</td><td>갱신되면 OK (느린 것 정상 — 확인용 스트림). 검은 화면이면 렌즈 필름·카메라 결착 점검</td></tr>
       <tr><td>② 추론 동작</td><td>"추론 ms" 카드</td><td>경량 모델 기준 <b>~68ms</b> 안팎 · 값이 계속 갱신</td></tr>
@@ -1889,6 +1906,15 @@ PUB: {"node":"node_8C8B35","t":"2026-06-17 00:05:00","pm1p0":8.2,"pm2p5":12.5,"p
       <tr><td>⑤ 탐지 실측</td><td>조준선(◯) 반응</td><td>거리·자세를 바꿔가며 <b>잡히는 최소·최대 거리</b> 기록 — 설치 높이·각도의 근거</td></tr>
       </tbody></table>
       
+      <div class="tabs">
+      <input type="radio" name="visfw1" id="v1N-r" class="tabA" checked>
+      <input type="radio" name="visfw1" id="v1P-r" class="tabB">
+      <div class="tab-labels">
+        <label for="v1N-r" class="lab-N1">A. Nicla Vision</label>
+        <label for="v1P-r" class="lab-N2">B. Portenta H7 + Vision Shield</label>
+      </div>
+      <div class="tab-bodies">
+        <div class="tab-body tab-A body-N">
       <span class="ftag">Nicla_AimingStream_cool.ino — 조준 테스트 펌웨어</span>
 <pre>/*******************************************************************
  * Nicla Vision — 스트리밍 테스트 펌웨어 (발열 안정화판)
@@ -2101,6 +2127,222 @@ void loop() {
   delay(IDLE_DELAY_MS);        // ★ 발열 조절 손잡이
 }
 </pre>
+        </div>
+        <div class="tab-body tab-B body-N">
+      <span class="ftag">Portenta_AimingStream_cool.ino — 조준 테스트 펌웨어 (HM0360)</span>
+<pre>/*******************************************************************
+ * Portenta H7 + Vision Shield — 조준(Aiming) 스트리밍 테스트
+ * ----------------------------------------------------------------
+ * Nicla_AimingStream_cool의 Portenta 이식판 (카메라 계층만 교체)
+ *   - HM0360 흑백 센서 (Vision Shield Rev2), 기본 320x320 정사각 전체 캡처(무왜곡 전폭)
+ *   - 상시 추론(유휴 400ms) → JSON + 2초마다 BMP 프레임
+ *   - &#x27;F&#x27; 180도 회전 토글 / 뷰어: aiming_dashboard.html 공용
+ *
+ * 보드: Arduino Portenta H7 (M7 core) / 실드: Portenta Vision Shield
+ * 라이브러리: EI 모델 라이브러리 (Nicla와 동일 zip — 재배포 불필요)
+ * ※ 보드 전환 시 빌드 캐시 삭제: %LOCALAPPDATA%\arduino\sketches
+ *******************************************************************/
+
+#include &lt;Person_Detection_FOMO_inferencing.h&gt;
+// ↑ 추론엔진 헤더 = 본인 EI 프로젝트 라이브러리 이름으로 교체!
+//   확인: 문서\Arduino\libraries\&lt;설치된 폴더&gt;\src\ 안의 *_inferencing.h 파일명
+
+#include &quot;camera.h&quot;
+#include &quot;hm0360.h&quot;                   // ★ Vision Shield Rev2 (HM0360, 흑백)
+#include &quot;mbedtls/base64.h&quot;
+
+// ===================== 설정 =====================
+#define CAM_ROTATE_180  0        // 조준에서 확정 → 운용판에 반영
+#define CAP_QVGA        1        // 1=320x240 QVGA 전체(공식 예제 검증 모드) / 0=160x120(경량)
+#define IDLE_DELAY_MS   400      // 추론 간 유휴 (발열 조절)
+#define AUTO_FRAME_MS   2000     // 프레임 자동 전송 주기
+// ================================================
+
+HM0360 himax;
+Camera cam(himax);
+FrameBuffer fb;
+
+#if CAP_QVGA
+  #define RAW_W 320
+  #define RAW_H 240
+  #define CAM_MODE CAMERA_R320x240
+#else
+  #define RAW_W 160
+  #define RAW_H 120
+  #define CAM_MODE CAMERA_R160x120
+#endif
+#define MW EI_CLASSIFIER_INPUT_WIDTH     // 96
+
+static uint8_t snap[RAW_W * RAW_H];      // 흑백 원본 스냅 (티어링 방지)
+static uint8_t model_in[MW * MW * 3];    // 모델 입력 (gray→3ch 복제)
+
+#define MAX_BOXES 12
+typedef struct { uint8_t cx, cy; } cent_t;
+static cent_t  g_cents[MAX_BOXES];
+static uint8_t g_cent_cnt = 0;
+static uint32_t g_infer_ms = 0;
+static bool g_flip = (CAM_ROTATE_180 != 0);
+
+/* ================================================================= */
+static inline uint8_t pxg(const uint8_t *raw, int sx, int sy) {
+  if (g_flip) { sx = RAW_W - 1 - sx; sy = RAW_H - 1 - sy; }
+  return raw[sy * RAW_W + sx];
+}
+
+static bool capture_and_prepare() {
+  if (cam.grabFrame(fb, 3000) != 0) {
+    static uint32_t last_err = 0;
+    if (millis() - last_err &gt; 5000) {
+      last_err = millis();
+      Serial.println(&quot;{\&quot;err\&quot;:\&quot;grabFrame timeout - Vision Shield 결착/모드 확인\&quot;}&quot;);
+    }
+    return false;
+  }
+  memcpy(snap, fb.getBuffer(), sizeof(snap));      // 즉시 스냅
+
+  // 프레임 &quot;전체&quot; → 96x96 (정사각이면 등방, 160x120이면 전폭 스퀴즈)
+  const float stepx = (float)RAW_W / MW;
+  const float stepy = (float)RAW_H / MW;
+  uint8_t *d = model_in;
+  for (int y = 0; y &lt; MW; y++) {
+    int sy = (int)(y * stepy);
+    for (int x = 0; x &lt; MW; x++) {
+      uint8_t g = pxg(snap, (int)(x * stepx), sy);
+      d[0] = d[1] = d[2] = g;                      // 흑백 → 3채널 복제
+      d += 3;
+    }
+  }
+  return true;
+}
+
+static int ei_get_data(size_t offset, size_t length, float *out_ptr) {
+  size_t ix = offset * 3;
+  for (size_t i = 0; i &lt; length; i++) {
+    out_ptr[i] = (model_in[ix + 2] &lt;&lt; 16) + (model_in[ix + 1] &lt;&lt; 8) + model_in[ix];
+    ix += 3;
+  }
+  return 0;
+}
+
+static void run_inference_once() {
+  if (!capture_and_prepare()) return;
+  ei::signal_t signal;
+  signal.total_length = MW * MW;
+  signal.get_data = &amp;ei_get_data;
+  ei_impulse_result_t result = { 0 };
+  uint32_t t0 = millis();
+  if (run_classifier(&amp;signal, &amp;result, false) != EI_IMPULSE_OK) return;
+  g_infer_ms = millis() - t0;
+  uint8_t n = 0;
+  for (uint32_t i = 0; i &lt; result.bounding_boxes_count &amp;&amp; n &lt; MAX_BOXES; i++) {
+    auto &amp;bb = result.bounding_boxes[i];
+    if (bb.value == 0) continue;
+    g_cents[n].cx = (uint8_t)(bb.x + bb.width / 2);
+    g_cents[n].cy = (uint8_t)(bb.y + bb.height / 2);
+    n++;
+  }
+  g_cent_cnt = n;
+}
+
+static void print_status_line() {
+  String js; js.reserve(220);
+  js += &quot;{\&quot;c\&quot;:&quot; + String(g_cent_cnt) +
+        &quot;,\&quot;ms\&quot;:&quot; + String(g_infer_ms) +
+        &quot;,\&quot;flip\&quot;:&quot; + String(g_flip ? 1 : 0) +
+        &quot;,\&quot;fw\&quot;:1&quot; +                              // 전체 프레임 유효
+        &quot;,\&quot;w\&quot;:&quot; + String(MW) + &quot;,\&quot;cents\&quot;:[&quot;;
+  for (uint8_t i = 0; i &lt; g_cent_cnt; i++) {
+    if (i) js += &quot;,&quot;;
+    js += &quot;[&quot; + String(g_cents[i].cx) + &quot;,&quot; + String(g_cents[i].cy) + &quot;]&quot;;
+  }
+  js += &quot;]}&quot;;
+  Serial.println(js);
+}
+
+/* 프리뷰: snap을 1/2 서브샘플 → 24bpp BMP 행 단위 생성·스트림
+   (정사각: 160x160 / 경량: 160x120 — 별도 프리뷰 버퍼 없음) */
+static void print_frame() {
+  const int OW = 160, OH = 120;          // 두 모드 모두 4:3 → 160x120 프리뷰
+  const uint32_t imgSize = (uint32_t)OW * OH * 3;
+  const uint32_t fileSize = 54 + imgSize;
+
+  uint8_t h[54] = { 0 };
+  h[0]=&#x27;B&#x27;; h[1]=&#x27;M&#x27;;
+  h[2]=fileSize; h[3]=fileSize&gt;&gt;8; h[4]=fileSize&gt;&gt;16; h[5]=fileSize&gt;&gt;24;
+  h[10]=54; h[14]=40;
+  h[18]=OW &amp; 0xFF; h[19]=OW &gt;&gt; 8;
+  int32_t nh = -(int32_t)OH;
+  h[22]=nh&amp;0xFF; h[23]=(nh&gt;&gt;8)&amp;0xFF; h[24]=(nh&gt;&gt;16)&amp;0xFF; h[25]=(nh&gt;&gt;24)&amp;0xFF;
+  h[26]=1; h[28]=24;
+  h[34]=imgSize; h[35]=imgSize&gt;&gt;8; h[36]=imgSize&gt;&gt;16;
+
+  Serial.print(&quot;IMG:&quot;);
+  static uint8_t chunk[1026];              // 3의 배수 유지
+  static unsigned char b64[1400];
+  size_t b64len, fill = 0;
+  memcpy(chunk, h, 54); fill = 54;
+
+  const int fx = RAW_W / OW, fy = RAW_H / OH;
+  static uint8_t row[160 * 3];
+  for (int y = 0; y &lt; OH; y++) {
+    int sy = y * fy;
+    for (int x = 0; x &lt; OW; x++) {
+      uint8_t g = pxg(snap, x * fx, sy);
+      row[3*x] = row[3*x+1] = row[3*x+2] = g;
+    }
+    size_t ri = 0;
+    while (ri &lt; sizeof(uint8_t) * OW * 3) {
+      size_t take = min(sizeof(chunk) - fill, (size_t)(OW * 3) - ri);
+      memcpy(chunk + fill, row + ri, take);
+      fill += take; ri += take;
+      if (fill == sizeof(chunk)) {
+        mbedtls_base64_encode(b64, sizeof(b64), &amp;b64len, chunk, fill);
+        Serial.write(b64, b64len);
+        fill = 0;
+      }
+    }
+  }
+  if (fill) {
+    mbedtls_base64_encode(b64, sizeof(b64), &amp;b64len, chunk, fill);
+    Serial.write(b64, b64len);
+  }
+  Serial.println();
+}
+
+/* ================================================================= */
+void setup() {
+  Serial.begin(115200);
+  delay(300);
+  if (!cam.begin(CAM_MODE, CAMERA_GRAYSCALE, 30)) {
+    Serial.println(&quot;[ERR] 카메라 초기화 실패 — Vision Shield 결착 확인&quot;);
+    while (1) delay(1000);
+  }
+  Serial.print(&quot;[AIM] Portenta 조준 테스트 (&quot;);
+  Serial.print(RAW_W); Serial.print(&quot;x&quot;); Serial.print(RAW_H);
+  Serial.println(&quot;) QVGA — F: 180도 회전&quot;);
+}
+
+void loop() {
+  run_inference_once();
+  print_status_line();
+
+  static uint32_t last_frame = 0;
+  if (millis() - last_frame &gt;= AUTO_FRAME_MS) {
+    last_frame = millis();
+    print_frame();
+  }
+  while (Serial.available()) {
+    char ch = Serial.read();
+    if (ch == &#x27;F&#x27; || ch == &#x27;f&#x27;) {
+      g_flip = !g_flip;
+      Serial.print(&quot;FLIP:&quot;); Serial.println(g_flip ? 1 : 0);
+    }
+  }
+  delay(IDLE_DELAY_MS);
+}</pre>
+        </div>
+      </div>
+      </div>
       <span class="ftag">aiming_dashboard.html — 브라우저 뷰어 (Web Serial · Nicla/XIAO 공용)</span>
 <pre>&lt;!DOCTYPE html&gt;&lt;html lang=&quot;ko&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;
 &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width,initial-scale=1&quot;&gt;
@@ -2265,8 +2507,18 @@ window.addEventListener(&#x27;resize&#x27;,drawOverlay);
 </pre>
       <div class="box"><span class="lbl">STEP 1의 산출물 (3가지 — STEP 2에 그대로 기입)</span>① 고정 위치·각도 확정 ② <code class="in">CAM_ROTATE_180</code> 값(0/1) ③ <code class="in">USE_FULL_WIDTH</code> 값(0/1). ※ 뷰어 연결이 안 되면: 아두이노 IDE <b>완전 종료</b>(포트는 한 프로그램만).</div>
 
-      <h3>STEP 2 — 운용 펌웨어: occ_node_nicla_cloud.ino</h3>
+
+      <h3>STEP 2 — 운용 펌웨어 업로드 (기종별)</h3>
       <p>STEP 1 확정값 2개를 CONFIG에 기입하고 WiFi·MQTT 계정을 채워 업로드합니다(WiFi 펌웨어 구동 중이면 <b>리셋 더블탭</b>). 아래 전문:</p>
+      <div class="tabs">
+      <input type="radio" name="visfw2" id="v2N-r" class="tabA" checked>
+      <input type="radio" name="visfw2" id="v2P-r" class="tabB">
+      <div class="tab-labels">
+        <label for="v2N-r" class="lab-N1">A. Nicla — occ_node_nicla_cloud.ino</label>
+        <label for="v2P-r" class="lab-N2">B. Portenta H7 — occ_node_portenta_cloud.ino</label>
+      </div>
+      <div class="tab-bodies">
+        <div class="tab-body tab-A body-N">
       <span class="ftag">occ_node_nicla_cloud.ino</span>
 <pre>/*
  * ============================================================
@@ -2639,9 +2891,378 @@ void loop() {
   delay(20);
 }
 </pre>
-      <h3>고칠 곳 (Nicla · 비전 노드)</h3>
-      <p><code class="in">WIFI_SSID/PASS</code> · <code class="in">MQTT_USER/PASS</code> · <code class="in">CAM_ROTATE_180</code>(조준 테스트 확정값, 0/1). 브로커·토픽은 env 노드와 동일 클러스터/네임스페이스입니다. 테스트 시 <code class="in">PUBLISH_MIN=1, DETECT_MS=2000</code>, 운용 복귀 <code class="in">5 / 10000</code>.</p>
-      <div class="box warn"><span class="lbl">⚠️ 업로드가 안 되면 (No DFU capable USB device)</span>WiFi 펌웨어 구동 중엔 자동 부트로더 진입이 자주 실패합니다 — <b>리셋 더블탭</b>(LED 초록 페이드) 후 업로드. 시리얼 확인 항목: <code class="in">[관문1]~[관문3]</code> 통과, <code class="in">sample n=</code> 증가, 버킷 경계 <code class="in">PUB:</code>.</div>
+        </div>
+        <div class="tab-body tab-B body-N">
+      <div class="box tip"><span class="lbl">💡 Nicla 판과의 차이</span>구조·발행 계약(occ 서브토픽·5분 버킷·centroid)은 동일. 카메라 드라이버만 <code class="in">hm0360.h / HM0360</code>(Vision Shield Rev2)이며, 실드가 흑백 센서라 Grayscale 모델과 궁합이 좋습니다. <code class="in">CAM_ROTATE_180</code>은 Nicla에서 확정한 값을 <b>그대로 쓰지 말고</b> Portenta 조준 테스트에서 다시 확정하세요(센서 실장 방향이 다를 수 있음).</div>
+      <span class="ftag">occ_node_portenta_cloud.ino</span>
+<pre>/*
+ * ============================================================
+ *  멀티노드 재실 인원 노드  ★ Portenta H7 + Vision Shield 판 (운용)
+ *  - Arduino_MQTT_MultiNode_Demo 발행 계약 정렬 (occ 서브토픽)
+ *  - 탐지 : 10초 단발 FOMO 추론 (듀티 ~0.7% → 발열 최소)
+ *  - 통계 : 5분 버킷당 ~30샘플 → 평균·중앙값·최대 동시 발행
+ *  - 좌표 : &quot;버킷 내 최대 인원 시점&quot;의 centroid 보존 (UI 대표 좌표)
+ *  - 감시 : 하드웨어 워치독 30초 — 행(hang) 시 자동 리셋 (무인 운용 보험)
+ * ============================================================
+ *  전제: 경량 모델 (FOMO 0.1 + Grayscale) — Nicla와 동일 라이브러리 사용
+ *  카메라: HM0360 (Rev2 실드, 흑백). CAP_QVGA=1이면 320x240 QVGA 전체(검증 모드),
+ *          관문 실패 시 0으로 후퇴(160x120, 동일 4:3 산수)
+ *
+ *  발행 계약 (env 노드와 정렬):
+ *    토픽   : multinode_aq/&lt;node_id&gt;/occ
+ *    노드ID : MAC 뒤 3바이트 node_XXXXXX 자동 생성
+ *    시각   : &quot;t&quot; = UTC 버킷 문자열 → env readings와 정확 조인
+ *  페이로드 예:
+ *    {&quot;node&quot;:&quot;node_2A8454&quot;,&quot;t&quot;:&quot;2026-07-09 13:35:00&quot;,
+ *     &quot;occ&quot;:2.4,&quot;occ_med&quot;:3,&quot;occ_max&quot;:4,&quot;occ_last&quot;:2,
+ *     &quot;c&quot;:[[48,30],[62,55]],&quot;w&quot;:96,&quot;n&quot;:30}
+ *      occ*  : 분석용 정형 지표 (DB 컬럼)
+ *      c     : occ_max 시점의 centroid — UI(조준선 맵)용, len(c)=occ_max와 짝
+ *              (항상 프레임 전체(4:3) 기준 상대좌표)
+ *      w     : c의 좌표계 크기 (모델 입력 폭)
+ *      n     : 버킷 내 유효 샘플 수 (품질 지표, 정상 ~30)
+ * ------------------------------------------------------------
+ *  설치 절차: Nicla_AimingStream 펌웨어로 방향·화각 확정
+ *             → CAM_ROTATE_180에 반영 → 본 펌웨어 업로드
+ *  필요 라이브러리: ArduinoMqttClient
+ *  보드: Portenta H7 (M7 core) + Vision Shield
+ *        (WiFiFirmwareUpdater 실행 완료 상태 · 보드 전환 시 캐시 삭제!)
+ *  업로드 팁: WiFi 펌웨어 구동 중엔 리셋 더블탭(부트로더) 후 업로드
+ * ============================================================
+ */
+
+#include &lt;Person_Detection_FOMO_inferencing.h&gt;
+// ↑ 추론엔진 헤더 = 본인 EI 프로젝트 라이브러리 이름으로 교체!
+//   확인: 문서\Arduino\libraries\&lt;설치된 폴더&gt;\src\ 안의 *_inferencing.h 파일명
+//   (예: My_Person_FOMO_inferencing.h — zip 재설치 시 이 줄만 맞추면 됨)
+#include &quot;camera.h&quot;
+#include &quot;hm0360.h&quot;          // ★ Vision Shield Rev2 (HM0360, 흑백)
+#include &lt;WiFi.h&gt;
+#include &lt;WiFiSSLClient.h&gt;
+#include &lt;ArduinoMqttClient.h&gt;
+#include &lt;time.h&gt;
+#include &lt;mbed.h&gt;                          // Watchdog
+
+// ===================== 사용자 설정 =====================
+const char* WIFI_SSID = &quot;your-wifi-ssid&quot;;
+const char* WIFI_PASS = &quot;your-wifi-password&quot;;
+
+const char* BROKER    = &quot;e311c7ffc26f4b7990382b5e43469c89.s1.eu.hivemq.cloud&quot;;
+const int   PORT      = 8883;
+const char* MQTT_USER = &quot;여기_username&quot;;
+const char* MQTT_PASS = &quot;여기_password&quot;;
+
+#define CAM_ROTATE_180   1                 // ★ 조준 테스트에서 확정한 값 (0/1)
+#define CAP_QVGA         1                 // 1=320x240 QVGA 전체(검증 모드) / 0=160x120(경량)
+                                           //   관문1~3 실패 시 0으로 후퇴 — c는 항상 &#x27;프레임 전체&#x27; 상대좌표
+const int PUBLISH_MIN  = 5;                // 버킷(분) — env 노드와 동일! (테스트 시 1)
+#define DETECT_MS        10000UL           // 탐지 주기 10초 (테스트 시 2000UL)
+#define BUCKET_MAX_S     40                // 버킷 내 샘플 상한
+#define WATCHDOG_MS      30000             // 30초 무응답 → 자동 리셋
+// ======================================================
+
+/* ---------- 카메라 (QQVGA) ---------- */
+HM0360 himax;
+Camera cam(himax);
+FrameBuffer fb;
+
+#if CAP_QVGA
+  #define RAW_W 320
+  #define RAW_H 240
+  #define CAM_MODE CAMERA_R320x240
+#else
+  #define RAW_W 160
+  #define RAW_H 120
+  #define CAM_MODE CAMERA_R160x120
+#endif
+
+static uint8_t model_in[EI_CLASSIFIER_INPUT_WIDTH *
+                        EI_CLASSIFIER_INPUT_HEIGHT * 3];
+
+/* ---------- 탐지 결과 ---------- */
+#define MAX_BOXES 12
+typedef struct { uint8_t cx, cy; } cent_t;
+static cent_t  g_cents[MAX_BOXES];         // 직전 추론의 centroid
+static uint8_t g_cent_cnt = 0;
+static cent_t  best_cents[MAX_BOXES];      // ★ 버킷 내 최대 인원 시점 좌표 보존
+static uint8_t best_cnt = 0;
+static uint32_t g_infer_ms = 0;
+
+/* ---------- 버킷 샘플 ---------- */
+static int8_t  samples[BUCKET_MAX_S];
+static uint8_t s_n = 0;
+static int     occLast = 0;
+
+/* ---------- 시각 ---------- */
+static bool timeOK = false;
+static unsigned long epochBase = 0, msBase = 0;
+static long curBucket = -1;
+static unsigned long lastDetect = 0, lastPubFallback = 0;
+
+WiFiSSLClient tls;
+MqttClient mqtt(tls);
+String nodeId, topic;
+mbed::Watchdog &amp;wd = mbed::Watchdog::get_instance();
+
+/* ================= 프로젝트 관례 함수 ================= */
+void makeNodeId() {
+  uint8_t mac[6];
+  WiFi.macAddress(mac);
+  char id[16];
+  snprintf(id, sizeof(id), &quot;node_%02X%02X%02X&quot;, mac[3], mac[4], mac[5]);
+  nodeId = String(id);
+  topic  = &quot;multinode_aq/&quot; + nodeId + &quot;/occ&quot;;
+}
+
+bool connectWiFi() {
+  if (WiFi.status() == WL_CONNECTED) return true;
+  Serial.print(&quot;WiFi&quot;);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  unsigned long t0 = millis();
+  while (WiFi.status() != WL_CONNECTED &amp;&amp; millis() - t0 &lt; 15000) {
+    delay(500); Serial.print(&quot;.&quot;);
+  }
+  bool ok = (WiFi.status() == WL_CONNECTED);
+  Serial.println(ok ? &quot; OK&quot; : &quot; FAIL&quot;);
+  return ok;
+}
+
+bool connectBroker() {
+  if (mqtt.connected()) return true;
+  if (!connectWiFi()) return false;
+  wd.kick();                                // TLS 협상 전 생존 신고
+  mqtt.setId(String(&quot;occ-&quot;) + nodeId);
+  mqtt.setUsernamePassword(MQTT_USER, MQTT_PASS);
+  mqtt.setKeepAliveInterval(60 * 1000L);
+  Serial.print(&quot;MQTT&quot;);
+  if (mqtt.connect(BROKER, PORT)) { Serial.println(&quot; OK&quot;); return true; }
+  Serial.print(&quot; rc=&quot;); Serial.println(mqtt.connectError());
+  return false;
+}
+
+void syncTime() {                           // WiFi 모듈 내장 NTP
+  Serial.print(&quot;NTP&quot;);
+  for (int i = 0; i &lt; 10; i++) {
+    unsigned long e = WiFi.getTime();
+    if (e &gt; 1600000000UL) {
+      epochBase = e; msBase = millis(); timeOK = true;
+      Serial.println(&quot; OK&quot;);
+      return;
+    }
+    Serial.print(&quot;.&quot;); delay(1000);
+  }
+  Serial.println(&quot; FAIL -&gt; 정각정렬 없이 동작&quot;);
+}
+
+long nowEpoch() {
+  return (long)(epochBase + (millis() - msBase) / 1000UL);
+}
+
+String epochToStr(long epoch) {
+  time_t t = (time_t)epoch;
+  struct tm tinfo; gmtime_r(&amp;t, &amp;tinfo);
+  char buf[32];
+  strftime(buf, sizeof(buf), &quot;%Y-%m-%d %H:%M:%S&quot;, &amp;tinfo);
+  return String(buf);
+}
+
+/* ================= 카메라/추론 ================= */
+static inline uint8_t pxg(const uint8_t *raw, int sx, int sy) {
+#if CAM_ROTATE_180
+  sx = RAW_W - 1 - sx;  sy = RAW_H - 1 - sy;
+#endif
+  return raw[sy * RAW_W + sx];              // 흑백 1바이트
+}
+
+static bool capture_and_prepare() {
+  if (cam.grabFrame(fb, 3000) != 0) return false;
+  const uint8_t *raw = fb.getBuffer();
+  const float stepx = (float)RAW_W / EI_CLASSIFIER_INPUT_WIDTH;   // 프레임 전체 →
+  const float stepy = (float)RAW_H / EI_CLASSIFIER_INPUT_HEIGHT;   // 96x96
+  uint8_t *d = model_in;
+  for (int y = 0; y &lt; EI_CLASSIFIER_INPUT_HEIGHT; y++) {
+    int sy = (int)(y * stepy);
+    for (int x = 0; x &lt; EI_CLASSIFIER_INPUT_WIDTH; x++) {
+      uint8_t g = pxg(raw, (int)(x * stepx), sy);
+      d[0] = d[1] = d[2] = g;                 // 흑백 → 3채널 복제
+      d += 3;
+    }
+  }
+  return true;
+}
+
+static int ei_get_data(size_t offset, size_t length, float *out_ptr) {
+  size_t ix = offset * 3;
+  for (size_t i = 0; i &lt; length; i++) {
+    out_ptr[i] = (model_in[ix + 2] &lt;&lt; 16) + (model_in[ix + 1] &lt;&lt; 8) + model_in[ix];
+    ix += 3;
+  }
+  return 0;
+}
+
+static int infer_once() {
+  if (!capture_and_prepare()) return -1;
+  ei::signal_t signal;
+  signal.total_length = EI_CLASSIFIER_INPUT_WIDTH * EI_CLASSIFIER_INPUT_HEIGHT;
+  signal.get_data = &amp;ei_get_data;
+  ei_impulse_result_t result = { 0 };
+  uint32_t t0 = millis();
+  if (run_classifier(&amp;signal, &amp;result, false) != EI_IMPULSE_OK) return -1;
+  g_infer_ms = millis() - t0;
+
+  uint8_t n = 0;
+  for (uint32_t i = 0; i &lt; result.bounding_boxes_count &amp;&amp; n &lt; MAX_BOXES; i++) {
+    auto &amp;bb = result.bounding_boxes[i];
+    if (bb.value == 0) continue;
+    g_cents[n].cx = (uint8_t)(bb.x + bb.width / 2);
+    g_cents[n].cy = (uint8_t)(bb.y + bb.height / 2);
+    n++;
+  }
+  g_cent_cnt = n;
+  return n;
+}
+
+/* 10초 단발 샘플 + 최대 시점 좌표 보존 */
+void takeSample() {
+  int c = infer_once();
+  if (c &lt; 0) { Serial.println(&quot;detect 실패 - 결측&quot;); return; }
+  occLast = c;
+  if (s_n &lt; BUCKET_MAX_S) samples[s_n++] = (int8_t)c;
+  if (c &gt; 0 &amp;&amp; (uint8_t)c &gt;= best_cnt) {          // ★ 최대 경신 시 좌표 보존
+    memcpy(best_cents, g_cents, sizeof(cent_t) * g_cent_cnt);
+    best_cnt = g_cent_cnt;
+  }
+}
+
+/* 버킷 통계 발행: 평균 + 중앙값 + 최대 + 마지막 + 최대 시점 centroid */
+void publishBucket(long bucketEpoch) {
+  if (s_n == 0) return;
+
+  int sum = 0, mx = 0;
+  int8_t sorted[BUCKET_MAX_S];
+  memcpy(sorted, samples, s_n);
+  for (uint8_t i = 1; i &lt; s_n; i++) {
+    int8_t key = sorted[i]; int j = i - 1;
+    while (j &gt;= 0 &amp;&amp; sorted[j] &gt; key) { sorted[j + 1] = sorted[j]; j--; }
+    sorted[j + 1] = key;
+  }
+  for (uint8_t i = 0; i &lt; s_n; i++) { sum += samples[i]; if (samples[i] &gt; mx) mx = samples[i]; }
+  float avg = (float)sum / s_n;
+  int   med = sorted[s_n / 2];
+
+  char cbuf[140] = &quot;&quot;; size_t ci = 0;
+  for (uint8_t i = 0; i &lt; best_cnt &amp;&amp; ci &lt; sizeof(cbuf) - 12; i++)
+    ci += snprintf(cbuf + ci, sizeof(cbuf) - ci, &quot;%s[%d,%d]&quot;,
+                   i ? &quot;,&quot; : &quot;&quot;, best_cents[i].cx, best_cents[i].cy);
+
+  char p[380];
+  if (timeOK) {
+    String ts = epochToStr(bucketEpoch);
+    snprintf(p, sizeof(p),
+      &quot;{\&quot;node\&quot;:\&quot;%s\&quot;,\&quot;t\&quot;:\&quot;%s\&quot;,&quot;
+      &quot;\&quot;occ\&quot;:%.2f,\&quot;occ_med\&quot;:%d,\&quot;occ_max\&quot;:%d,\&quot;occ_last\&quot;:%d,&quot;
+      &quot;\&quot;c\&quot;:[%s],\&quot;w\&quot;:%d,\&quot;n\&quot;:%d}&quot;,
+      nodeId.c_str(), ts.c_str(), avg, med, mx, occLast,
+      cbuf, EI_CLASSIFIER_INPUT_WIDTH, s_n);
+  } else {
+    snprintf(p, sizeof(p),
+      &quot;{\&quot;node\&quot;:\&quot;%s\&quot;,&quot;
+      &quot;\&quot;occ\&quot;:%.2f,\&quot;occ_med\&quot;:%d,\&quot;occ_max\&quot;:%d,\&quot;occ_last\&quot;:%d,&quot;
+      &quot;\&quot;c\&quot;:[%s],\&quot;w\&quot;:%d,\&quot;n\&quot;:%d}&quot;,
+      nodeId.c_str(), avg, med, mx, occLast,
+      cbuf, EI_CLASSIFIER_INPUT_WIDTH, s_n);
+  }
+
+  if (connectBroker()) {
+    mqtt.beginMessage(topic);
+    mqtt.print(p);
+    mqtt.endMessage();
+    Serial.print(&quot;PUB: &quot;);
+  } else Serial.print(&quot;SKIP(미연결): &quot;);
+  Serial.println(p);
+}
+
+void resetBucket() { s_n = 0; best_cnt = 0; }
+
+/* ================================================================= */
+void setup() {
+  Serial.begin(115200);
+  delay(500);
+  Serial.println(&quot;\n[BOOT] Portenta occ node (10s 단발 / 5분 버킷 / 워치독)&quot;);
+  Serial.print(&quot;[CAM] &quot;); Serial.print(RAW_W); Serial.print(&quot;x&quot;);
+  Serial.print(RAW_H); Serial.println(CAP_QVGA ? &quot; QVGA 전체(4:3)&quot; : &quot; QQVGA 전체(4:3)&quot;);
+
+  if (!cam.begin(CAM_MODE, CAMERA_GRAYSCALE, 30)) {
+    Serial.println(&quot;[ERR] 카메라 초기화 실패&quot;);
+    while (1) delay(1000);
+  }
+
+  /* 관문 1: 아레나 선점 (WiFi 이전 — 연속 힙 블록 확보) */
+  Serial.print(&quot;[관문1] 아레나 선점 추론... &quot;);
+  if (infer_once() &lt; 0) {
+    Serial.println(&quot;실패&quot;);
+    while (1) delay(1000);
+  }
+  Serial.print(&quot;성공 (&quot;); Serial.print(g_infer_ms); Serial.println(&quot;ms)&quot;);
+
+  /* 관문 2: WiFi + NTP + 브로커 */
+  connectWiFi();
+  makeNodeId();
+  syncTime();
+  connectBroker();
+
+  /* 관문 3: 공존 검증 */
+  Serial.print(&quot;[관문3] WiFi 공존 추론... &quot;);
+  Serial.println(infer_once() &gt;= 0 ? &quot;성공 — 공존 확인&quot; : &quot;실패 — 공존 불가&quot;);
+
+  Serial.print(&quot;Node: &quot;);  Serial.println(nodeId);
+  Serial.print(&quot;Topic: &quot;); Serial.println(topic);
+  Serial.print(&quot;탐지 &quot;); Serial.print(DETECT_MS / 1000);
+  Serial.print(&quot;s 단발 / 버킷 &quot;); Serial.print(PUBLISH_MIN);
+  Serial.print(&quot;분 / 회전 &quot;); Serial.println(CAM_ROTATE_180);
+
+  if (timeOK) { long sec = PUBLISH_MIN * 60L; curBucket = (nowEpoch()/sec)*sec; }
+  lastPubFallback = millis();
+
+  wd.start(WATCHDOG_MS);                    // ★ 무인 운용 보험: 30초 행 → 리셋
+}
+
+void loop() {
+  wd.kick();                                // 매 루프 생존 신고
+  mqtt.poll();
+
+  unsigned long now = millis();
+  long sec = PUBLISH_MIN * 60L;
+
+  if (timeOK) {
+    long bucket = (nowEpoch() / sec) * sec;
+    if (curBucket &lt; 0) curBucket = bucket;
+    if (bucket != curBucket) {              // 버킷 경계 → 발행
+      publishBucket(curBucket);
+      resetBucket();
+      curBucket = bucket;
+    }
+  } else {
+    if (now - lastPubFallback &gt;= (unsigned long)PUBLISH_MIN * 60000UL) {
+      lastPubFallback = now;
+      publishBucket(0);
+      resetBucket();
+    }
+  }
+
+  if (now - lastDetect &gt;= DETECT_MS) {
+    lastDetect = now;
+    takeSample();
+    Serial.print(&quot;sample n=&quot;); Serial.print(s_n);
+    Serial.print(&quot; last=&quot;); Serial.print(occLast);
+    Serial.print(&quot; (&quot;); Serial.print(g_infer_ms); Serial.println(&quot;ms)&quot;);
+  }
+
+  delay(20);
+}</pre>
+        </div>
+      </div>
+      </div>
     </section>
 
   <!-- s6 수신 테스트 -->
@@ -5526,6 +6147,28 @@ sudo rm -f /etc/mosquitto/conf.d/multinode_aq.conf</pre>
       setTimeout(() => { btn.textContent='📋 복사'; btn.classList.remove('copied'); }, 1500);
     });
     pre.appendChild(btn);
+  });
+
+  // 긴 코드 블록 접기 토글 (15줄 초과 시 기본 접힘)
+  const FOLD_MIN = 15;
+  document.querySelectorAll('pre').forEach(pre => {
+    const nLines = pre.textContent.replace(/\n$/,'').split('\n').length;
+    if (nLines <= FOLD_MIN) return;
+    const top = document.createElement('button');
+    top.type = 'button'; top.className = 'fold-btn';
+    const bot = document.createElement('button');
+    bot.type = 'button'; bot.className = 'fold-btn bottom'; bot.textContent = '▲ 코드 접기';
+    const setState = (open) => {
+      pre.classList.toggle('folded', !open);
+      top.classList.toggle('open', open);
+      bot.classList.toggle('show', open);
+      top.innerHTML = (open ? '▼ 코드 접기' : '▶ 코드 펼치기') + '<span class="cnt">(' + nLines + '줄)</span>';
+    };
+    top.addEventListener('click', () => setState(pre.classList.contains('folded')));
+    bot.addEventListener('click', () => { setState(false); top.scrollIntoView({block:'center'}); });
+    pre.parentNode.insertBefore(top, pre);
+    pre.parentNode.insertBefore(bot, pre.nextSibling);
+    setState(false);
   });
 </script>
 </body>
