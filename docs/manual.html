@@ -900,6 +900,13 @@ double sPm1=0, sPm25=0, sPm4=0, sPm10=0, sHum=0, sTemp=0, sVoc=0, sNox=0;
 double sCo2=0, sScdT=0, sScdH=0;
 int n = 0;        // SEN55 샘플 수
 int nC = 0;       // SCD30 샘플 수 (측정 주기 달라 별도 카운트)
+// ---- 센서 건강 감시 (v2: 값 동결/버스 행 대응) ----
+int           senFail    = 0;      // SEN55 연속 무효 샘플 수
+unsigned long scdLastOK  = 0;      // SCD30 마지막 유효 수신 시각
+int           recoverCnt = 0;      // I2C 복구 시도 누계
+const int           SEN_FAIL_LIMIT = 10;       // 연속 10회 무효 → 버스 복구
+const unsigned long SCD_STALL_MS   = 180000UL; // SCD30 3분 무응답 → 버스 복구
+const int           RECOVER_MAX    = 3;        // 복구 3회 실패 → MCU 리셋
 bool senOK  = false;
 bool scdOK  = false;
 bool timeOK = false;
@@ -992,15 +999,32 @@ void publishAverage(long bucketEpoch) {
   Serial.print(&quot;PUB: &quot;); Serial.println(p);
 }
 
+// v2: I2C 통신은 성공(err==0)해도 센서가 굳어 쓰레기 값을 반복 반환하는
+//     고장 모드가 실재 (예: 94.2C / 169.8% / PM2.5 2378). 물리 범위로 걸러냄.
+bool plausibleSEN(float t, float h, float pm25, float pm10) {
+  return t &gt; -20 &amp;&amp; t &lt; 60 &amp;&amp; h &gt;= 0 &amp;&amp; h &lt;= 100 &amp;&amp;
+         pm25 &gt;= 0 &amp;&amp; pm25 &lt; 1000 &amp;&amp; pm10 &gt;= 0 &amp;&amp; pm10 &lt; 2000;
+}
+
+void mcuReset() {                    // 보드별 소프트웨어 리셋
+#if defined(ARDUINO_ARCH_RENESAS)
+  NVIC_SystemReset();                // UNO R4 (RA4M1)
+#elif defined(ARDUINO_ARCH_ESP32)
+  ESP.restart();                     // Nano ESP32
+#endif
+}
+
 void takeSample() {
   // SEN55
   if (senOK) {
     float pm1, pm25, pm4, pm10, hum, temp, voc, nox;
     uint16_t err = sen5x.readMeasuredValues(pm1, pm25, pm4, pm10, hum, temp, voc, nox);
-    if (!err &amp;&amp; !isnan(pm25) &amp;&amp; !isnan(temp)) {
+    if (!err &amp;&amp; !isnan(pm25) &amp;&amp; !isnan(temp) &amp;&amp; plausibleSEN(temp, hum, pm25, pm10)) {
       sPm1 += pm1; sPm25 += pm25; sPm4 += pm4; sPm10 += pm10;
       sHum += hum; sTemp += temp; sVoc += voc; sNox += nox;
-      n++;
+      n++; senFail = 0;
+    } else {
+      senFail++;                     // 통신 실패든 물리범위 밖이든 무효 샘플
     }
   }
   // SCD30 (자체 dataAvailable 주기, 준비됐을 때만 누적)
@@ -1008,8 +1032,40 @@ void takeSample() {
     float c = scd30.getCO2();
     float t = scd30.getTemperature();
     float h = scd30.getHumidity();
-    if (c &gt; 0 &amp;&amp; !isnan(t)) { sCo2 += c; sScdT += t; sScdH += h; nC++; }
+    if (c &gt; 0 &amp;&amp; c &lt; 10000 &amp;&amp; !isnan(t)) {
+      sCo2 += c; sScdT += t; sScdH += h; nC++;
+      scdLastOK = millis();          // 마지막 유효 수신 갱신
+    }
   }
+}
+
+// v2: 잠긴 I2C 버스 복구 -&gt; 센서 재초기화 -&gt; 실패 누적 시 MCU 리셋
+void recoverI2C() {
+  recoverCnt++;
+  Serial.print(&quot;[RECOVER] I2C 복구 시도 &quot;); Serial.println(recoverCnt);
+  Wire.end();
+  // 슬레이브가 버스를 물고 있을 때: SCL 9펄스로 강제 해제
+  pinMode(SCL, OUTPUT);
+  for (int i = 0; i &lt; 9; i++) {
+    digitalWrite(SCL, LOW);  delayMicroseconds(10);
+    digitalWrite(SCL, HIGH); delayMicroseconds(10);
+  }
+  pinMode(SCL, INPUT);
+  Wire.begin();
+  Wire.setClock(50000);
+  // 센서 재초기화
+  sen5x.begin(Wire);
+  sen5x.deviceReset(); delay(200);
+  senOK = (sen5x.startMeasurement() == 0);
+  scdOK = scd30.begin();
+  Serial.print(&quot;[RECOVER] SEN55=&quot;); Serial.print(senOK ? &quot;OK&quot; : &quot;FAIL&quot;);
+  Serial.print(&quot; SCD30=&quot;);          Serial.println(scdOK ? &quot;OK&quot; : &quot;FAIL&quot;);
+  if ((!senOK &amp;&amp; !scdOK) || recoverCnt &gt; RECOVER_MAX) {
+    Serial.println(&quot;[RECOVER] 복구 불가 -&gt; MCU 리셋&quot;);
+    delay(300);
+    mcuReset();
+  }
+  senFail = 0; scdLastOK = millis();
 }
 
 void resetAccum() {
@@ -1035,6 +1091,7 @@ void setup() {
   // SCD30
   if (scd30.begin()) { scdOK = true;  Serial.println(&quot;SCD30 시작 (CO2 첫값까지 수초~수십초)&quot;); }
   else               { scdOK = false; Serial.println(&quot;SCD30 begin 실패 - 0x61/배선/5V 확인&quot;); }
+  scdLastOK = millis();              // v2: 무응답 감시 기준점
 
   connectWiFi();
   makeNodeId();
@@ -1052,6 +1109,12 @@ void setup() {
 void loop() {
   if (!client.connected()) connectBroker();
   client.loop();
+
+  // v2: 센서 동결/버스 행 감지 -&gt; 복구
+  if (senFail &gt;= SEN_FAIL_LIMIT ||
+      (scdOK &amp;&amp; millis() - scdLastOK &gt; SCD_STALL_MS)) {
+    recoverI2C();
+  }
 
   unsigned long now = millis();
   long sec = PUBLISH_MIN * 60L;
@@ -1147,6 +1210,13 @@ double sPm1=0, sPm25=0, sPm4=0, sPm10=0, sHum=0, sTemp=0, sVoc=0, sNox=0;
 double sCo2=0, sScdT=0, sScdH=0;
 int n = 0;        // SEN55 샘플 수
 int nC = 0;       // SCD30 샘플 수 (측정 주기 달라 별도 카운트)
+// ---- 센서 건강 감시 (v2: 값 동결/버스 행 대응) ----
+int           senFail    = 0;      // SEN55 연속 무효 샘플 수
+unsigned long scdLastOK  = 0;      // SCD30 마지막 유효 수신 시각
+int           recoverCnt = 0;      // I2C 복구 시도 누계
+const int           SEN_FAIL_LIMIT = 10;       // 연속 10회 무효 → 버스 복구
+const unsigned long SCD_STALL_MS   = 180000UL; // SCD30 3분 무응답 → 버스 복구
+const int           RECOVER_MAX    = 3;        // 복구 3회 실패 → MCU 리셋
 bool senOK  = false;
 bool scdOK  = false;
 bool timeOK = false;
@@ -1239,15 +1309,32 @@ void publishAverage(long bucketEpoch) {
   Serial.print(&quot;PUB: &quot;); Serial.println(p);
 }
 
+// v2: I2C 통신은 성공(err==0)해도 센서가 굳어 쓰레기 값을 반복 반환하는
+//     고장 모드가 실재 (예: 94.2C / 169.8% / PM2.5 2378). 물리 범위로 걸러냄.
+bool plausibleSEN(float t, float h, float pm25, float pm10) {
+  return t &gt; -20 &amp;&amp; t &lt; 60 &amp;&amp; h &gt;= 0 &amp;&amp; h &lt;= 100 &amp;&amp;
+         pm25 &gt;= 0 &amp;&amp; pm25 &lt; 1000 &amp;&amp; pm10 &gt;= 0 &amp;&amp; pm10 &lt; 2000;
+}
+
+void mcuReset() {                    // 보드별 소프트웨어 리셋
+#if defined(ARDUINO_ARCH_RENESAS)
+  NVIC_SystemReset();                // UNO R4 (RA4M1)
+#elif defined(ARDUINO_ARCH_ESP32)
+  ESP.restart();                     // Nano ESP32
+#endif
+}
+
 void takeSample() {
   // SEN55
   if (senOK) {
     float pm1, pm25, pm4, pm10, hum, temp, voc, nox;
     uint16_t err = sen5x.readMeasuredValues(pm1, pm25, pm4, pm10, hum, temp, voc, nox);
-    if (!err &amp;&amp; !isnan(pm25) &amp;&amp; !isnan(temp)) {
+    if (!err &amp;&amp; !isnan(pm25) &amp;&amp; !isnan(temp) &amp;&amp; plausibleSEN(temp, hum, pm25, pm10)) {
       sPm1 += pm1; sPm25 += pm25; sPm4 += pm4; sPm10 += pm10;
       sHum += hum; sTemp += temp; sVoc += voc; sNox += nox;
-      n++;
+      n++; senFail = 0;
+    } else {
+      senFail++;                     // 통신 실패든 물리범위 밖이든 무효 샘플
     }
   }
   // SCD30 (자체 dataAvailable 주기, 준비됐을 때만 누적)
@@ -1255,8 +1342,40 @@ void takeSample() {
     float c = scd30.getCO2();
     float t = scd30.getTemperature();
     float h = scd30.getHumidity();
-    if (c &gt; 0 &amp;&amp; !isnan(t)) { sCo2 += c; sScdT += t; sScdH += h; nC++; }
+    if (c &gt; 0 &amp;&amp; c &lt; 10000 &amp;&amp; !isnan(t)) {
+      sCo2 += c; sScdT += t; sScdH += h; nC++;
+      scdLastOK = millis();          // 마지막 유효 수신 갱신
+    }
   }
+}
+
+// v2: 잠긴 I2C 버스 복구 -&gt; 센서 재초기화 -&gt; 실패 누적 시 MCU 리셋
+void recoverI2C() {
+  recoverCnt++;
+  Serial.print(&quot;[RECOVER] I2C 복구 시도 &quot;); Serial.println(recoverCnt);
+  Wire.end();
+  // 슬레이브가 버스를 물고 있을 때: SCL 9펄스로 강제 해제
+  pinMode(SCL, OUTPUT);
+  for (int i = 0; i &lt; 9; i++) {
+    digitalWrite(SCL, LOW);  delayMicroseconds(10);
+    digitalWrite(SCL, HIGH); delayMicroseconds(10);
+  }
+  pinMode(SCL, INPUT);
+  Wire.begin();
+  Wire.setClock(50000);
+  // 센서 재초기화
+  sen5x.begin(Wire);
+  sen5x.deviceReset(); delay(200);
+  senOK = (sen5x.startMeasurement() == 0);
+  scdOK = scd30.begin();
+  Serial.print(&quot;[RECOVER] SEN55=&quot;); Serial.print(senOK ? &quot;OK&quot; : &quot;FAIL&quot;);
+  Serial.print(&quot; SCD30=&quot;);          Serial.println(scdOK ? &quot;OK&quot; : &quot;FAIL&quot;);
+  if ((!senOK &amp;&amp; !scdOK) || recoverCnt &gt; RECOVER_MAX) {
+    Serial.println(&quot;[RECOVER] 복구 불가 -&gt; MCU 리셋&quot;);
+    delay(300);
+    mcuReset();
+  }
+  senFail = 0; scdLastOK = millis();
 }
 
 void resetAccum() {
@@ -1282,6 +1401,7 @@ void setup() {
   // SCD30
   if (scd30.begin()) { scdOK = true;  Serial.println(&quot;SCD30 시작 (CO2 첫값까지 수초~수십초)&quot;); }
   else               { scdOK = false; Serial.println(&quot;SCD30 begin 실패 - 0x61/배선/5V 확인&quot;); }
+  scdLastOK = millis();              // v2: 무응답 감시 기준점
 
   connectWiFi();
   makeNodeId();
@@ -1299,6 +1419,12 @@ void setup() {
 void loop() {
   if (!client.connected()) connectBroker();
   client.loop();
+
+  // v2: 센서 동결/버스 행 감지 -&gt; 복구
+  if (senFail &gt;= SEN_FAIL_LIMIT ||
+      (scdOK &amp;&amp; millis() - scdLastOK &gt; SCD_STALL_MS)) {
+    recoverI2C();
+  }
 
   unsigned long now = millis();
   long sec = PUBLISH_MIN * 60L;
@@ -1412,6 +1538,13 @@ double sPm1=0, sPm25=0, sPm4=0, sPm10=0, sHum=0, sTemp=0, sVoc=0, sNox=0;
 double sCo2=0, sScdT=0, sScdH=0;
 int n = 0;        // SEN55 샘플 수
 int nC = 0;       // SCD30 샘플 수 (측정 주기 달라 별도 카운트)
+// ---- 센서 건강 감시 (v2: 값 동결/버스 행 대응) ----
+int           senFail    = 0;      // SEN55 연속 무효 샘플 수
+unsigned long scdLastOK  = 0;      // SCD30 마지막 유효 수신 시각
+int           recoverCnt = 0;      // I2C 복구 시도 누계
+const int           SEN_FAIL_LIMIT = 10;       // 연속 10회 무효 → 버스 복구
+const unsigned long SCD_STALL_MS   = 180000UL; // SCD30 3분 무응답 → 버스 복구
+const int           RECOVER_MAX    = 3;        // 복구 3회 실패 → MCU 리셋
 bool senOK  = false;
 bool scdOK  = false;
 bool timeOK = false;
@@ -1505,15 +1638,32 @@ void publishAverage(long bucketEpoch) {
   Serial.print(&quot;PUB: &quot;); Serial.println(p);
 }
 
+// v2: I2C 통신은 성공(err==0)해도 센서가 굳어 쓰레기 값을 반복 반환하는
+//     고장 모드가 실재 (예: 94.2C / 169.8% / PM2.5 2378). 물리 범위로 걸러냄.
+bool plausibleSEN(float t, float h, float pm25, float pm10) {
+  return t &gt; -20 &amp;&amp; t &lt; 60 &amp;&amp; h &gt;= 0 &amp;&amp; h &lt;= 100 &amp;&amp;
+         pm25 &gt;= 0 &amp;&amp; pm25 &lt; 1000 &amp;&amp; pm10 &gt;= 0 &amp;&amp; pm10 &lt; 2000;
+}
+
+void mcuReset() {                    // 보드별 소프트웨어 리셋
+#if defined(ARDUINO_ARCH_RENESAS)
+  NVIC_SystemReset();                // UNO R4 (RA4M1)
+#elif defined(ARDUINO_ARCH_ESP32)
+  ESP.restart();                     // Nano ESP32
+#endif
+}
+
 void takeSample() {
   // SEN55
   if (senOK) {
     float pm1, pm25, pm4, pm10, hum, temp, voc, nox;
     uint16_t err = sen5x.readMeasuredValues(pm1, pm25, pm4, pm10, hum, temp, voc, nox);
-    if (!err &amp;&amp; !isnan(pm25) &amp;&amp; !isnan(temp)) {
+    if (!err &amp;&amp; !isnan(pm25) &amp;&amp; !isnan(temp) &amp;&amp; plausibleSEN(temp, hum, pm25, pm10)) {
       sPm1 += pm1; sPm25 += pm25; sPm4 += pm4; sPm10 += pm10;
       sHum += hum; sTemp += temp; sVoc += voc; sNox += nox;
-      n++;
+      n++; senFail = 0;
+    } else {
+      senFail++;                     // 통신 실패든 물리범위 밖이든 무효 샘플
     }
   }
   // SCD30 (자체 dataAvailable 주기, 준비됐을 때만 누적)
@@ -1521,8 +1671,40 @@ void takeSample() {
     float c = scd30.getCO2();
     float t = scd30.getTemperature();
     float h = scd30.getHumidity();
-    if (c &gt; 0 &amp;&amp; !isnan(t)) { sCo2 += c; sScdT += t; sScdH += h; nC++; }
+    if (c &gt; 0 &amp;&amp; c &lt; 10000 &amp;&amp; !isnan(t)) {
+      sCo2 += c; sScdT += t; sScdH += h; nC++;
+      scdLastOK = millis();          // 마지막 유효 수신 갱신
+    }
   }
+}
+
+// v2: 잠긴 I2C 버스 복구 -&gt; 센서 재초기화 -&gt; 실패 누적 시 MCU 리셋
+void recoverI2C() {
+  recoverCnt++;
+  Serial.print(&quot;[RECOVER] I2C 복구 시도 &quot;); Serial.println(recoverCnt);
+  Wire.end();
+  // 슬레이브가 버스를 물고 있을 때: SCL 9펄스로 강제 해제
+  pinMode(SCL, OUTPUT);
+  for (int i = 0; i &lt; 9; i++) {
+    digitalWrite(SCL, LOW);  delayMicroseconds(10);
+    digitalWrite(SCL, HIGH); delayMicroseconds(10);
+  }
+  pinMode(SCL, INPUT);
+  Wire.begin();
+  Wire.setClock(50000);
+  // 센서 재초기화
+  sen5x.begin(Wire);
+  sen5x.deviceReset(); delay(200);
+  senOK = (sen5x.startMeasurement() == 0);
+  scdOK = scd30.begin();
+  Serial.print(&quot;[RECOVER] SEN55=&quot;); Serial.print(senOK ? &quot;OK&quot; : &quot;FAIL&quot;);
+  Serial.print(&quot; SCD30=&quot;);          Serial.println(scdOK ? &quot;OK&quot; : &quot;FAIL&quot;);
+  if ((!senOK &amp;&amp; !scdOK) || recoverCnt &gt; RECOVER_MAX) {
+    Serial.println(&quot;[RECOVER] 복구 불가 -&gt; MCU 리셋&quot;);
+    delay(300);
+    mcuReset();
+  }
+  senFail = 0; scdLastOK = millis();
 }
 
 void resetAccum() {
@@ -1548,6 +1730,7 @@ void setup() {
   // SCD30
   if (scd30.begin()) { scdOK = true;  Serial.println(&quot;SCD30 시작 (CO2 첫값까지 수초~수십초)&quot;); }
   else               { scdOK = false; Serial.println(&quot;SCD30 begin 실패 - 0x61/배선/5V 확인&quot;); }
+  scdLastOK = millis();              // v2: 무응답 감시 기준점
 
   connectWiFi();
   makeNodeId();
@@ -1566,6 +1749,12 @@ void setup() {
 void loop() {
   if (!client.connected()) connectBroker();
   client.loop();
+
+  // v2: 센서 동결/버스 행 감지 -&gt; 복구
+  if (senFail &gt;= SEN_FAIL_LIMIT ||
+      (scdOK &amp;&amp; millis() - scdLastOK &gt; SCD_STALL_MS)) {
+    recoverI2C();
+  }
 
   unsigned long now = millis();
   long sec = PUBLISH_MIN * 60L;
@@ -1662,6 +1851,13 @@ double sPm1=0, sPm25=0, sPm4=0, sPm10=0, sHum=0, sTemp=0, sVoc=0, sNox=0;
 double sCo2=0, sScdT=0, sScdH=0;
 int n = 0;        // SEN55 샘플 수
 int nC = 0;       // SCD30 샘플 수 (측정 주기 달라 별도 카운트)
+// ---- 센서 건강 감시 (v2: 값 동결/버스 행 대응) ----
+int           senFail    = 0;      // SEN55 연속 무효 샘플 수
+unsigned long scdLastOK  = 0;      // SCD30 마지막 유효 수신 시각
+int           recoverCnt = 0;      // I2C 복구 시도 누계
+const int           SEN_FAIL_LIMIT = 10;       // 연속 10회 무효 → 버스 복구
+const unsigned long SCD_STALL_MS   = 180000UL; // SCD30 3분 무응답 → 버스 복구
+const int           RECOVER_MAX    = 3;        // 복구 3회 실패 → MCU 리셋
 bool senOK  = false;
 bool scdOK  = false;
 bool timeOK = false;
@@ -1755,15 +1951,32 @@ void publishAverage(long bucketEpoch) {
   Serial.print(&quot;PUB: &quot;); Serial.println(p);
 }
 
+// v2: I2C 통신은 성공(err==0)해도 센서가 굳어 쓰레기 값을 반복 반환하는
+//     고장 모드가 실재 (예: 94.2C / 169.8% / PM2.5 2378). 물리 범위로 걸러냄.
+bool plausibleSEN(float t, float h, float pm25, float pm10) {
+  return t &gt; -20 &amp;&amp; t &lt; 60 &amp;&amp; h &gt;= 0 &amp;&amp; h &lt;= 100 &amp;&amp;
+         pm25 &gt;= 0 &amp;&amp; pm25 &lt; 1000 &amp;&amp; pm10 &gt;= 0 &amp;&amp; pm10 &lt; 2000;
+}
+
+void mcuReset() {                    // 보드별 소프트웨어 리셋
+#if defined(ARDUINO_ARCH_RENESAS)
+  NVIC_SystemReset();                // UNO R4 (RA4M1)
+#elif defined(ARDUINO_ARCH_ESP32)
+  ESP.restart();                     // Nano ESP32
+#endif
+}
+
 void takeSample() {
   // SEN55
   if (senOK) {
     float pm1, pm25, pm4, pm10, hum, temp, voc, nox;
     uint16_t err = sen5x.readMeasuredValues(pm1, pm25, pm4, pm10, hum, temp, voc, nox);
-    if (!err &amp;&amp; !isnan(pm25) &amp;&amp; !isnan(temp)) {
+    if (!err &amp;&amp; !isnan(pm25) &amp;&amp; !isnan(temp) &amp;&amp; plausibleSEN(temp, hum, pm25, pm10)) {
       sPm1 += pm1; sPm25 += pm25; sPm4 += pm4; sPm10 += pm10;
       sHum += hum; sTemp += temp; sVoc += voc; sNox += nox;
-      n++;
+      n++; senFail = 0;
+    } else {
+      senFail++;                     // 통신 실패든 물리범위 밖이든 무효 샘플
     }
   }
   // SCD30 (자체 dataAvailable 주기, 준비됐을 때만 누적)
@@ -1771,8 +1984,40 @@ void takeSample() {
     float c = scd30.getCO2();
     float t = scd30.getTemperature();
     float h = scd30.getHumidity();
-    if (c &gt; 0 &amp;&amp; !isnan(t)) { sCo2 += c; sScdT += t; sScdH += h; nC++; }
+    if (c &gt; 0 &amp;&amp; c &lt; 10000 &amp;&amp; !isnan(t)) {
+      sCo2 += c; sScdT += t; sScdH += h; nC++;
+      scdLastOK = millis();          // 마지막 유효 수신 갱신
+    }
   }
+}
+
+// v2: 잠긴 I2C 버스 복구 -&gt; 센서 재초기화 -&gt; 실패 누적 시 MCU 리셋
+void recoverI2C() {
+  recoverCnt++;
+  Serial.print(&quot;[RECOVER] I2C 복구 시도 &quot;); Serial.println(recoverCnt);
+  Wire.end();
+  // 슬레이브가 버스를 물고 있을 때: SCL 9펄스로 강제 해제
+  pinMode(SCL, OUTPUT);
+  for (int i = 0; i &lt; 9; i++) {
+    digitalWrite(SCL, LOW);  delayMicroseconds(10);
+    digitalWrite(SCL, HIGH); delayMicroseconds(10);
+  }
+  pinMode(SCL, INPUT);
+  Wire.begin();
+  Wire.setClock(50000);
+  // 센서 재초기화
+  sen5x.begin(Wire);
+  sen5x.deviceReset(); delay(200);
+  senOK = (sen5x.startMeasurement() == 0);
+  scdOK = scd30.begin();
+  Serial.print(&quot;[RECOVER] SEN55=&quot;); Serial.print(senOK ? &quot;OK&quot; : &quot;FAIL&quot;);
+  Serial.print(&quot; SCD30=&quot;);          Serial.println(scdOK ? &quot;OK&quot; : &quot;FAIL&quot;);
+  if ((!senOK &amp;&amp; !scdOK) || recoverCnt &gt; RECOVER_MAX) {
+    Serial.println(&quot;[RECOVER] 복구 불가 -&gt; MCU 리셋&quot;);
+    delay(300);
+    mcuReset();
+  }
+  senFail = 0; scdLastOK = millis();
 }
 
 void resetAccum() {
@@ -1798,6 +2043,7 @@ void setup() {
   // SCD30
   if (scd30.begin()) { scdOK = true;  Serial.println(&quot;SCD30 시작 (CO2 첫값까지 수초~수십초)&quot;); }
   else               { scdOK = false; Serial.println(&quot;SCD30 begin 실패 - 0x61/배선/5V 확인&quot;); }
+  scdLastOK = millis();              // v2: 무응답 감시 기준점
 
   connectWiFi();
   makeNodeId();
@@ -1815,6 +2061,12 @@ void setup() {
 void loop() {
   if (!client.connected()) connectBroker();
   client.loop();
+
+  // v2: 센서 동결/버스 행 감지 -&gt; 복구
+  if (senFail &gt;= SEN_FAIL_LIMIT ||
+      (scdOK &amp;&amp; millis() - scdLastOK &gt; SCD_STALL_MS)) {
+    recoverI2C();
+  }
 
   unsigned long now = millis();
   long sec = PUBLISH_MIN * 60L;
@@ -1882,6 +2134,7 @@ PUB: {"node":"node_8C8B35","t":"2026-06-17 00:05:00","pm1p0":8.2,"pm2p5":12.5,"p
   
     <div class="box warn"><span class="lbl">⚠️ "MQTT rc=-2" 가 반복되면</span><b>클라우드</b>: 8883이 막혔거나 HiveMQ 정보 오타 → Host·User·Pass 확인. <b>로컬</b>: 브로커(허브)가 아직 준비 안 됨(패널 2) 또는 <b>학교망 격리</b> → 트러블슈팅 진단법 → 클라우드로.</div>
     <div class="box warn"><span class="lbl">⚠️ "sample 0" 에서 안 늘면</span>센서 읽기 실패 — <b>전압 스위치</b>(R4=5V, ESP32=3.3V) · SEN55 I2C 케이블 · 0x69 주소 확인. <code class="in">sample</code> 숫자가 늘어야 정상(발행 주기 되면 <code class="in">PUB:</code>).</div>
+    <div class="box warn"><span class="lbl">⚠️ 타임스탬프만 갱신되고 값이 얼어붙으면 (모든 변수 동일값 반복)</span>MCU·WiFi·MQTT는 정상인데 <b>센서 읽기만 죽은</b> 상태 — 공유 I2C 버스 행(SCD30 클럭스트레칭 락업 등)이 전형. 얼어붙은 값이 물리적으로 불가능(온도 90°C대, 습도 100% 초과, PM 수천)하면 확정적. <b>조치</b>: 해당 노드 전원 재인가. v2 펌웨어는 이를 자동 감지(연속 무효 10회 또는 SCD30 3분 무응답)해 <b>버스 복구 → 재초기화 → MCU 리셋</b>까지 자동 수행하고, 물리범위 밖 샘플은 평균에서 제외합니다. <b>복구 후</b>: DB에 쌓인 동결 구간은 레짐 차트의 median/IQR 기준선을 오염시키므로 삭제 권장.</div>
   
       <h3 style="border-left:4px solid #FFB300;padding-left:10px">6-2. 비전 노드 펌웨어 (Nicla Vision / Portenta H7 — 선택)</h3>
       <p>FOMO 사람 탐지로 <b>재실 인원</b>을 발행하는 9번째 노드 유형입니다. 배경·설계·운용은 <b>V장(비전 노드)</b> 참조 — 여기서는 펌웨어 전문과 준비만 다룹니다.</p>
@@ -3917,6 +4170,8 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) -&
     flexible regime-switching detection. NOTE: normalization removes ABSOLUTE level
     (e.g. 500 vs 900ppm both map near 0); absolute level is shown by the CO2 barplot.
     Density gradation: denser quadrant = deeper tint. Foundation for future GMM.
+    v2: past-point scatter removed (readability) -&gt; density bg + current vectors only,
+    enlarged current markers + class label annotated at each arrow tip.
     Quadrant split at median(=0): low-low=Clean / lowCO2-highVOC=Matter&gt;Human /
     highCO2-lowVOC=Human&gt;Matter / high-high=Human~=Matter.&quot;&quot;&quot;
     d = dfa[[&quot;co2&quot;, &quot;voc&quot;, &quot;node&quot;]].dropna()
@@ -3965,16 +4220,8 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) -&
 
     # node colors: shared vivid identity palette (see NODE_PALETTE)
     node_list = sorted(d[&quot;node&quot;].unique(), key=lambda n: labels.get(n, n))
-    # past points: small &amp; faint (distribution backdrop). Clip to range edges.
-    for i, nd in enumerate(node_list):
-        m = d[&quot;node&quot;] == nd
-        fig.add_trace(go.Scatter(
-            x=zco2[m].clip(-amax, amax), y=zvoc[m].clip(-amax, amax), mode=&quot;markers&quot;,
-            name=label_of(nd, labels), legendgroup=nd,
-            marker=dict(size=5, color=node_color(nd),
-                        line=dict(width=0.3, color=&quot;rgba(0,0,0,0.3)&quot;), opacity=0.35),
-        ))
-    # current position: vector from origin + emphasized marker (per node)
+    # 과거 개별 산점은 제거 — 분포 맥락은 밀도 배경(Histogram2d)만 유지 (가독성)
+    # current position: vector from origin + enlarged marker + class label (per node)
     if latest:
         for i, nd in enumerate(node_list):
             cur = latest.get(nd)
@@ -3990,20 +4237,34 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) -&
             # vector: origin -&gt; current (arrow)
             fig.add_annotation(x=cx, y=cy, ax=0, ay=0,
                                xref=&quot;x&quot;, yref=&quot;y&quot;, axref=&quot;x&quot;, ayref=&quot;y&quot;,
-                               showarrow=True, arrowhead=2, arrowsize=1.2,
-                               arrowwidth=2, arrowcolor=col, opacity=0.9)
-            # emphasized current marker (modest size). Diamond if clipped (out of range).
+                               showarrow=True, arrowhead=2, arrowsize=1.0,
+                               arrowwidth=2, arrowcolor=col, opacity=0.95)
+            # enlarged current marker. Diamond if clipped (out of range).
             fig.add_trace(go.Scatter(
                 x=[cx], y=[cy], mode=&quot;markers&quot;,
                 name=f&quot;{label_of(nd, labels)} (now)&quot;, legendgroup=nd,
                 showlegend=False,
-                marker=dict(size=11, color=col,
+                marker=dict(size=16, color=col,
                             symbol=(&quot;diamond-open&quot; if outside else &quot;star&quot;),
-                            line=dict(width=1.2, color=INK)),
+                            line=dict(width=1.6, color=INK)),
                 hovertemplate=(f&quot;{label_of(nd, labels)} now&lt;br&gt;CO2 r=%{{x:.2f}}&quot;
                                f&quot;&lt;br&gt;VOC r=%{{y:.2f}}&quot;
                                f&quot;{&#x27; (범위밖)&#x27; if outside else &#x27;&#x27;}&lt;extra&gt;&lt;/extra&gt;&quot;),
             ))
+            # class label at the arrow tip (offset outward along the vector)
+            norm = (cx * cx + cy * cy) ** 0.5
+            ux, uy = ((cx / norm, cy / norm) if norm &gt; 1e-6 else (1.0, 0.0))
+            off = amax * 0.07
+            lx = max(-amax * 0.98, min(amax * 0.98, cx + ux * off))
+            ly = max(-amax * 0.98, min(amax * 0.98, cy + uy * off))
+            fig.add_annotation(x=lx, y=ly, text=label_of(nd, labels),
+                               showarrow=False,
+                               xanchor=(&quot;left&quot; if ux &gt;= 0 else &quot;right&quot;),
+                               yanchor=(&quot;bottom&quot; if uy &gt;= 0 else &quot;top&quot;),
+                               font={&quot;size&quot;: 9, &quot;color&quot;: col},
+                               bgcolor=&quot;rgba(0,0,0,0.45)&quot;,
+                               bordercolor=col, borderwidth=1, borderpad=1,
+                               opacity=0.95)
     # quadrant labels with inequality notation (Human vs Matter)
     #  x+ = CO2 high (human factor) ; y+ = VOC high (matter factor)
     qlabels = [( amax*0.6,  amax*0.6, &quot;Human \u2248 Matter&quot;),   # high-high (both)
@@ -4380,6 +4641,28 @@ with st.expander(&quot;Clear all collected data (DANGER)&quot;, expanded=False):
 </pre>
 
     <div class="box"><span class="lbl">센서를 바꾸거나 추가하려면</span>코드 상단 <code class="in">METRICS</code> 딕셔너리 한 곳만 고치면 게이지·boxplot·상관·시계열·CSV가 모두 자동으로 따라옵니다. (게이지 범위·색도 여기서)</div>
+
+    <h3 style="border-left:4px solid #FFB300;padding-left:10px">심화 — CAQI 요약지수 설계 (선택 · 데이터 리터러시 교육 소재)</h3>
+    <p>대시보드의 게이지 6개·차트를 <b>한 숫자</b>로 압축해 "지금 이 교실 공기, 한마디로 어때?"에 답하는 <b>요약지수(KPI)</b>를 둘 수 있습니다. 아래는 AQI 계열 표준 방법론(서브지수 → 구간 선형보간 → 최솟값 통합)을 교실 맥락에 맞춘 설계안입니다.</p>
+
+    <div class="box"><span class="lbl">정의 — 교실공기지수 (0~100)</span>
+    변수별 서브지수 <code class="in">S</code>를 구한 뒤 <b>최솟값</b>이 지수: <code class="in">지수 = min(S_CO2, S_PM2.5, S_PM10, S_VOC)</code>. 최솟값을 만든 변수가 <b>지배 인자</b>로 함께 표시됩니다(예: "42점 · 지배 인자 CO₂ → 환기하세요"). 가중평균을 쓰지 않는 이유: 평균은 CO₂ 2,000ppm의 위험 신호를 좋은 PM 점수가 희석해 버립니다. 최솟값(주오염물질) 방식은 US EPA AQI·한국 CAI가 쓰는 표준 통합법입니다.</div>
+
+    <table><thead><tr><th>변수</th><th>100점</th><th>75점 (좋음)</th><th>50점 (기준선)</th><th>25점 (나쁨)</th><th>0점</th></tr></thead><tbody>
+    <tr><td>CO₂ (ppm)</td><td>≤450</td><td>700</td><td><b>1,000</b> ★</td><td>1,750</td><td>≥2,500</td></tr>
+    <tr><td>PM2.5 (µg/m³)</td><td>≤5</td><td>15</td><td><b>35</b> ★</td><td>65</td><td>≥100</td></tr>
+    <tr><td>PM10 (µg/m³)</td><td>≤10</td><td>40</td><td><b>75</b> ★</td><td>140</td><td>≥200</td></tr>
+    <tr><td>VOC (Index)</td><td>≤100</td><td>175</td><td>250</td><td>325</td><td>≥400</td></tr>
+    </tbody></table>
+    <p>★ = 학교보건법 교사 내 공기질 유지기준(법정 수치). 구간 안은 선형보간 — 예: CO₂ 850ppm → 700~1,000 구간 → 75 − 25×(850−700)/300 = <b>62.5점</b>. 등급: 75+ 좋음 🟢 / 50~74 보통 🟡 / 25~49 주의 🟠(환기 권장) / 0~24 나쁨 🔴(즉시 환기). <b>온·습도는 지수에서 제외</b>(오염이 아닌 쾌적성) — 별도 배지(쾌적: 18~28°C·30~80%)로 분리.</p>
+
+    <div class="box tip"><span class="lbl">💡 "CO₂·VOC로 만든 지수를 CO₂·VOC로 분석하면 순환논리 아닌가?" — 용도가 요약이면 무관합니다</span>
+    학급 <b>평균 점수</b>에 비유하면 분명해집니다. 국·수·영 점수를 평균 내 "82점"으로 요약하는 건 아무 문제가 없습니다 — 여러 숫자를 하나로 <b>접는(압축)</b> 것뿐, 검증할 주장이 없으니 순환할 고리도 없습니다. 반면 "국·수·영으로 평균 점수를 예측하는 AI, 정확도 100%!"는 순환입니다 — 자기가 만든 공식을 자기가 되풀이한 것이니까요. 전국민이 보는 미세먼지 AQI도 측정값의 결정론적 요약이지만 아무도 순환이라 하지 않는 이유가 이것입니다: AQI는 <b>예측 대상이 아니라 소통 도구</b>입니다. 이 지수도 같은 지위입니다.
+    <br><br><b>단, 경계선이 있습니다</b> — 훗날 "머신러닝으로 이 지수를 예측하자"거나 "어떤 변수가 지수에 영향을 주나 분석하자"는 순간, 지수가 <b>학습 타겟으로 승격</b>되며 순환이 시작됩니다(입력으로 만든 타겟을 입력으로 맞추면 발견이 아니라 공식 복원). 그때는 타겟을 <b>다른 정보 채널</b>에서 가져와야 합니다: ① 미래 시점 값(30분 뒤 지수 예측 = 환기 조기경보) ② 비전 노드의 재실 인원(occ — 독립 측정 채널) ③ 외부 라벨(시간표·창문 개폐·체감 설문). 참고로 레짐 분류(GMM 등)는 비지도학습이라 타겟 자체가 없으므로 이 이슈와 무관합니다.</div>
+
+    <div class="box warn"><span class="lbl">⚠️ 정직성 — 이 지수는 "검증된 표준"이 아니라 "검증된 방법론 위의 로컬 운영 지표"입니다</span>
+    ① 골격(서브지수·선형보간·최솟값)과 ★ 기준선은 표준·법정 근거가 있으나, <b>나머지 경계값(450/700/1,750/2,500 등)은 설계 판단</b>입니다. ② SEN55의 VOC는 절대 농도가 아닌 <b>Sensirion VOC Index</b>(100 = 그 센서의 최근 24h 평균, 즉 노드별 상대 지표) — VOC 축은 근거가 가장 약하고, 교실 간 비교 시 공정하지 않다는 점을 각주로 명시하세요. ③ 대외 보고서에는 표준 지수처럼 인용하지 말고 설계 근거를 밝힌 자체 지표로 소개할 것. 이 "숫자는 측정이 아니라 설계"라는 점 자체가 훌륭한 데이터 리터러시 수업 소재입니다.</div>
+
   </section>
 
   <!-- s9 실행 투트랙 -->
@@ -5557,6 +5840,8 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) -&
     flexible regime-switching detection. NOTE: normalization removes ABSOLUTE level
     (e.g. 500 vs 900ppm both map near 0); absolute level is shown by the CO2 barplot.
     Density gradation: denser quadrant = deeper tint. Foundation for future GMM.
+    v2: past-point scatter removed (readability) -&gt; density bg + current vectors only,
+    enlarged current markers + class label annotated at each arrow tip.
     Quadrant split at median(=0): low-low=Clean / lowCO2-highVOC=Matter&gt;Human /
     highCO2-lowVOC=Human&gt;Matter / high-high=Human~=Matter.&quot;&quot;&quot;
     d = dfa[[&quot;co2&quot;, &quot;voc&quot;, &quot;node&quot;]].dropna()
@@ -5605,16 +5890,8 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) -&
 
     # node colors: shared vivid identity palette (see NODE_PALETTE)
     node_list = sorted(d[&quot;node&quot;].unique(), key=lambda n: labels.get(n, n))
-    # past points: small &amp; faint (distribution backdrop). Clip to range edges.
-    for i, nd in enumerate(node_list):
-        m = d[&quot;node&quot;] == nd
-        fig.add_trace(go.Scatter(
-            x=zco2[m].clip(-amax, amax), y=zvoc[m].clip(-amax, amax), mode=&quot;markers&quot;,
-            name=label_of(nd, labels), legendgroup=nd,
-            marker=dict(size=5, color=node_color(nd),
-                        line=dict(width=0.3, color=&quot;rgba(0,0,0,0.3)&quot;), opacity=0.35),
-        ))
-    # current position: vector from origin + emphasized marker (per node)
+    # 과거 개별 산점은 제거 — 분포 맥락은 밀도 배경(Histogram2d)만 유지 (가독성)
+    # current position: vector from origin + enlarged marker + class label (per node)
     if latest:
         for i, nd in enumerate(node_list):
             cur = latest.get(nd)
@@ -5630,20 +5907,34 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) -&
             # vector: origin -&gt; current (arrow)
             fig.add_annotation(x=cx, y=cy, ax=0, ay=0,
                                xref=&quot;x&quot;, yref=&quot;y&quot;, axref=&quot;x&quot;, ayref=&quot;y&quot;,
-                               showarrow=True, arrowhead=2, arrowsize=1.2,
-                               arrowwidth=2, arrowcolor=col, opacity=0.9)
-            # emphasized current marker (modest size). Diamond if clipped (out of range).
+                               showarrow=True, arrowhead=2, arrowsize=1.0,
+                               arrowwidth=2, arrowcolor=col, opacity=0.95)
+            # enlarged current marker. Diamond if clipped (out of range).
             fig.add_trace(go.Scatter(
                 x=[cx], y=[cy], mode=&quot;markers&quot;,
                 name=f&quot;{label_of(nd, labels)} (now)&quot;, legendgroup=nd,
                 showlegend=False,
-                marker=dict(size=11, color=col,
+                marker=dict(size=16, color=col,
                             symbol=(&quot;diamond-open&quot; if outside else &quot;star&quot;),
-                            line=dict(width=1.2, color=INK)),
+                            line=dict(width=1.6, color=INK)),
                 hovertemplate=(f&quot;{label_of(nd, labels)} now&lt;br&gt;CO2 r=%{{x:.2f}}&quot;
                                f&quot;&lt;br&gt;VOC r=%{{y:.2f}}&quot;
                                f&quot;{&#x27; (범위밖)&#x27; if outside else &#x27;&#x27;}&lt;extra&gt;&lt;/extra&gt;&quot;),
             ))
+            # class label at the arrow tip (offset outward along the vector)
+            norm = (cx * cx + cy * cy) ** 0.5
+            ux, uy = ((cx / norm, cy / norm) if norm &gt; 1e-6 else (1.0, 0.0))
+            off = amax * 0.07
+            lx = max(-amax * 0.98, min(amax * 0.98, cx + ux * off))
+            ly = max(-amax * 0.98, min(amax * 0.98, cy + uy * off))
+            fig.add_annotation(x=lx, y=ly, text=label_of(nd, labels),
+                               showarrow=False,
+                               xanchor=(&quot;left&quot; if ux &gt;= 0 else &quot;right&quot;),
+                               yanchor=(&quot;bottom&quot; if uy &gt;= 0 else &quot;top&quot;),
+                               font={&quot;size&quot;: 9, &quot;color&quot;: col},
+                               bgcolor=&quot;rgba(0,0,0,0.45)&quot;,
+                               bordercolor=col, borderwidth=1, borderpad=1,
+                               opacity=0.95)
     # quadrant labels with inequality notation (Human vs Matter)
     #  x+ = CO2 high (human factor) ; y+ = VOC high (matter factor)
     qlabels = [( amax*0.6,  amax*0.6, &quot;Human \u2248 Matter&quot;),   # high-high (both)
