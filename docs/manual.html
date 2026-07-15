@@ -2888,7 +2888,9 @@ void makeNodeId() {
 bool connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return true;
   Serial.print(&quot;WiFi&quot;);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  // 숨김 SSID 대응: 보안모드(WPA2-AES) 명시 → 스캔 생략하고 직접 join
+  // (mbed 코어의 2-인자 begin은 스캔에서 SSID를 못 찾으면 즉시 실패함)
+  WiFi.begin(WIFI_SSID, WIFI_PASS, ENC_TYPE_CCMP);
   unsigned long t0 = millis();
   while (WiFi.status() != WL_CONNECTED &amp;&amp; millis() - t0 &lt; 15000) {
     delay(500); Serial.print(&quot;.&quot;);
@@ -3270,7 +3272,9 @@ void makeNodeId() {
 bool connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return true;
   Serial.print(&quot;WiFi&quot;);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  // 숨김 SSID 대응: 보안모드(WPA2-AES) 명시 → 스캔 생략하고 직접 join
+  // (mbed 코어의 2-인자 begin은 스캔에서 SSID를 못 찾으면 즉시 실패함)
+  WiFi.begin(WIFI_SSID, WIFI_PASS, ENC_TYPE_CCMP);
   unsigned long t0 = millis();
   while (WiFi.status() != WL_CONNECTED &amp;&amp; millis() - t0 &lt; 15000) {
     delay(500); Serial.print(&quot;.&quot;);
@@ -3891,14 +3895,14 @@ _VIS_CSS = &quot;&quot;&quot;
   .vp .fresh{font-size:10px;padding:2px 9px;border-radius:20px;
              border:1px solid #3a414e;color:#8de5a1;}
   .vp .fresh.stale{color:#ff9f9b;}
-  .vp .chips{display:flex;gap:8px;margin:8px 0 10px;flex-wrap:wrap;}
+  .vp .chips{display:flex;gap:8px;margin:8px 0 10px;width:clamp(288px,50%,373px);}
   .vp .chip{background:#1a1f29;border:1px solid #333b49;border-radius:8px;
-            padding:4px 12px;text-align:center;min-width:64px;}
+            padding:4px 12px;text-align:center;flex:1;min-width:0;}
   .vp .chip .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;}
   .vp .chip.acc .v{color:__ACC__;}
   .vp .chip .l{font-size:9.5px;color:#aab2bd;letter-spacing:.08em;}
   .vp .maprow{display:flex;gap:12px;align-items:stretch;}
-  .vp .map{position:relative;flex:0 0 288px;height:216px;background:#161a22;
+  .vp .map{position:relative;flex:0 0 clamp(288px,50%,373px);aspect-ratio:4/3;height:auto;background:#161a22;
            border:1px dashed #3a414e;border-radius:8px;overflow:hidden;
            background-image:
              repeating-linear-gradient(0deg,transparent,transparent 23px,__GRID__ 24px),
@@ -4008,7 +4012,7 @@ def render_vision_panel(env_node: str, labels: dict):
         &lt;/div&gt;
       &lt;/div&gt;
     &lt;/div&gt;&quot;&quot;&quot;
-    components.html(css + body, height=396)
+    components.html(css + body, height=436)
 
 
 
