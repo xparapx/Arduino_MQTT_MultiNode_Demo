@@ -3855,7 +3855,7 @@ def load_merged_analysis(min_n_env: int = 0, min_n_occ: int = 25) -&gt; pd.DataF
     NTP-aligned bucket grid, so no resample/asof needed. Rows whose occ bucket
     has too few samples (n &lt; min_n_occ) are dropped as low-quality.
     Columns: t_kst, room, co2, voc, scd_temp, scd_hum, pm2p5, pm10p0,
-             occ, occ_med, occ_max, occ_n
+             occ_mean, occ_med, occ_max, occ_n
     &quot;&quot;&quot;
     if not _occ_table_exists():
         return pd.DataFrame()
@@ -3865,7 +3865,7 @@ def load_merged_analysis(min_n_env: int = 0, min_n_occ: int = 25) -&gt; pd.DataF
             &quot;SELECT ts, node, co2, voc, scd_temp, scd_hum, pm2p5, pm10p0, n &quot;
             &quot;FROM readings&quot;, con)
         occ = pd.read_sql_query(
-            &quot;SELECT ts, node, occ, occ_med, occ_max, n AS occ_n &quot;
+            &quot;SELECT ts, node, occ AS occ_mean, occ_med, occ_max, n AS occ_n &quot;
             &quot;FROM occupancy WHERE n &gt;= ?&quot;, con, params=(min_n_occ,))
     if env.empty or occ.empty:
         return pd.DataFrame()
@@ -3874,14 +3874,14 @@ def load_merged_analysis(min_n_env: int = 0, min_n_occ: int = 25) -&gt; pd.DataF
     env = env.dropna(subset=[&quot;room&quot;])
     occ = occ.dropna(subset=[&quot;room&quot;])
     m = pd.merge(env.drop(columns=[&quot;node&quot;]),
-                 occ[[&quot;ts&quot;, &quot;room&quot;, &quot;occ&quot;, &quot;occ_med&quot;, &quot;occ_max&quot;, &quot;occ_n&quot;]],
+                 occ[[&quot;ts&quot;, &quot;room&quot;, &quot;occ_mean&quot;, &quot;occ_med&quot;, &quot;occ_max&quot;, &quot;occ_n&quot;]],
                  on=[&quot;ts&quot;, &quot;room&quot;], how=&quot;inner&quot;)
     if m.empty:
         return m
     m[&quot;t_kst&quot;] = (pd.to_datetime(m[&quot;ts&quot;]) + pd.Timedelta(hours=9)
                   ).dt.strftime(&quot;%Y-%m-%d %H:%M:%S&quot;)
     cols = [&quot;t_kst&quot;, &quot;room&quot;, &quot;co2&quot;, &quot;voc&quot;, &quot;scd_temp&quot;, &quot;scd_hum&quot;,
-            &quot;pm2p5&quot;, &quot;pm10p0&quot;, &quot;occ&quot;, &quot;occ_med&quot;, &quot;occ_max&quot;, &quot;occ_n&quot;]
+            &quot;pm2p5&quot;, &quot;pm10p0&quot;, &quot;occ_mean&quot;, &quot;occ_med&quot;, &quot;occ_max&quot;, &quot;occ_n&quot;]
     return m[cols].sort_values([&quot;room&quot;, &quot;t_kst&quot;]).reset_index(drop=True)
 
 
@@ -4549,6 +4549,32 @@ if not mrg.empty:
 elif _occ_table_exists():
     st.caption(&quot;Merged export: no matching (bucket, room) rows yet -- &quot;
                &quot;needs both env and vision nodes publishing with NTP time.&quot;)
+
+# (5-2b) vision occupancy raw download -- full occupancy schema as stored
+#         (merged export drops cents/w and low-n rows; this keeps everything)
+def load_occ_all() -&gt; pd.DataFrame:
+    if not _occ_table_exists():
+        return pd.DataFrame()
+    sql = (&quot;SELECT datetime(ts,&#x27;+9 hours&#x27;) AS recv_time_kst, ts AS ts_utc, &quot;
+           &quot;node, occ AS occ_mean, occ_med, occ_max, occ_last, cents, w, n &quot;
+           &quot;FROM occupancy ORDER BY id&quot;)
+    with closing(sqlite3.connect(DB)) as con:
+        return pd.read_sql_query(sql, con)
+
+occ_all = load_occ_all()
+if not occ_all.empty:
+    occ_all.insert(3, &quot;room&quot;, occ_all[&quot;node&quot;].map(labels).fillna(&quot;&quot;))
+    st.download_button(
+        f&quot;Download vision occupancy CSV ({len(occ_all):,} rows / &quot;
+        f&quot;{occ_all[&#x27;node&#x27;].nunique()} nodes)&quot;,
+        data=occ_all.to_csv(index=False).encode(&quot;utf-8-sig&quot;),
+        file_name=f&quot;occupancy_all_{str(occ_all[&#x27;recv_time_kst&#x27;].max())[:10]}.csv&quot;,
+        mime=&quot;text/csv&quot;,
+        key=&quot;dl_occ_raw&quot;,
+        help=&quot;occupancy 테이블 원본 전체. cents=최대 인원 시점 centroid JSON(w 좌표계), &quot;
+             &quot;n=버킷 내 유효 샘플 수(정상 ~30, 낮으면 저품질 버킷). &quot;
+             &quot;병합 CSV와 달리 품질 필터 없이 전 행 포함 — 결측/장애 구간 분석에도 사용.&quot;,
+    )
 
 # (5-3) date-range download -- date picker + hour dropdown
 st.markdown(f&quot;&lt;div style=&#x27;color:{INK_DIM};margin:10px 0 4px;&#x27;&gt;&quot;
