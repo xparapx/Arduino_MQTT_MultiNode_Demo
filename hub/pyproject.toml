@@ -12,3 +12,24 @@ dependencies = [
     "streamlit>=1.58.0",
     "streamlit-autorefresh>=1.0.1",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.16.5",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+# hub.py / dashboard.py are board code kept byte-identical to production (plan section 0.2);
+# hub_cloud.py and en/ are legacy reference copies (docs/DRIFT.md). Lint only new code.
+extend-exclude = ["hub.py", "dashboard.py", "hub_cloud.py", "en", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B"]

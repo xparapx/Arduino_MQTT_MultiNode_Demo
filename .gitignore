@@ -45,3 +45,6 @@ secrets.env
 *.bak
 *.save
 _phase0_backup/
+
+# Phase 1: the anonymised test fixture is the one DB we do commit
+!hub/fixtures/sample.db
