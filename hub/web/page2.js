@@ -1,7 +1,7 @@
 /* Page 2 -- diagnosis: everything from one /api/analysis bundle (analysis table only). */
 "use strict";
 (() => {
-  const { $, esc, css, num, dash, sec, dot, regime, chip, getJSON, poll, table } = AQ;
+  const { $, esc, css, num, dash, sec, dot, regime, chip, actionChip, getJSON, poll, table } = AQ;
   let A = null, within = null;
   const pct = (v) => v === null || v === undefined ? "—" : `${Number(v).toFixed(1)}%`;
   const kstRange = (w) => w ? `${w.start.slice(5, 10)} → ${w.end.slice(5, 10)}` : "—";
@@ -39,7 +39,7 @@
 
     // B
     const BH = 470;
-    const brows = A.rooms.map((x) => ({ cls: x.judged ? "" : "dim", cells: [nm(x), regime(x.regime), num(x.co2), num(x.voc), x.judged ? `${x.dwell_censored ? "≥" : ""}${num(x.dwell_min)}` : "—", esc(x.action.word)], txt: [5] }));
+    const brows = A.rooms.map((x) => ({ cls: x.judged ? "" : "dim", cells: [nm(x), regime(x.regime), num(x.co2), num(x.voc), x.judged ? `${x.dwell_censored ? "≥" : ""}${num(x.dwell_min)}` : "—", actionChip(x.action.kind, x.action.word)], txt: [5] }));
     h += sec("plane", "cyan", "현재 레짐 — 고정 스케일 CO₂×VOC 평면", `hourly · ${esc(A.model.ver || "—")} predict · ${cfg.regime.smooth_window * cfg.regime.bucket_minutes}분 평활 · CO₂÷${cfg.regime.co2_scale} · VOC÷${cfg.regime.voc_scale}`)
       + `<div class="grid g5" style="align-items:stretch"><div class="span3 panel" style="height:${BH}px">${CH.plane(A.rooms, cfg, meta, BH - 30)}</div>`
       + `<div class="span2 panel" style="height:${BH}px;display:flex;flex-direction:column">${table(["교실", "레짐", "CO₂", "VOC", "체류(min)", "행동"], brows)}<p class="note" style="margin-top:auto">체류 = 현재 레짐에 머문 시간(관측 하한). 축은 외기 기준 고정 — 재학습해도 4분면 위치가 유지되어 지난주와 비교 가능. 제외 = QC 게이트 미달 — 평면에 별 없음.</p></div></div>`;
@@ -114,7 +114,7 @@
     const rule = Object.values(devs).map((d) => `${d.device === "fan" ? "환풍기" : "공청기"} ${d.state ? "ON · " : ""}${d.rule}`).join("\n") || "—";
     const keep = a.since_kst ? `${a.since_kst}부터${a.binding ? ` · 최소 ~${a.hold_until_kst}` : ""}` : "—";
     const why = x.judged ? `CO₂ ${num(x.co2)} ppm · VOC ${num(x.voc)} · ${esc(a.reason)}` : esc(a.reason || "QC 게이트 미달 — 규칙층도 돌리지 않음");
-    return `<div class="act${k === "hold" ? " hold" : ""}" style="border-left-color:${col}"><div class="h">${nm(x)}${regime(x.regime)}</div><div class="do" style="color:${k === "hold" ? css("--dim") : col};font-weight:${["fan", "purifier", "both"].includes(k) ? 700 : 500}">${esc(a.word)}</div>`
+    return `<div class="act${k === "hold" ? " hold" : ""}" style="border-left-color:${col}"><div class="h">${nm(x)}${regime(x.regime)}</div><div class="do">${actionChip(k, a.word, true)}</div>`
       + `<div class="chain"><div><b>진단 (ML)</b><span>${esc(diag)}</span></div><div><b>판단 (규칙)</b><span style="white-space:pre-line">${esc(rule)}</span></div><div><b>유지</b><span>${esc(keep)}</span></div></div><div class="why">${why}</div></div>`;
   }
 

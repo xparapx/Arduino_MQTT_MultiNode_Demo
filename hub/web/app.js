@@ -87,6 +87,7 @@ const AQ = (() => {
   const REGIME_KO = { clean: "청정", matter: "물질", human: "인체", mixed: "복합", hold: "보류" };
   const regime = (r) => r ? `<span class="regime r-${r in REGIME_KO ? r : "hold"}">${REGIME_KO[r] || r}</span>` : `<span class="chipx ex">제외</span>`;
   const chip = (t, k) => `<span class="chipx ${k || ""}">${esc(t)}</span>`;
+  const actionChip = (kind, word, big) => `<span class="achip k-${kind || "hold"}${big ? " big" : ""}">${esc(word)}</span>`;
   const regimeColor = (r) => css({ clean: "--green", matter: "--orange", human: "--blue", mixed: "--red" }[r] || "--grid");
   function table(head, rows, cls = "") {
     const th = head.map((h) => `<th>${h}</th>`).join("");
@@ -111,5 +112,5 @@ const AQ = (() => {
   }
 
   return { $, esc, css, num, dash, theme, setTheme, initTheme, onTheme, getJSON, poll, initTip, toast, sec, dot,
-           regime, chip, regimeColor, REGIME_KO, table, initSidebar };
+           regime, chip, actionChip, regimeColor, REGIME_KO, table, initSidebar };
 })();
