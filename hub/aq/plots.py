@@ -110,9 +110,10 @@ def label_positions(pts: list[tuple[float, float]], near: float = LABEL_NEAR) ->
 
 def action_summary(devs: dict) -> dict:
     """Collapse the fan / purifier action payloads of one room into one row:
-    word (ACTION_WORDS), reason, since (latest state change, UTC) and hold_until
-    (latest, UTC) of the devices that are ON; ``kept`` when every ON device is
-    only held by hysteresis / minimum run time."""
+    word (ACTION_WORDS), reason, and -- for the devices that are ON -- since
+    (latest switch-on, UTC) and hold_until (latest, UTC); both None when nothing
+    is ON. ``kept`` when every ON device is only held by hysteresis / minimum
+    run time."""
     if not devs:
         return {"word": "—", "reason": "", "since": None, "hold_until": None, "kept": False}
     if all(p["rule"] == HOLD for p in devs.values()):
@@ -132,16 +133,17 @@ def action_summary(devs: dict) -> dict:
         val = p["values"].get(var)
         parts.append(f"{DEVICE_KO.get(d, d)} {p['rule']}"
                      + (f" ({var} {val:.0f})" if isinstance(val, (int, float)) else ""))
-    on_devs = [p for p in devs.values() if p["state"] == 1] or list(devs.values())
+    on_devs = [p for p in devs.values() if p["state"] == 1]
     return {"word": word, "reason": " · ".join(parts), "kept": kept,
-            "since": max(p["since"] for p in on_devs),
-            "hold_until": max(p["hold_until"] for p in on_devs)}
+            "since": max(p["since"] for p in on_devs) if on_devs else None,
+            "hold_until": max(p["hold_until"] for p in on_devs) if on_devs else None}
 
 
 def regime_table(regime_now: dict, actions: dict, labels: dict) -> pd.DataFrame:
     rows = []
     for node, p in regime_now.items():
-        rows.append({"교실": labels.get(node, node), "레짐": REGIME_KO.get(p["regime"], p["regime"]),
+        rows.append({"교실": labels.get(node, node),
+                     "레짐": REGIME_KO.get(p["regime"], "보류" if p["regime"] == HOLD else p["regime"]),
                      "CO₂": None if p["co2"] != p["co2"] else round(p["co2"]),
                      "VOC": None if p["voc"] != p["voc"] else round(p["voc"]),
                      "체류(min)": f"{'≥' if p['dwell_censored'] else ''}{p['dwell_min']:.0f}",
@@ -230,15 +232,19 @@ def transition_matrix_figure(counts: dict) -> go.Figure:
 # ---- E / F / G / I tables ----------------------------------------------------------
 
 def actions_table(actions: dict, labels: dict, run_at: str | None = None) -> pd.DataFrame:
-    """One row per room: 행동 · 근거 · 판정 시각 (since of the ON devices, KST) ·
-    유지 (hold_until while the minimum run time still binds at run_at)."""
+    """One row per room: 행동 · 근거 · 판정 시각 (the hourly run, KST) · 유지 (when
+    something is ON: since when, plus the minimum-run end while it still binds)."""
     rows = []
     for node, devs in actions.items():
         a = action_summary(devs)
-        binding = a["hold_until"] and (run_at is None or a["hold_until"] > run_at)
+        keep = "—"
+        if a["since"]:
+            keep = f"{_kst(a['since']).strftime('%m-%d %H:%M')}부터"
+            if run_at is None or a["hold_until"] > run_at:
+                keep += f" · 최소 ~{_kst(a['hold_until']).strftime('%H:%M')}"
         rows.append({"교실": labels.get(node, node), "행동": a["word"], "근거": a["reason"],
-                     "판정 시각": _kst(a["since"]).strftime("%m-%d %H:%M") if a["since"] else "—",
-                     "유지": f"~{_kst(a['hold_until']).strftime('%H:%M')}" if binding else "—"})
+                     "판정 시각": _kst(run_at).strftime("%m-%d %H:%M") if run_at else "—",
+                     "유지": keep})
     return pd.DataFrame(rows)
 
 

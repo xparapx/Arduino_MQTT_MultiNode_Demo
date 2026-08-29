@@ -18,7 +18,7 @@ from pathlib import Path
 import streamlit as st
 
 from aq import governance
-from aq.ui_common import DB, INK, _occ_table_exists, _ro, data_version, load_node_labels
+from aq.ui_common import DB, INK, _occ_table_exists, _ro, data_version
 
 TS_FMT = "%Y-%m-%d %H:%M:%S"
 KST = timedelta(hours=9)
@@ -92,7 +92,7 @@ def kst(ts_utc: str | None, fmt: str = "%m-%d %H:%M") -> str:
 def service_status(max_id: int, aid: int) -> dict:
     """hub freshness, node activity, analyst runs and model version."""
     out = {"hub_last": None, "hub_age_min": None, "readings_rows": 0, "env_active": 0,
-           "vis_recent": 0, "vis_nodes": [], "hourly": "", "daily": "", "weekly": "",
+           "vis_recent": 0, "vis_nodes": [], "env_nodes": [], "hourly": "", "daily": "", "weekly": "",
            "model": None, "journal": None}
     if not os.path.isfile(DB):
         return out
@@ -100,14 +100,16 @@ def service_status(max_id: int, aid: int) -> dict:
         out["journal"] = con.execute("PRAGMA journal_mode").fetchone()[0]
         out["readings_rows"] = con.execute("SELECT COUNT(*) FROM readings").fetchone()[0]
         last = con.execute("SELECT MAX(ts) FROM readings").fetchone()[0]
+        # node totals come from the tables, not nodes.json: on the board every node id
+        # is "node_XXXXXX", so only readings / occupancy tell environment and vision apart
+        out["env_nodes"] = [r[0] for r in con.execute(
+            "SELECT node FROM readings GROUP BY node ORDER BY node")]
         out["env_active"] = con.execute(
             "SELECT COUNT(*) FROM (SELECT node FROM readings "
             "WHERE id > (SELECT MAX(id) FROM readings) - 2000 GROUP BY node "
             "HAVING MAX(ts) >= datetime('now', ?))", (f"-{ACTIVE_WINDOW_MIN} minutes",)
         ).fetchone()[0]
         if _occ_table_exists():
-            # vision nodes = the ones that ever wrote occupancy: nodes.json carries no
-            # prefix that tells environment and vision nodes apart on the board
             out["vis_nodes"] = [r[0] for r in con.execute(
                 "SELECT node FROM occupancy GROUP BY node ORDER BY node")]
             out["vis_recent"] = con.execute(
@@ -134,7 +136,7 @@ def render_sidebar(page: str) -> None:
     max_id, _ = data_version()
     aid, _ = analysis_version()
     s = service_status(max_id, aid)
-    n_env = sum(1 for k in load_node_labels() if k not in s["vis_nodes"])
+    n_env = len(s["env_nodes"])
     with st.sidebar:
         st.markdown(f"<div style='font-weight:700;color:{INK};font-size:15px;margin-bottom:6px'>"
                     "multinode_aq · UNO Q (aqhub)</div>", unsafe_allow_html=True)
