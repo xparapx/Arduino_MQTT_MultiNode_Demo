@@ -35,3 +35,14 @@ extend-exclude = ["hub.py", "dashboard.py", "hub_cloud.py", "en", ".venv", "aq/u
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# UI modules carry Korean captions (CJK = double width for E501); everything else applies.
+"pages/*.py" = ["E501"]
+"aq/plots.py" = ["E501"]
+"aq/analysis_view.py" = ["E501"]
+
+[tool.coverage.run]
+# aq/ui_common.py is the page-1 legacy code moved verbatim in Phase 5; it is
+# exercised by scripts/perf_probe.py and tests/test_pages.py, not unit-tested.
+omit = ["aq/ui_common.py"]

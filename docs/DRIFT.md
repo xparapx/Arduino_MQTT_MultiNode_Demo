@@ -111,3 +111,18 @@
 | 첫 모델 | (v1 초기 학습) | `current`가 없으면 후보를 무조건 승격("first model"); `fit` 명령도 첫 버전은 자동 승격 | 부트스트랩 |
 | `--models-dir` | (없음) | 모든 명령에 추가 | 테스트·보드 사전 검증이 저장소 밖 디렉터리를 쓰도록 |
 | v1 학습 데이터 | 보드 28일 | 2026-08-01 05:05 ~ 08-29 05:05 UTC, 48,259행(QC 통과), 중심 clean 538/71 · matter 447/131 · human 901/118 · mixed 1831/244 | 보드 `/tmp` 사본에서 학습 후 저장소로 복사 |
+
+## Phase 5 — 플랜 §9·목업 v2와 실제 구현의 차이
+| 항목 | 플랜/목업 | 실제 | 사유 |
+|---|---|---|---|
+| `ui_common.py` 이동 | "이동만" | ast 줄 범위로 80개 정의를 **바이트 그대로** 이동, probe 수치 동일. 이동 코드는 옛 스타일이라 ruff 제외(`extend-exclude`) | 검증 가능한 이동. 새 페이지 2 코드는 `aq/plots.py`·`aq/analysis_view.py`·`pages/`(린트 대상) |
+| H "analyst가 저장한 집계본" | (kind 미정의) | 새 kind **`explore`**(Spearman 상관 + RobustScaling 밀도 pooled 24×24 / 노드 20×20 + median·IQR) — daily가 저장, 페이지 2가 그림 | 페이지 2가 readings를 읽지 않으려면 집계가 analysis에 있어야 함. §6.1 kind 목록에 추가(Phase 2 스키마 확장) |
+| 레이더 | 카드 8개 | **폴라 서브플롯 2×4 1 figure**(결정 (a)). 카드 테두리 → 서브플롯 제목 | 요소 8→1. 사용자 결정 2026-08-29 |
+| ③ 오른쪽 열 [ASK] | 비전 패널 전폭 또는 재실×CO₂ 미니 산점도 | **비전 패널 전폭** | 재실×CO₂는 페이지 2 G가 다룸; 페이지 1은 "지금 상태"만 |
+| C 밴드 범위 | 목업 "28일 × 6교실" | **7일**(`[run].daily_window_days`) | daily 창이 7일. 28일로 늘리면 daily 실행이 4배(보드 5 s → ~20 s); 필요 시 [ASK] |
+| 사이드바 상태 | hub 최신 행·analyst run_at·모델 버전 | + 활성 노드 수(15분 내 행), 비전 노드 최근(24h), readings 행 수, journal 모드 | `analysis_view.service_status()`가 readings/occupancy를 읽음 — `pages/`가 아니라 `aq/`에 있어 CI 가드 범위 밖(의도) |
+| D 표 | 목업 "가장 흔한 다음 전이" | 노드별 count 행렬을 **합산**한 pooled 행렬로 지속확률·다음 전이, 체류는 노드 중앙값의 중앙값 | 페이지가 재계산하지 않고 저장된 count만 합산 |
+| I 모델 이력 표 | 버전·학습 창·행·중심 이동·로그우도Δ·결정·사유 | `model_event` 행 20개 + `models/` 버전 목록 | weekly 실행 전에는 v1 목록만 보임 |
+| 빈 상태 | 안내 화면 | `analysis` 없음/비었을 때 안내 + 나타날 섹션 목록 + dry-run 명령. 지금 보드가 이 상태 | — |
+| ruff E501 | 100자 | `pages/*.py`, `aq/plots.py`, `aq/analysis_view.py`는 E501 제외 | 한글 캡션(CJK 2폭) |
+| `components.html` 경고 | Phase 5에서 처리 | **미처리** — `st.iframe`은 URL 전용, `st.html`은 iframe 격리 없음 | 대체재 없음. Streamlit 제거 시점에 재검토 |

@@ -23,6 +23,12 @@ SAMPLES = {
     "model_event": {"candidate_ver": "v2", "decision": "keep", "centroid_shift": 0.12,
                     "loglik_delta": 0.004, "reason": "below thresholds"},
     "summary": {"lines": ["CLASS_01: human regime for 35 min, fan ON"]},
+    "explore": {"vars": ["co2", "voc"], "corr": {"co2": {"co2": 1.0, "voc": 0.1}},
+                "pooled": {"co2_med": 600.0, "co2_iqr": 200.0, "voc_med": 100.0, "voc_iqr": 40.0,
+                           "amax": 2.0, "bins": 2, "hist": [[1, 0], [0, 1]]},
+                "nodes": {"env_01": {"co2_med": 600.0, "co2_iqr": 200.0, "voc_med": 100.0,
+                                     "voc_iqr": 40.0, "amax": 2.0, "bins": 2,
+                                     "hist": [[1, 0], [0, 1]]}}},
 }
 
 

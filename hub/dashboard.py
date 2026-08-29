@@ -39,7 +39,7 @@ from plotly.subplots import make_subplots
 import streamlit as st
 import streamlit.components.v1 as components
 
-from aq import ui_common
+from aq import analysis_view, ui_common
 from aq.ui_common import (  # noqa: F401  (page-1 uses most of these; probe reads the rest)
     DB,
     NODES_PATH,
@@ -142,6 +142,7 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
+analysis_view.render_sidebar("1")
 st.markdown(f"<h1 style='color:{INK};margin-bottom:2px;'>"
             "Multinode Environmental Sensing Monitor</h1>", unsafe_allow_html=True)
 

@@ -10,7 +10,7 @@ actuator_state tables -- and with --dry-run writes nothing at all: every row
 that would be stored is printed as JSON on stdout. Logs go to stderr.
 
 hourly : per node -> qc (today), regime_now, action (fan / purifier), forecast; summary
-daily  : per node -> qc (each day), band, transition; occ_co2 over the window
+daily  : per node -> qc (each day), band, transition; occ_co2 + explore over the window
 weekly : candidate GMM fit on the training window, stored as gmm_vN, compared with
          models/current (log-likelihood on the last 7 days, centroid shift, calendar
          boundary) -> promote / keep / reject -> model_event
@@ -33,6 +33,7 @@ sys.path.insert(0, str(HUB))
 from aq import (  # noqa: E402
     config,
     db,
+    explore,
     forecast,
     governance,
     occ_co2,
@@ -204,6 +205,8 @@ def run_daily(conn, cfg: dict, labels_map: dict, as_of: datetime, model_pack) ->
     occ = db.load_occupancy(conn, fmt(start), fmt(as_of))
     rows.append(row("occ_co2", occ_co2.spearman_by_room(clean, occ, labels_map, cfg), "all",
                     start, as_of, None, run_at))
+    # page 2 H: correlation + RobustScaling densities, aggregated here, drawn there
+    rows.append(row("explore", explore.payload(clean, cfg), "all", start, as_of, None, run_at))
     return rows
 
 

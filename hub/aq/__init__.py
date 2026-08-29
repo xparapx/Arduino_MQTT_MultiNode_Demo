@@ -11,6 +11,8 @@ __all__ = [
     "config",
     "db",
     "schemas",
+    "explore",
+    "analysis_view",
     "qc",
     "regime",
     "rules",
