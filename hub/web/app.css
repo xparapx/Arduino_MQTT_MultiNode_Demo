@@ -7,7 +7,9 @@
   --blue: #a1c9f4; --orange: #ffb482; --green: #8de5a1; --red: #ff9f9b; --purple: #d0bbff;
   --yellow: #fffea3; --cyan: #b9f2f0; --gray: #cfcfcf; --pink: #fab0e4; --brown: #debb9b;
   --badge-ink: #111;
-  --r-clean-bg: #1f3b2c; --r-matter-bg: #3d2f1c; --r-human-bg: #1f2f44; --r-mixed-bg: #3d2424; --r-both-bg: #33244a;
+  /* regime palette (user, 2026-08-29): 청정 / 물질 / 인체 / 복합 */
+  --rg-clean: #12CBC4; --rg-matter: #FFC312; --rg-human: #9980FA; --rg-mixed: #ED4C67;
+  --rg-tint: 22%;
   --chip-ok: #3b6b4c; --chip-ex: #7a3f3f; --chip-warn: #7a5a3f;
   --acc: #FFB300; --map-bg: #161a22; --map-line: #2a3140; --bar: #3d4c60;
   --chip2-bg: #1a1f29; --chip2-bd: #333b49;
@@ -21,7 +23,8 @@
   --blue: #3d7cc9; --orange: #d97a2e; --green: #1f9d8a; --red: #d9534f; --purple: #8b6fd6;
   --yellow: #b8a400; --cyan: #2aa3a0; --gray: #7a7f87; --pink: #c95aa6; --brown: #a5794a;
   --badge-ink: #ffffff;
-  --r-clean-bg: #dff5e7; --r-matter-bg: #fbe9d8; --r-human-bg: #dde9f8; --r-mixed-bg: #fbe0df; --r-both-bg: #ebe4fb;
+  --rg-clean: #0fa8a2; --rg-matter: #d39a00; --rg-human: #7a5fe0; --rg-mixed: #d63f5a;
+  --rg-tint: 16%;
   --chip-ok: #9fd3b1; --chip-ex: #f0b4b1; --chip-warn: #f0cba8;
   --acc: #b87a00; --map-bg: #f3f5f8; --map-line: #dfe3ea; --bar: #b9c4d3;
   --chip2-bg: #f7f8fa; --chip2-bd: #dfe3ea;
@@ -93,19 +96,19 @@ main { padding: 22px 28px 60px; min-width: 0; max-width: 1500px; }
   font-family: "IBM Plex Mono", monospace; border: 1px solid var(--grid); color: var(--dim); white-space: nowrap; }
 .chipx.ok { color: var(--green); border-color: var(--chip-ok); } .chipx.ex { color: var(--red); border-color: var(--chip-ex); }
 .chipx.warn { color: var(--orange); border-color: var(--chip-warn); }
-.regime { padding: 2px 8px; border-radius: 5px; font-weight: 600; font-size: 12px; display: inline-block; font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
-.r-clean { background: var(--r-clean-bg); color: var(--green); } .r-matter { background: var(--r-matter-bg); color: var(--orange); }
-.r-human { background: var(--r-human-bg); color: var(--blue); } .r-mixed { background: var(--r-mixed-bg); color: var(--red); }
-.r-hold { background: var(--panel2); color: var(--dim); }
+.regime { padding: 2px 8px; border-radius: 5px; font-weight: 600; font-size: 12px; display: inline-block; font-family: "IBM Plex Sans KR", system-ui, sans-serif;
+  border: 1px solid color-mix(in srgb, var(--rc, var(--dim)) 55%, transparent); background: color-mix(in srgb, var(--rc, var(--dim)) var(--rg-tint), transparent); color: var(--rc, var(--dim)); }
+.r-clean { --rc: var(--rg-clean); } .r-matter { --rc: var(--rg-matter); } .r-human { --rc: var(--rg-human); } .r-mixed { --rc: var(--rg-mixed); }
+.r-hold { --rc: var(--dim); background: var(--panel2); }
 /* action chips: one colour per action kind (B table, E cards) */
 .achip { display: inline-block; padding: 2px 10px; border-radius: 6px; font-weight: 700; font-size: 12px; white-space: nowrap;
   font-family: "IBM Plex Sans KR", system-ui, sans-serif; border: 1px solid transparent; }
 .achip.big { font-size: 18px; padding: 5px 14px; border-radius: 8px; align-self: flex-start; }
-.achip.k-fan { background: var(--r-mixed-bg); color: var(--red); border-color: var(--red); }
-.achip.k-purifier { background: var(--r-matter-bg); color: var(--orange); border-color: var(--orange); }
-.achip.k-both { background: var(--r-both-bg); color: var(--purple); border-color: var(--purple); }
-.achip.k-none { background: var(--r-clean-bg); color: var(--green); }
-.achip.k-hold { background: var(--panel2); color: var(--dim); border-color: var(--grid); font-weight: 500; }
+/* action kinds borrow the regime they answer: 환기 = 인체, 공기청정 = 물질, 둘 다 = 복합, 조치 없음 = 청정 */
+.achip { background: color-mix(in srgb, var(--rc, var(--dim)) var(--rg-tint), transparent); color: var(--rc, var(--dim)); border-color: color-mix(in srgb, var(--rc, var(--dim)) 60%, transparent); }
+.achip.k-fan { --rc: var(--rg-human); } .achip.k-purifier { --rc: var(--rg-matter); } .achip.k-both { --rc: var(--rg-mixed); }
+.achip.k-none { --rc: var(--rg-clean); border-color: transparent; }
+.achip.k-hold { --rc: var(--dim); background: var(--panel2); border-color: var(--grid); font-weight: 500; }
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 7px; font-size: 12px; cursor: pointer;
   background: var(--panel2); color: var(--ink); border: 1px solid var(--grid); font-family: inherit; }
 .btn.primary { background: var(--blue); color: var(--badge-ink); border-color: var(--blue); }
@@ -157,8 +160,8 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .vp .c2 .v { font-size: 19px; font-weight: 800; font-family: "IBM Plex Mono", monospace; }
 .vp .c2.acc .v { color: var(--acc); }
 .vp .c2 .l { font-size: 9.5px; color: var(--dim); letter-spacing: 0.08em; }
-.vp .maprow { display: flex; gap: 14px; margin-top: 10px; }
-.vp .map { position: relative; flex: 0 0 auto; height: 320px; width: auto; aspect-ratio: 4 / 3; background: var(--map-bg); border: 1px dashed var(--grid);
+.vp .maprow { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; }
+.vp .map { position: relative; flex: 0 0 auto; height: 320px; width: auto; max-width: 100%; aspect-ratio: 4 / 3; background: var(--map-bg); border: 1px dashed var(--grid);
   border-radius: 8px; overflow: hidden;
   background-image: repeating-linear-gradient(0deg, transparent, transparent 23px, var(--map-line) 24px),
                     repeating-linear-gradient(90deg, transparent, transparent 23px, var(--map-line) 24px); }
@@ -169,7 +172,7 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .vp .none { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 12px; }
 .vp .tag { position: absolute; right: 8px; bottom: 6px; font-size: 9px; color: var(--foot); font-family: "IBM Plex Mono", monospace; }
 @keyframes vb { 0%, 100% { opacity: 1; } 50% { opacity: 0.18; } }
-.vp .side2 { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+.vp .side2 { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
 .vp .bars { display: flex; align-items: flex-end; gap: 2px; height: 110px; }
 .vp .bars i { flex: 1; background: var(--bar); border-radius: 2px 2px 0 0; min-height: 2px; }
 .vp .bars i.now { background: var(--acc); }

@@ -88,7 +88,7 @@ const AQ = (() => {
   const regime = (r) => r ? `<span class="regime r-${r in REGIME_KO ? r : "hold"}">${REGIME_KO[r] || r}</span>` : `<span class="chipx ex">제외</span>`;
   const chip = (t, k) => `<span class="chipx ${k || ""}">${esc(t)}</span>`;
   const actionChip = (kind, word, big) => `<span class="achip k-${kind || "hold"}${big ? " big" : ""}">${esc(word)}</span>`;
-  const regimeColor = (r) => css({ clean: "--green", matter: "--orange", human: "--blue", mixed: "--red" }[r] || "--grid");
+  const regimeColor = (r) => css({ clean: "--rg-clean", matter: "--rg-matter", human: "--rg-human", mixed: "--rg-mixed" }[r] || "--grid");
   function table(head, rows, cls = "") {
     const th = head.map((h) => `<th>${h}</th>`).join("");
     const body = rows.map((r) => `<tr${r.cls ? ` class="${r.cls}"` : ""}>${r.cells.map((c, i) => `<td${(i > 0 && r.txt && r.txt.includes(i)) ? ' class="txt"' : ""}>${c}</td>`).join("")}</tr>`).join("");
