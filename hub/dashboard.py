@@ -20,9 +20,10 @@ Multinode Environmental Sensing Monitor (display only)  -- native/systemd track,
   4) recent 5 rows
   5) data export -- full CSV / date-range CSV
 """
-import json, os, re, sqlite3
+import json, os, re, sqlite3, sys
 from contextlib import closing
 from datetime import datetime, date, time, timedelta
+from time import perf_counter
 
 import numpy as np
 import pandas as pd
@@ -42,6 +43,12 @@ NODES_PATH = "nodes.json"
 ROW_LIMIT  = 5000          # recent rows to show
 REFRESH_MS = 10_000        # auto-refresh every 10s
 MAX_COLS   = 4             # max grid columns (2 rows x 4 = 8 nodes)
+
+# ---- [perf] server-side timing of one script run (Phase 1b). stderr -> journalctl.
+#      `journalctl -u multinode_aq_dashboard -f | grep perf` shows one line per section.
+_t0 = perf_counter()
+def _perf(tag: str) -> None:
+    print(f"[perf] {tag} {perf_counter() - _t0:.2f}s", file=sys.stderr, flush=True)
 
 # ---- Theme colors (seaborn pastel + dark) ----
 BG        = "#1a1d24"      # charcoal background
@@ -889,6 +896,8 @@ for i in range(0, len(nodes), ncols):
         with col:
             node_card(node, latest[node], labels)
 
+_perf("sec1")
+
 # ---- Section 2: overall stats (5-min) ----
 header("2) Overall stats (5-min)", H_STATS)
 dfa = load_all_for_stats()
@@ -907,6 +916,8 @@ if not dfa.empty:
     r2c2.plotly_chart(make_regime_scatter(dfa, labels, latest),
                       use_container_width=True, key="regime")
 
+_perf("sec2")
+
 # ---- Section 3: time series + per-node regime ----
 header("3) Time series by node", H_TS)
 sel = st.selectbox("Select node", nodes,
@@ -924,12 +935,16 @@ st.caption("좌: 선택 노드의 '자기 기준'(노드별 RobustScaling) — �
            "최근 버킷 '최대 인원 시점'의 위치(c), 수치는 5분 버킷 통계(평균/중앙값/최대). "
            "영상은 전송·저장되지 않습니다(좌표만 수집).")
 
+_perf("sec3")
+
 # ---- Section 4: recent rows ----
 header("4) Recent records", H_TS)
 recent = df[df["node"] == sel][["recv_time"] + SENSOR_KEYS].tail(5).iloc[::-1]
 fmt = {k: ("{:.0f}" if k in ("voc", "nox", "co2") else "{:.1f}")
        for k in SENSOR_KEYS}
 st.dataframe(recent.style.format(fmt), use_container_width=True, hide_index=True)
+
+_perf("sec4")
 
 # ---- Section 5: data export ----
 header("5) Data export (CSV)", H_EXPORT)
@@ -1027,6 +1042,8 @@ else:
     st.caption("Range export becomes available once data accumulates.")
 
 
+_perf("sec5")
+
 # ---- Section 6: data reset (clear table, with auto-backup) ----
 header("6) Data reset", H_EXPORT)
 with st.expander("Clear all collected data (DANGER)", expanded=False):
@@ -1079,3 +1096,5 @@ with st.expander("Clear all collected data (DANGER)", expanded=False):
             st.info("Refresh (or wait for auto-refresh) to see the empty dashboard.")
         except Exception as e:
             st.error(f"Reset failed: {e}")
+
+_perf("sec6 total")
