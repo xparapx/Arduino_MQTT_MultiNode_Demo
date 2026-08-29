@@ -13,23 +13,27 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
+from aq.derive import (  # noqa: F401  (re-exported for pages and tests)
+    ACTION_WORDS,
+    DEVICE_KO,
+    HOLD,
+    LABEL_NEAR,
+    LABEL_SLOTS,
+    REGIME_KO,
+    action_summary,
+    label_positions,
+    pool_transitions,
+)
 from aq.regime import REGIMES
 from aq.ui_common import GRID, INK, INK_DIM, PASTEL, node_color
 
 REGIME_COLOR = {"clean": PASTEL["green"], "matter": PASTEL["orange"],
                 "human": PASTEL["blue"], "mixed": PASTEL["red"], None: "#3a414e"}
-REGIME_KO = {"clean": "청정", "matter": "물질", "human": "인체", "mixed": "복합"}
 KST = timedelta(hours=9)
 TS_FMT = "%Y-%m-%d %H:%M:%S"
 DENSITY_SCALE = [[0.0, "rgba(0,0,0,0)"], [0.15, "rgba(120,170,255,0.10)"],
                  [0.5, "rgba(120,170,255,0.28)"], [1.0, "rgba(90,140,255,0.55)"]]
 
-# Action wording shown in B and E (one row per room). Provisional: to be aligned
-# with the LED indicator wording once that is fixed -- change only this dict.
-ACTION_WORDS = {"fan": "환기 필요", "purifier": "공기청정 필요", "both": "환기·공기청정 필요",
-                "none": "조치 없음", "hold": "판정 보류", "keep": " (유지)"}
-DEVICE_KO = {"fan": "환풍기", "purifier": "공청기"}
-HOLD = "hold"
 
 
 def _layout(fig: go.Figure, height: int, **kw) -> go.Figure:
@@ -91,54 +95,6 @@ def plane_figure(regime_now: dict, labels: dict, cfg: dict, model_meta: dict | N
     return fig
 
 
-LABEL_SLOTS = ("top center", "bottom center", "middle right", "middle left",
-               "top right", "bottom left", "top left", "bottom right")
-LABEL_NEAR = 0.07       # axis-fraction distance under which two star labels would collide
-
-
-def label_positions(pts: list[tuple[float, float]], near: float = LABEL_NEAR) -> list[str]:
-    """One plotly textposition per point so that points closer than ``near``
-    (in axis fractions) get different label slots. Greedy: every point takes the
-    first slot none of its earlier neighbours uses; hover always has the full text."""
-    out: list[str] = []
-    for i, (x, y) in enumerate(pts):
-        used = {out[j] for j, (px, py) in enumerate(pts[:i])
-                if ((x - px) ** 2 + (y - py) ** 2) ** 0.5 < near}
-        out.append(next((sl for sl in LABEL_SLOTS if sl not in used), LABEL_SLOTS[0]))
-    return out
-
-
-def action_summary(devs: dict) -> dict:
-    """Collapse the fan / purifier action payloads of one room into one row:
-    word (ACTION_WORDS), reason, and -- for the devices that are ON -- since
-    (latest switch-on, UTC) and hold_until (latest, UTC); both None when nothing
-    is ON. ``kept`` when every ON device is only held by hysteresis / minimum
-    run time."""
-    if not devs:
-        return {"word": "—", "reason": "", "since": None, "hold_until": None, "kept": False}
-    if all(p["rule"] == HOLD for p in devs.values()):
-        word, kept = ACTION_WORDS["hold"], False
-    else:
-        on = [d for d in ("fan", "purifier") if devs.get(d, {}).get("state") == 1]
-        word = ACTION_WORDS["both" if len(on) == 2 else on[0] if on else "none"]
-        kept = bool(on) and all(devs[d]["rule"].startswith(("keep", "min_run")) for d in on)
-        if kept:
-            word += ACTION_WORDS["keep"]
-    parts = []
-    regime = next((p["values"].get("regime") for p in devs.values()), None)
-    if regime in REGIME_KO:
-        parts.append(f"레짐 {REGIME_KO[regime]}")
-    for d, p in devs.items():
-        var = "co2" if d == "fan" else "voc"
-        val = p["values"].get(var)
-        parts.append(f"{DEVICE_KO.get(d, d)} {'ON · ' if p['state'] == 1 else ''}{p['rule']}"
-                     + (f" ({var} {val:.0f})" if isinstance(val, (int, float)) else ""))
-    on_devs = [p for p in devs.values() if p["state"] == 1]
-    return {"word": word, "reason": " · ".join(parts), "kept": kept,
-            "since": max(p["since"] for p in on_devs) if on_devs else None,
-            "hold_until": max(p["hold_until"] for p in on_devs) if on_devs else None}
-
-
 def regime_table(regime_now: dict, actions: dict, labels: dict) -> pd.DataFrame:
     rows = []
     for node, p in regime_now.items():
@@ -190,31 +146,17 @@ def band_share(bands: dict) -> dict:
 # ---- D: transitions -----------------------------------------------------------------
 
 def transition_summary(transitions: dict) -> tuple[pd.DataFrame, dict]:
-    """Pool the per-node count matrices; per regime: persistence, median dwell
-    (median of node medians), most common next regime. Also totals."""
-    counts = {a: {b: 0 for b in REGIMES} for a in REGIMES}
-    gap = valid = 0
-    dwell: dict[str, list] = {r: [] for r in REGIMES}
-    for p in transitions.values():
-        gap += p["gap_pairs"]
-        valid += p["valid_pairs"]
-        for a in REGIMES:
-            for b in REGIMES:
-                counts[a][b] += p["counts"].get(a, {}).get(b, 0)
-            if p["dwell_median"].get(a) is not None:
-                dwell[a].append(p["dwell_median"][a])
+    """Pooled per-regime table (aq.derive.pool_transitions) + totals."""
+    pooled = pool_transitions(transitions)
     rows = []
-    for a in REGIMES:
-        tot = sum(counts[a].values())
-        stay = counts[a][a] / tot if tot else float("nan")
-        nxt = sorted(((counts[a][b], b) for b in REGIMES if b != a), reverse=True)
-        n_c, n_b = nxt[0] if nxt and nxt[0][0] > 0 else (0, None)
-        rows.append({"레짐": f"{REGIME_KO[a]} · {a}",
-                     "지속확률": None if tot == 0 else round(stay, 3),
-                     "중앙 체류(min)": None if not dwell[a] else round(float(np.median(dwell[a]))),
-                     "가장 흔한 다음 전이": (f"→ {REGIME_KO[n_b]} {n_c / tot:.3f}" if n_b else "—"),
-                     "관측 쌍": tot})
-    return pd.DataFrame(rows), {"gap_pairs": gap, "valid_pairs": valid, "counts": counts}
+    for r in pooled["rows"]:
+        rows.append({"레짐": f"{REGIME_KO[r['regime']]} · {r['regime']}",
+                     "지속확률": r["persist"], "중앙 체류(min)": r["dwell_median"],
+                     "가장 흔한 다음 전이": (f"→ {REGIME_KO[r['next']]} {r['next_p']:.3f}"
+                                    if r["next"] else "—"),
+                     "관측 쌍": r["pairs"]})
+    return pd.DataFrame(rows), {"gap_pairs": pooled["gap_pairs"],
+                                "valid_pairs": pooled["valid_pairs"], "counts": pooled["counts"]}
 
 
 def transition_matrix_figure(counts: dict) -> go.Figure:

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>교실 공기질 모니터 — 진단 &amp; 추론</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css">
+<script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("aq-theme")||"dark")}catch(e){}</script>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+  <div class="brand">multinode_aq · UNO Q (aqhub)<b>교실 공기질 모니터</b></div>
+  <nav class="nav">
+    <a href="/"><span class="n">1</span>모니터링</a>
+    <a class="on p2" href="/diagnosis"><span class="n">2</span>진단 &amp; 추론</a>
+  </nav>
+  <div class="status">
+    <div><span>hub.py</span><span class="v" id="st-hub">…</span></div>
+    <div><span>마지막 수신</span><span class="v" id="st-last">—</span></div>
+    <div><span>환경 노드</span><span class="v" id="st-env">—</span></div>
+    <div><span>비전 노드</span><span class="v" id="st-vis">—</span></div>
+    <div><span>readings</span><span class="v" id="st-rows">—</span></div>
+  </div>
+  <div class="status">
+    <div><span>analyst.py</span><span class="v" id="st-analyst">—</span></div>
+    <div><span>daily · weekly</span><span class="v" id="st-daily">—</span></div>
+    <div><span>진단 모델</span><span class="v" id="st-model">—</span></div>
+  </div>
+  <div class="theme"><button data-theme="dark">다크</button><button data-theme="light">라이트</button></div>
+  <div class="foot">sensor_data.db · WAL<br>readings / occupancy / analysis<br>web v0.8 · api 60 s</div>
+</aside>
+<main>
+  <h1>진단 &amp; 추론</h1>
+  <p class="sub">analyst.py가 저장한 <span class="mono">analysis</span> 테이블만 읽어 표시 — ML(GMM)이 "무엇이 문제인지", 규칙이 "행동할 때인지" · 이 페이지는 readings를 직접 읽지 않음</p>
+  <div id="page2"></div>
+</main>
+</div>
+<script src="/static/app.js"></script>
+<script src="/static/charts.js"></script>
+<script src="/static/page2.js"></script>
+</body>
+</html>

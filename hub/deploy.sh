@@ -18,7 +18,7 @@ LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse "origin/$BRANCH")
 CHANGED=$(git diff --name-only "$LOCAL" "$REMOTE" -- . | sed 's#^hub/##')
 
-need_hub=0; need_dash=0
+need_hub=0; need_dash=0; need_web=0
 while IFS= read -r f; do
   [ -z "$f" ] && continue
   case "$f" in
@@ -26,6 +26,9 @@ while IFS= read -r f; do
   esac
   case "$f" in
     dashboard.py|nodes.json|pyproject.toml|uv.lock|aq/*|pages/*|.streamlit/*|systemd/multinode_aq_dashboard.service) need_dash=1 ;;
+  esac
+  case "$f" in
+    webapp.py|nodes.json|pyproject.toml|uv.lock|aq/*|web/*|systemd/multinode_aq_web.service) need_web=1 ;;
   esac
 done <<< "$CHANGED"
 
@@ -40,6 +43,7 @@ fi
 restart=()
 [ $need_hub  = 1 ] && restart+=(multinode_aq_hub)
 [ $need_dash = 1 ] && restart+=(multinode_aq_dashboard)
+[ $need_web  = 1 ] && systemctl list-unit-files multinode_aq_web.service >/dev/null 2>&1 && restart+=(multinode_aq_web)
 echo "restart  : ${restart[*]:-none}"
 
 if [ "${1:-}" != "--apply" ]; then
@@ -56,8 +60,8 @@ fi
 git pull -q --ff-only origin "$BRANCH"
 "$UV" sync --frozen
 "$PY" -m py_compile hub.py
-"$PY" -c "import aq, dashboard" >/dev/null 2>&1 && echo "import   : aq, dashboard OK" || {
-  echo "ERROR: import check failed - NOT safe to restart" >&2; "$PY" -c "import aq, dashboard"; exit 1; }
+"$PY" -c "import aq, dashboard, webapp" >/dev/null 2>&1 && echo "import   : aq, dashboard, webapp OK" || {
+  echo "ERROR: import check failed - NOT safe to restart" >&2; "$PY" -c "import aq, dashboard, webapp"; exit 1; }
 echo "deployed : $(git rev-parse --short HEAD)"
 if [ ${#restart[@]} -gt 0 ]; then
   echo
