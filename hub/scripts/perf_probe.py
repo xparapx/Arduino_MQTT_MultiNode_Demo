@@ -50,7 +50,10 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", default=str(HUB), help="dir holding sensor_data.db + nodes.json")
     ap.add_argument("--json", action="store_true", help="also print a JSON summary")
+    ap.add_argument("--script", default=str(HUB / "dashboard.py"),
+                    help="dashboard.py to measure (e.g. a copy in /tmp before it is merged)")
     a = ap.parse_args()
+    script = str(Path(a.script).resolve())
     os.chdir(a.dir)
     sys.path.insert(0, str(HUB))
     logging.getLogger("streamlit").setLevel(logging.ERROR)  # hide bare-mode warnings
@@ -66,10 +69,10 @@ def main() -> int:
 
     # 1) whole-script runs: cold (caches empty) then warm (caches primed)
     t = perf_counter()
-    ns = runpy.run_path(str(HUB / "dashboard.py"), run_name="dashboard")
+    ns = runpy.run_path(script, run_name="dashboard")
     cold = perf_counter() - t
     t = perf_counter()
-    runpy.run_path(str(HUB / "dashboard.py"), run_name="dashboard")
+    runpy.run_path(script, run_name="dashboard")
     warm = perf_counter() - t
 
     d = type("NS", (), ns)  # attribute access over the script namespace

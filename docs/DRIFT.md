@@ -68,7 +68,8 @@
 |---|---|---|---|
 | before 측정 방법 | 배포 후 `journalctl`의 `[perf]` 로그 + 브라우저 DevTools 웹소켓 바이트 | `hub/scripts/perf_probe.py`(bare 모드)로 **배포·재시작 없이** 보드에서 측정. 페이로드는 figure JSON / CSV 바이트로 근사 | 재시작(sudo) 없이 before를 얻기 위해. 브라우저 DevTools 수치는 없음 — Streamlit은 변경 없는 요소를 재전송하지 않으므로 probe 수치는 상한 |
 | ② 캐시 키 | `MAX(id)` | `data_version()` = (`MAX(id)`, 최신 행의 5분 버킷). 무거운 28일 통계는 **버킷**으로, 라이브 figure는 노드별 `recv_time`으로 키 | `MAX(id)`는 8노드가 수 초마다 바꾸므로 60 s 주기마다 캐시 미스 → 통계는 버킷당 1회만 재생성 |
-| ② ★ 마커 오버레이 | `copy.deepcopy` 후 `add_trace` | deepcopy 없이 `st.cache_data` 반환값에 직접 추가 | `st.cache_data`는 호출마다 unpickle한 새 복사본을 돌려주므로 deepcopy가 중복 |
+| ② figure 캐시 종류 | `@st.cache_data` | **`@st.cache_resource`**(ttl 300, `max_entries`) | 보드 벤치마크: `cache_data` 히트 = unpickle → plotly 재검증(레이더 25 ms×8, ②의 5개 280 ms)으로 새로 만드는 것과 같은 비용. `cache_resource`는 같은 객체를 돌려줘 히트 ≈ 0 ms. `st.plotly_chart`는 읽기만 함 |
+| ② ★ 마커 오버레이 | `copy.deepcopy` 후 `add_trace` | 플랜대로 deepcopy **+ 배치 추가**(`add_traces` 1회, `layout.annotations` 1회 대입) | 공유 객체라 deepcopy 필수. `add_annotation` 16회는 매번 전체 목록 재검증 → 293 ms, 배치 51 ms |
 | ③ 노드별 산점도 과거점 | "서버 집계본만 전송" | 밀도 배경은 `np.histogram2d` 집계, 과거점은 **시간 균등 표본 ≤ 1,500점**(`SCATTER_MAX_POINTS`) | 점을 없애면 화면이 달라짐. 표본화로 모양 유지, 페이로드 634 KB → 49 KB |
 | ② boxplot 이상치 | (언급 없음) | `boxpoints="outliers"` 대신 순위 균등 표본 ≤ 300점 scatter | 사전 집계 `go.Box(q1=…)`에는 이상치 인자가 없음 |
 | bare 모드 검사 | `deploy.sh`의 `import dashboard` | fragment 본문은 bare 모드에서 실행되지 않음(Streamlit이 컨텍스트 없으면 `None` 반환) → `perf_probe.py`가 `__wrapped__`로 호출 | import 검사만으로는 섹션 코드가 실행되지 않으므로 probe를 배포 후 검증에 사용 |

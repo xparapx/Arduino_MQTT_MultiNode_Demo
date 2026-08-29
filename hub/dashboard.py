@@ -23,7 +23,7 @@ Multinode Environmental Sensing Monitor (display only)  -- native/systemd track,
 Refresh (Phase 1b): sections are st.fragment blocks -- 1/3/4 every 60 s,
 2 every 5 min, 5 only on its buttons. No full-page autorefresh.
 """
-import json, os, re, sqlite3, sys
+import copy, json, os, re, sqlite3, sys
 from contextlib import closing
 from datetime import datetime, date, time, timedelta
 from time import perf_counter
@@ -762,14 +762,18 @@ def make_regime_base(dfa: pd.DataFrame, labels: dict):
 
 def overlay_current(fig: go.Figure, meta: dict, latest: dict, labels: dict) -> go.Figure:
     """Live layer on top of make_regime_base(): per node a vector from the
-    origin + enlarged marker + class label at the arrow tip. Cheap; runs on
-    every refresh on the (copied) cached base figure."""
+    origin + enlarged marker + class label at the arrow tip. The base comes
+    from st.cache_resource (shared object), so it is deep-copied first; the
+    additions are batched because every add_annotation() re-validates the
+    whole annotation list (16 calls cost 6x one batched assignment)."""
     if not meta or not latest:
         return fig
+    fig = copy.deepcopy(fig)
     amax = meta["amax"]
     def rc(v, med, iqr): return (v - med) / iqr if iqr and iqr > 0 else 0.0
     def clip(v):                          # clamp into [-amax, amax] for display
         return max(-amax, min(amax, v))
+    anns, traces = [], []
     for nd in meta["nodes"]:
         cur = latest.get(nd)
         if not cur:
@@ -783,12 +787,12 @@ def overlay_current(fig: go.Figure, meta: dict, latest: dict, labels: dict) -> g
         outside = (cx != rx) or (cy != ry)
         col = node_color(nd)
         # vector: origin -> current (arrow)
-        fig.add_annotation(x=cx, y=cy, ax=0, ay=0,
-                           xref="x", yref="y", axref="x", ayref="y",
-                           showarrow=True, arrowhead=2, arrowsize=1.0,
-                           arrowwidth=2, arrowcolor=col, opacity=0.95)
+        anns.append(dict(x=cx, y=cy, ax=0, ay=0,
+                         xref="x", yref="y", axref="x", ayref="y",
+                         showarrow=True, arrowhead=2, arrowsize=1.0,
+                         arrowwidth=2, arrowcolor=col, opacity=0.95))
         # enlarged current marker. Diamond if clipped (out of range).
-        fig.add_trace(go.Scatter(
+        traces.append(go.Scatter(
             x=[cx], y=[cy], mode="markers",
             name=f"{label_of(nd, labels)} (now)", legendgroup=nd,
             showlegend=False,
@@ -805,14 +809,17 @@ def overlay_current(fig: go.Figure, meta: dict, latest: dict, labels: dict) -> g
         off = amax * 0.07
         lx = max(-amax * 0.98, min(amax * 0.98, cx + ux * off))
         ly = max(-amax * 0.98, min(amax * 0.98, cy + uy * off))
-        fig.add_annotation(x=lx, y=ly, text=label_of(nd, labels),
-                           showarrow=False,
-                           xanchor=("left" if ux >= 0 else "right"),
-                           yanchor=("bottom" if uy >= 0 else "top"),
-                           font={"size": 9, "color": col},
-                           bgcolor="rgba(0,0,0,0.45)",
-                           bordercolor=col, borderwidth=1, borderpad=1,
-                           opacity=0.95)
+        anns.append(dict(x=lx, y=ly, text=label_of(nd, labels),
+                         showarrow=False,
+                         xanchor=("left" if ux >= 0 else "right"),
+                         yanchor=("bottom" if uy >= 0 else "top"),
+                         font={"size": 9, "color": col},
+                         bgcolor="rgba(0,0,0,0.45)",
+                         bordercolor=col, borderwidth=1, borderpad=1,
+                         opacity=0.95))
+    if traces:
+        fig.add_traces(traces)
+        fig.layout.annotations = tuple(fig.layout.annotations) + tuple(anns)
     return fig
 
 
@@ -908,10 +915,12 @@ def overlay_node_current(fig: go.Figure, meta: dict, cur: dict) -> go.Figure:
     ry = rc(vv, meta["voc_med"], meta["voc_iqr"])
     cx, cy = clip(rx), clip(ry)
     outside = (cx != rx) or (cy != ry)
-    fig.add_annotation(x=cx, y=cy, ax=0, ay=0, xref="x", yref="y",
-                       axref="x", ayref="y", showarrow=True, arrowhead=2,
-                       arrowsize=1.2, arrowwidth=2,
-                       arrowcolor=PASTEL["orange"], opacity=0.9)
+    fig = copy.deepcopy(fig)              # base is a shared cache_resource object
+    fig.layout.annotations = tuple(fig.layout.annotations) + (dict(
+        x=cx, y=cy, ax=0, ay=0, xref="x", yref="y",
+        axref="x", ayref="y", showarrow=True, arrowhead=2,
+        arrowsize=1.2, arrowwidth=2,
+        arrowcolor=PASTEL["orange"], opacity=0.9),)
     fig.add_trace(go.Scatter(
         x=[cx], y=[cy], mode="markers", showlegend=False,
         marker=dict(size=12, color=PASTEL["orange"],
@@ -960,11 +969,14 @@ def make_timeseries(dfn: pd.DataFrame) -> go.Figure:
 # ========================================================
 #  Cached figure layer (Phase 1b)
 #  Keys come from data_version(): the 28-day statistics rebuild once per 5-min
-#  bucket, live figures only when their node has a newer row. st.cache_data
-#  returns a fresh copy on every hit, so the overlays below may add traces to
-#  the returned figure without a deepcopy of their own.
+#  bucket, live figures only when their node has a newer row.
+#  st.cache_resource, not cache_data: a cache_data hit unpickles the figure,
+#  which re-runs plotly's validation (25 ms per radar, 280 ms for section 2 on
+#  the board -- as slow as building it). cache_resource hands back the same
+#  object, so a hit is free; st.plotly_chart only reads it, and the overlays
+#  deep-copy before adding their live markers. max_entries bounds memory.
 # ========================================================
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_resource(ttl=300, max_entries=4, show_spinner=False)
 def stats_figures(bucket: str) -> dict:
     """Section 2: five figures + the regime base/meta, built from one load."""
     dfa = load_all_for_stats(bucket)
@@ -978,19 +990,19 @@ def stats_figures(bucket: str) -> dict:
             "regime": base, "regime_meta": meta}
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_resource(ttl=300, max_entries=16, show_spinner=False)
 def node_regime_figure(bucket: str, node_id: str):
     """Section 3 left: (base figure, meta) for one node."""
     return make_node_regime_base(load_all_for_stats(bucket), node_id, load_node_labels())
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_resource(ttl=300, max_entries=32, show_spinner=False)
 def radar_figure(node_id: str, stamp: str, _vals: dict) -> go.Figure:
     """Section 1: one radar, keyed on the node's newest recv_time."""
     return make_node_radar(_vals, node_id)
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_resource(ttl=300, max_entries=32, show_spinner=False)
 def timeseries_figure(node_id: str, stamp: str, _dfn: pd.DataFrame) -> go.Figure:
     """Section 3: last 60 rows of one node, keyed on its newest recv_time."""
     return make_timeseries(_dfn)
@@ -1097,7 +1109,7 @@ def section_stats():
         with r2c1:
             st.plotly_chart(figs["co2_bar"], width="stretch", key="co2_bar")
             st.plotly_chart(figs["voc_bar"], width="stretch", key="voc_bar")
-        # live markers (★) go on top of the cached base every refresh
+        # live markers (★) go on a deep copy of the cached base every refresh
         r2c2.plotly_chart(overlay_current(figs["regime"], figs["regime_meta"], latest, labels),
                           width="stretch", key="regime")
     _perf("sec2", t)
