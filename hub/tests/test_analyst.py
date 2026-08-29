@@ -63,10 +63,55 @@ def test_daily_dry_run_has_gaps_and_qc_failures(fixture_path, as_of, capsys):
     assert len(occ) == 1
 
 
-def test_weekly_dry_run(fixture_path, as_of, capsys):
-    rows = _run("weekly", fixture_path, as_of, capsys)
+def test_weekly_dry_run(fixture_path, as_of, capsys, tmp_path):
+    rows = _run("weekly", fixture_path, as_of, capsys, extra=["--models-dir", str(tmp_path)])
     assert len(rows) == 1 and rows[0]["kind"] == "model_event"
-    assert rows[0]["payload"]["decision"] in ("stored", "reject")
+    p = rows[0]["payload"]
+    assert p["decision"] == "promote" and p["reason"] == "first model"      # no current yet
+    assert p["stored"] is False and not list(tmp_path.glob("gmm_v*"))       # dry-run stores nothing
+
+
+def test_weekly_store_promote_then_keep(fixture_copy, as_of, capsys, tmp_path):
+    """Real weekly run on a copy: v1 stored + promoted; a second run keeps."""
+    from aq import governance
+    base = ["run", "--mode", "weekly", "--db", str(fixture_copy), "--as-of", as_of,
+            "--models-dir", str(tmp_path)]
+    assert analyst.main(base) == 0
+    capsys.readouterr()
+    assert governance.list_versions(tmp_path) == ["gmm_v1"]
+    assert governance.resolve_current(tmp_path) == "gmm_v1"
+    assert analyst.main(base) == 0                       # same data -> candidate v2 kept
+    capsys.readouterr()
+    assert governance.list_versions(tmp_path) == ["gmm_v1", "gmm_v2"]
+    assert governance.resolve_current(tmp_path) == "gmm_v1"
+    conn = sqlite3.connect(fixture_copy)
+    events = conn.execute("SELECT payload FROM analysis WHERE kind='model_event' ORDER BY id")
+    decisions = [json.loads(r[0])["decision"] for r in events]
+    conn.close()
+    assert decisions == ["promote", "keep"]
+    # hourly now uses the promoted model, not the ad-hoc fit
+    rows = _run("hourly", fixture_copy, as_of, capsys, extra=["--models-dir", str(tmp_path)])
+    assert {r["model_ver"] for r in rows if r["kind"] == "regime_now"} == {"gmm_v1"}
+
+
+def test_model_subcommand(fixture_copy, as_of, capsys, tmp_path):
+    base = ["--db", str(fixture_copy), "--as-of", as_of, "--models-dir", str(tmp_path)]
+    assert analyst.main(["fit", "--window", "28", *base]) == 0            # v1, auto-promoted
+    assert analyst.main(["fit", "--window", "28", *base]) == 0            # v2, not promoted
+    capsys.readouterr()
+    assert analyst.main(["model", "list", *base]) == 0
+    listing = json.loads(capsys.readouterr().out)
+    assert listing["current"] == "gmm_v1"
+    assert [v["version"] for v in listing["versions"]] == ["gmm_v1", "gmm_v2"]
+    assert analyst.main(["model", "promote", "--to", "gmm_v2", *base]) == 0
+    assert analyst.main(["model", "rollback", "--to", "gmm_v1", *base]) == 0
+    assert analyst.main(["model", "rollback", "--to", "gmm_v9", *base]) == 2
+    capsys.readouterr()
+    conn = sqlite3.connect(fixture_copy)
+    kinds = [json.loads(r[0])["decision"] for r in conn.execute(
+        "SELECT payload FROM analysis WHERE kind='model_event' ORDER BY id")]
+    conn.close()
+    assert kinds == ["promote", "rollback"]
 
 
 def test_dry_run_writes_nothing(fixture_copy, as_of, capsys):
@@ -78,13 +123,13 @@ def test_dry_run_writes_nothing(fixture_copy, as_of, capsys):
     assert "analysis" not in tables
 
 
-def test_fit_dry_run_meta(fixture_path, as_of, capsys):
+def test_fit_dry_run_meta(fixture_path, as_of, capsys, tmp_path):
     rc = analyst.main(["fit", "--window", "28", "--db", str(fixture_path), "--as-of", as_of,
-                       "--dry-run"])
+                       "--dry-run", "--models-dir", str(tmp_path)])
     assert rc == 0
     meta = json.loads(capsys.readouterr().out)
     assert {c["regime"] for c in meta["components"]} == set(regime.REGIMES)
-    assert meta["version"] == "candidate" and meta["rows"] > 0
+    assert meta["version"] == "gmm_v1" and meta["rows"] > 0      # next free version name
 
 
 def test_show_on_empty_db(tmp_path, empty_db, capsys):
