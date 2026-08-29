@@ -117,6 +117,8 @@ from aq.ui_common import (  # noqa: F401  (page-1 uses most of these; probe read
     stats_figures,
     node_regime_figure,
     radar_figure,
+    make_radar_grid,
+    radar_grid_figure,
     timeseries_figure,
     header,
 )
@@ -190,15 +192,14 @@ def section_live_status():
     t = perf_counter()
     _, _, df, nodes, latest = snapshot()
     st.caption(f"{len(nodes)} nodes: {', '.join(label_of(n, labels) for n in nodes)}"
-               f"   |   {len(df):,} rows  -  last seen {df['recv_time'].max()} (KST)")
-    header("1) Live status by node", H_OVERVIEW)
-    ncols = min(len(nodes), MAX_COLS)
-    for i in range(0, len(nodes), ncols):
-        row_nodes = nodes[i:i + ncols]
-        cols = st.columns(ncols)
-        for col, node in zip(cols, row_nodes):
-            with col:
-                node_card(node, latest[node], labels)
+               f"   |   {len(df):,} rows  -  last seen {df['recv_time'].max()} (KST)"
+               "   |   T/H = SCD30   |   redrawn only when data changes")
+    header("1) Live status by node — radar (6 variables, normalised)", H_OVERVIEW)
+    st.caption(f"fragment {REFRESH_LIVE} · sorted by label number")
+    # Phase 5 (decision a): one figure with a polar subplot per node
+    stamps = tuple((n, str(latest[n].get("recv_time"))) for n in nodes)
+    st.plotly_chart(radar_grid_figure(stamps, nodes, latest, labels),
+                    width="stretch", key="radar_grid")
     _perf("sec1", t)
 
 
@@ -207,22 +208,19 @@ def section_live_status():
 def section_stats():
     t = perf_counter()
     _, bucket, _, _, latest = snapshot()
-    header("2) Overall stats (5-min)", H_STATS)
-    st.caption(f"Window: last {STATS_DAYS} days. Rebuilt once per 5-min bucket.")
+    header(f"2) Overall stats — last {STATS_DAYS} days", H_STATS)
+    st.caption(f"fragment {REFRESH_STATS} · server aggregates only (q1 · median · q3), "
+               "rebuilt once per 5-min bucket")
     figs = stats_figures(bucket)
     if figs:
-        # row 1: boxplot | correlation  (1:1)
-        r1c1, r1c2 = st.columns(2)
-        r1c1.plotly_chart(figs["box"], width="stretch", key="box")
-        r1c2.plotly_chart(figs["corr"], width="stretch", key="corr")
-        # row 2: CO2+VOC by node (stacked, left) | CO2-VOC regime scatter (right)  (1:2)
-        r2c1, r2c2 = st.columns([1, 2])
-        with r2c1:
-            st.plotly_chart(figs["co2_bar"], width="stretch", key="co2_bar")
-            st.plotly_chart(figs["voc_bar"], width="stretch", key="voc_bar")
-        # live markers (★) go on a deep copy of the cached base every refresh
-        r2c2.plotly_chart(overlay_current(figs["regime"], figs["regime_meta"], latest, labels),
-                          width="stretch", key="regime")
+        # row 1: boxplots (full width)
+        st.plotly_chart(figs["box"], width="stretch", key="box")
+        # row 2: CO2 | VOC mean by node
+        r2c1, r2c2 = st.columns(2)
+        r2c1.plotly_chart(figs["co2_bar"], width="stretch", key="co2_bar")
+        r2c2.plotly_chart(figs["voc_bar"], width="stretch", key="voc_bar")
+        st.caption("Correlation heatmap and the CO₂-VOC regime scatters (pooled / per node) "
+                   "moved to page 2 (diagnosis). This page shows the current state only.")
     _perf("sec2", t)
 
 
@@ -231,25 +229,22 @@ def section_stats():
 def section_node_detail():
     t = perf_counter()
     _, bucket, df, nodes, latest = snapshot()
-    header("3) Time series by node", H_TS)
+    header("3) Time series by node + occupancy", H_TS)
+    st.caption(f"fragment {REFRESH_LIVE} · selection is kept across refreshes · last 60 buckets = 5 h")
     sel = st.selectbox("Select node", nodes,
                        format_func=lambda n: label_of(n, labels), key="ts_node")
     dfn = df[df["node"] == sel].tail(60)
     st.plotly_chart(timeseries_figure(sel, str(latest[sel].get("recv_time")), dfn),
                     width="stretch", key="ts")
-    # per-node regime scatter | vision occupancy crosshair map  (2 columns)
-    r3a, r3b = st.columns(2)
-    base, meta = node_regime_figure(bucket, sel)
-    r3a.plotly_chart(overlay_node_current(base, meta, latest.get(sel)),
-                     width="stretch", key="node_regime")
-    with r3b:
-        render_vision_panel(sel, labels)
-    st.caption("좌: 선택 노드의 '자기 기준'(노드별 RobustScaling) — 전체 비교는 Section 2의 "
-               "pooled 산점도. 우: 같은 교실(라벨) 비전 노드의 재실 탐지 — 깜빡이는 조준선은 "
-               "최근 버킷 '최대 인원 시점'의 위치(c), 수치는 5분 버킷 통계(평균/중앙값/최대). "
-               "영상은 전송·저장되지 않습니다(좌표만 수집).")
+    # vision occupancy crosshair map, full width (the per-node regime scatter
+    # moved to page 2 H -- plan 9.1-3; full-width panel chosen, see DRIFT)
+    render_vision_panel(sel, labels)
+    st.caption("같은 교실(라벨) 비전 노드의 재실 탐지 — 깜빡이는 조준선은 최근 버킷 "
+               "'최대 인원 시점'의 위치(c), 수치는 5분 버킷 통계(평균/중앙값/최대). "
+               "영상은 전송·저장되지 않습니다(좌표만 수집). 노드별 상대 레짐 산점도는 "
+               "2) 진단 페이지 H로 이동.")
 
-    header("4) Recent records", H_TS)
+    header(f"4) Recent records — {label_of(sel, labels)}", H_TS)
     recent = df[df["node"] == sel][["recv_time"] + SENSOR_KEYS].tail(5).iloc[::-1]
     fmt = {k: ("{:.0f}" if k in ("voc", "nox", "co2") else "{:.1f}")
            for k in SENSOR_KEYS}
@@ -262,7 +257,7 @@ def section_node_detail():
 # "Prepare" button that runs the query + to_csv once and parks the bytes in
 # st.session_state; the download button appears after that. Before, all four
 # CSVs (two of them the full table) were rebuilt on every 10 s refresh.
-EXPORT_ON_DEMAND = True
+EXPORT_ON_DEMAND = True  # page 1 flag read by scripts/perf_probe.py
 
 
 def _csv_bytes(d: pd.DataFrame) -> bytes:
@@ -311,7 +306,9 @@ def load_occ_all() -> pd.DataFrame:
 @st.fragment
 def section_export():
     t = perf_counter()
-    header("5) Data export (CSV)", H_EXPORT)
+    header("5) Data export (CSV) — built on request", H_EXPORT)
+    st.caption("No query or serialisation until a button is pressed. DB = permanent original, "
+               "CSV = a copy at that moment: Prepare → Download.")
 
     # (5-1) full download -- quick backup
     export_slot("all", "Prepare all-data CSV", query_all,

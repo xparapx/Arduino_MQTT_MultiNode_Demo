@@ -104,10 +104,14 @@ def main() -> int:
         dfa = T("load_all_for_stats", lambda: uncached(d.load_all_for_stats)())
     rows.append(("  rows in dfa", 0.0, len(dfa)))
 
-    # 3) section 1: radars
-    T(f"sec1 radar x{len(nodes)}",
-      lambda: [d.make_node_radar(latest[n], n) for n in nodes],
-      lambda figs: sum(fig_bytes(f) for f in figs))
+    # 3) section 1: radars (Phase 5: one grid figure; before: one figure per node)
+    if hasattr(d, "make_radar_grid"):
+        T(f"sec1 radar grid ({len(nodes)} polars)",
+          lambda: d.make_radar_grid(nodes, latest, labels), fig_bytes)
+    else:
+        T(f"sec1 radar x{len(nodes)}",
+          lambda: [d.make_node_radar(latest[n], n) for n in nodes],
+          lambda figs: sum(fig_bytes(f) for f in figs))
 
     # 4) section 2 figures (old API: builders take dfa; new API: stats_figures(max_id))
     if new_api:
@@ -115,10 +119,11 @@ def main() -> int:
                  lambda: uncached(d.stats_figures)(bucket),
                  lambda fs: sum(fig_bytes(f) for k, f in fs.items() if k != "regime_meta"))
         T("sec2 stats_figures (cached hit)", lambda: d.stats_figures(bucket))
-        T("sec2 overlay ★ on regime",
-          lambda: d.overlay_current(copy.deepcopy(figs["regime"]), figs["regime_meta"],
-                                    latest, labels),
-          fig_bytes)
+        if "regime" in figs:                       # pre-Phase-5 page 1
+            T("sec2 overlay ★ on regime",
+              lambda: d.overlay_current(copy.deepcopy(figs["regime"]), figs["regime_meta"],
+                                        latest, labels),
+              fig_bytes)
     else:
         T("sec2 boxplots", lambda: d.make_boxplots(dfa), fig_bytes)
         T("sec2 corr", lambda: d.make_corr(dfa), fig_bytes)
@@ -130,7 +135,7 @@ def main() -> int:
     # 5) section 3
     dfn = df[df["node"] == sel].tail(60)
     T("sec3 timeseries", lambda: d.make_timeseries(dfn), fig_bytes)
-    if new_api:
+    if new_api and "regime" in figs:              # per-node scatter left page 1 in Phase 5
         T("sec3 node regime (uncached)",
           lambda: uncached(d.node_regime_figure)(bucket, sel)[0], fig_bytes)
     else:

@@ -588,6 +588,62 @@ def make_node_radar(vals: dict, node_id: str = "") -> go.Figure:
     return fig
 
 
+def radar_values(vals: dict) -> tuple[list, list]:
+    """(theta labels, r) for one node: GAUGE_KEYS normalised by their gauge range,
+    axis label = name + current value (same text as the old per-node radar)."""
+    cats, r = [], []
+    for k in GAUGE_KEYS:
+        label, unit, _, gmin, gmax = METRICS[k]
+        v = vals.get(k)
+        if v is None or pd.isna(v):
+            rv, vtxt = 0.0, "-"
+        else:
+            rv = float(np.clip((float(v) - gmin) / (gmax - gmin), 0.0, 1.0))
+            vtxt = f"{float(v):.1f}"
+        cats.append(f"{label}<br><b>{vtxt}</b> {unit}")
+        r.append(rv)
+    cats.append(cats[0]); r.append(r[0])          # close polygon
+    return cats, r
+
+
+def make_radar_grid(nodes: list, latest: dict, labels: dict, ncols: int = MAX_COLS) -> go.Figure:
+    """Phase 5 (decision a): all node radars in ONE figure as a rows x ncols grid of
+    polar subplots -- one plotly element per refresh instead of eight. Same
+    polygon, colours and axis labels as make_node_radar; the card title becomes
+    the subplot title."""
+    n = len(nodes)
+    ncols = max(1, min(n, ncols))
+    nrows = max(1, (n + ncols - 1) // ncols)
+    fig = make_subplots(rows=nrows, cols=ncols,
+                        specs=[[{"type": "polar"}] * ncols for _ in range(nrows)],
+                        subplot_titles=[label_of(nd, labels) for nd in nodes],
+                        horizontal_spacing=0.06, vertical_spacing=0.16)
+    for i, nd in enumerate(nodes):
+        cats, r = radar_values(latest.get(nd, {}))
+        fig.add_trace(go.Scatterpolar(
+            r=r, theta=cats, fill="toself", mode="lines+markers",
+            line=dict(color=node_color(nd), width=2),
+            marker=dict(size=4, color=node_color(nd)),
+            fillcolor=node_fill(nd), hoverinfo="skip", showlegend=False,
+        ), row=i // ncols + 1, col=i % ncols + 1)
+    polar_style = dict(
+        bgcolor="rgba(255,255,255,0.03)",
+        radialaxis=dict(range=[0, 1], showticklabels=False, gridcolor=GRID, linecolor=GRID),
+        angularaxis=dict(tickfont={"size": 9, "color": INK}, gridcolor=GRID, linecolor=GRID),
+    )
+    fig.update_polars(**polar_style)
+    fig.update_annotations(font=dict(size=14, color=INK))
+    fig.update_layout(height=300 * nrows + 40, margin=dict(l=40, r=40, t=50, b=20),
+                      paper_bgcolor="rgba(0,0,0,0)", font={"color": INK})
+    return fig
+
+
+@st.cache_resource(ttl=300, max_entries=8, show_spinner=False)
+def radar_grid_figure(stamps: tuple, _nodes: list, _latest: dict, _labels: dict) -> go.Figure:
+    """Section 1: the whole grid, keyed on (node, newest recv_time) per node."""
+    return make_radar_grid(list(_nodes), _latest, _labels)
+
+
 def node_card(node_id: str, vals: dict, labels: dict):
     with st.container(border=True):
         st.markdown(
@@ -1042,11 +1098,11 @@ def stats_figures(bucket: str) -> dict:
     if dfa.empty:
         return {}
     labels_ = load_node_labels()
-    base, meta = make_regime_base(dfa, labels_)
-    return {"box": make_boxplots(dfa), "corr": make_corr(dfa),
+    # Phase 5: correlation heatmap and the regime scatters moved to page 2 (H);
+    # page 1 keeps "now": boxplots + CO2 / VOC means by node.
+    return {"box": make_boxplots(dfa),
             "co2_bar": make_target_by_node(dfa, labels_, "co2"),
-            "voc_bar": make_target_by_node(dfa, labels_, "voc"),
-            "regime": base, "regime_meta": meta}
+            "voc_bar": make_target_by_node(dfa, labels_, "voc")}
 
 
 @st.cache_resource(ttl=300, max_entries=16, show_spinner=False)
