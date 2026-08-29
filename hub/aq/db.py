@@ -15,6 +15,10 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 HUB_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_DB = HUB_DIR / "sensor_data.db"
@@ -102,3 +106,104 @@ def bucket_5min(ts: str | datetime) -> str:
         ts = datetime.strptime(ts, TS_FMT)
     floored = ts - timedelta(minutes=ts.minute % 5, seconds=ts.second, microseconds=ts.microsecond)
     return floored.strftime(TS_FMT)
+
+
+# ---- Phase 3: loaders (read-only) and the analyst's writers -------------------
+
+def floor_buckets(ts: pd.Series) -> pd.Series:
+    """Vectorised bucket_5min for a Series of 'YYYY-MM-DD HH:MM:SS' strings."""
+    import pandas as pd
+
+    return pd.to_datetime(ts, format=TS_FMT).dt.floor(f"{int(BUCKET.total_seconds() // 60)}min") \
+        .dt.strftime(TS_FMT)
+
+
+def load_readings(conn: sqlite3.Connection, start: str, end: str) -> pd.DataFrame:
+    """readings rows with ``start <= ts < end`` (UTC strings), one row per
+    (node, bucket): ts floored to 5 min, the LAST received row of a bucket wins.
+    Columns: node, bucket, ts, co2, voc, pm2p5, temp, hum, n."""
+    import pandas as pd
+
+    sql = ("SELECT id, ts, node, co2, voc, pm2p5, scd_temp AS temp, scd_hum AS hum, n "
+           "FROM readings WHERE ts >= ? AND ts < ? ORDER BY id")
+    df = pd.read_sql_query(sql, conn, params=(start, end))
+    if df.empty:
+        return pd.DataFrame(columns=["node", "bucket", "ts", "co2", "voc", "pm2p5",
+                                     "temp", "hum", "n"])
+    df["bucket"] = floor_buckets(df["ts"])
+    df = df.drop_duplicates(["node", "bucket"], keep="last")
+    df = df.sort_values(["node", "bucket"]).reset_index(drop=True)
+    return df[["node", "bucket", "ts", "co2", "voc", "pm2p5", "temp", "hum", "n"]]
+
+
+def load_occupancy(conn: sqlite3.Connection, start: str, end: str) -> pd.DataFrame:
+    """occupancy rows with ``start <= ts < end``, one row per (node, bucket).
+    Columns: node, bucket, occ, occ_med, occ_max, n."""
+    import pandas as pd
+
+    cols = ["node", "bucket", "occ", "occ_med", "occ_max", "n"]
+    if "occupancy" not in existing_tables(conn):
+        return pd.DataFrame(columns=cols)
+    sql = ("SELECT id, ts, node, occ, occ_med, occ_max, n FROM occupancy "
+           "WHERE ts >= ? AND ts < ? ORDER BY id")
+    df = pd.read_sql_query(sql, conn, params=(start, end))
+    if df.empty:
+        return pd.DataFrame(columns=cols)
+    df["bucket"] = floor_buckets(df["ts"])
+    df = df.drop_duplicates(["node", "bucket"], keep="last")
+    return df.sort_values(["node", "bucket"]).reset_index(drop=True)[cols]
+
+
+ANALYSIS_COLS = ("run_at", "kind", "scope", "win_start", "win_end", "model_ver", "payload")
+
+
+def write_analysis(conn: sqlite3.Connection, rows: list[dict]) -> int:
+    """Insert analysis rows (dicts with ANALYSIS_COLS; payload as dict). Every
+    payload passes aq.schemas.validate first, so a bad row aborts the batch."""
+    import json
+
+    from aq import schemas
+
+    prepared = []
+    for r in rows:
+        schemas.validate(r["kind"], r["payload"])
+        prepared.append(tuple(json.dumps(r[c], ensure_ascii=False) if c == "payload" else r.get(c)
+                              for c in ANALYSIS_COLS))
+    cols, marks = ",".join(ANALYSIS_COLS), ",".join("?" * len(ANALYSIS_COLS))
+    conn.executemany(f"INSERT INTO analysis({cols}) VALUES({marks})", prepared)
+    conn.commit()
+    return len(prepared)
+
+
+def read_analysis(conn: sqlite3.Connection, kind: str, limit: int = 20) -> list[dict]:
+    import json
+
+    if "analysis" not in existing_tables(conn):
+        return []
+    cur = conn.execute("SELECT id, run_at, kind, scope, win_start, win_end, model_ver, payload "
+                       "FROM analysis WHERE kind=? ORDER BY id DESC LIMIT ?", (kind, limit))
+    out = []
+    for row in cur.fetchall():
+        d = dict(zip(["id", "run_at", "kind", "scope", "win_start", "win_end", "model_ver",
+                      "payload"], row, strict=True))
+        d["payload"] = json.loads(d["payload"])
+        out.append(d)
+    return out
+
+
+def read_actuator_state(conn: sqlite3.Connection) -> dict[str, dict[str, dict]]:
+    """{node: {device: {"state": int, "since": str}}} -- empty when the table is absent."""
+    if "actuator_state" not in existing_tables(conn):
+        return {}
+    out: dict[str, dict[str, dict]] = {}
+    for node, device, state, since in conn.execute(
+            "SELECT node, device, state, since FROM actuator_state"):
+        out.setdefault(node, {})[device] = {"state": int(state), "since": since}
+    return out
+
+
+def write_actuator_state(conn: sqlite3.Connection, node: str, device: str,
+                         state: int, since: str) -> None:
+    conn.execute("INSERT OR REPLACE INTO actuator_state(node, device, state, since) "
+                 "VALUES(?,?,?,?)", (node, device, int(state), since))
+    conn.commit()

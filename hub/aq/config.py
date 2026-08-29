@@ -26,7 +26,7 @@ class ConfigError(ValueError):
 # section -> {key: expected type(s)}. Lists are checked for element type below.
 NUM = (int, float)
 _SPEC: dict[str, dict[str, type | tuple]] = {
-    "time": {"bucket_minutes": int, "smooth_window": int,
+    "time": {"tz_offset_hours": int, "bucket_minutes": int, "smooth_window": int,
              "transition_dt_minutes": int, "transition_dt_tolerance": int},
     "qc": {"daily_valid_pct_min": NUM},
     "qc.range": {"co2": list, "temp": list, "hum": list, "voc": list, "pm": list,
@@ -44,6 +44,8 @@ _SPEC: dict[str, dict[str, type | tuple]] = {
     "forecast": {"horizon_minutes": int, "target_shift_buckets": int},
     "occ_co2": {"min_occ_n": int},
     "summary": {"max_lines": int},
+    "run": {"hourly_window_hours": int, "daily_window_days": int, "forecast_min_rows": int,
+            "trail_buckets": int, "band_slot_minutes": int},
     "schedule": {"hourly": str, "daily": str, "weekly": str, "timeout_start_sec": int},
 }
 
