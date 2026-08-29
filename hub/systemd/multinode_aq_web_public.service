@@ -1,0 +1,15 @@
+[Unit]
+Description=multinode_aq web front end, public monitoring-only instance (port 8502, behind Tailscale Funnel)
+After=network-online.target multinode_aq_hub.service
+Wants=network-online.target
+
+[Service]
+ExecStart=/home/arduino/multinode_aq/hub/.venv/bin/python /home/arduino/multinode_aq/hub/webapp.py --port 8502 --quiet --public
+WorkingDirectory=/home/arduino/multinode_aq/hub
+Restart=always
+RestartSec=5
+Nice=5
+User=arduino
+
+[Install]
+WantedBy=multi-user.target

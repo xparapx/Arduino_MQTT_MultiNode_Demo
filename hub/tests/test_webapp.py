@@ -171,3 +171,25 @@ def test_http_export_and_reset_guard(site):
     assert e.value.code == 400
     after = _rows(site["dir"] / "sensor_data.db")
     assert before == after > 0
+
+
+def test_public_instance_is_monitoring_only(site):
+    """--public: export and reset answer 403, status says so, everything else works."""
+    srv, url = webapp.serve_in_thread(site["data"], public=True)
+    try:
+        assert get(f"{url}/api/status")["public"] is True
+        assert get(f"{url}/api/analysis")["version"] > 0
+        for path in ("/api/export?kind=all",
+                     "/api/export?kind=range&start=2026-08-28T00:00&end=2026-08-29T00:00"):
+            with pytest.raises(urllib.error.HTTPError) as e:
+                get(f"{url}{path}", raw=True)
+            assert e.value.code == 403
+        before = _rows(site["dir"] / "sensor_data.db")
+        req = urllib.request.Request(f"{url}/api/reset", data=b'{"confirm": "DELETE"}',
+                                     method="POST", headers={"Content-Type": "application/json"})
+        with pytest.raises(urllib.error.HTTPError) as e:
+            urllib.request.urlopen(req, timeout=30)
+        assert e.value.code == 403 and _rows(site["dir"] / "sensor_data.db") == before
+    finally:
+        srv.shutdown()
+    assert get(f"{site['url']}/api/status")["public"] is False        # admin instance untouched

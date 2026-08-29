@@ -18,6 +18,10 @@ Routes
     POST /api/reset           section 6: CSV backup then DELETE FROM readings
                               (body {"confirm": "DELETE"}) -- same behaviour as dashboard.py
 
+--public (monitoring-only instance, e.g. the one behind Tailscale Funnel on 8502):
+/api/export and /api/reset answer 403 and /api/status carries "public": true, so
+the pages hide sections 5 and 6. The admin instance (8501) runs without it.
+
 The data layer is aq.webdata (read-only, memoised on the DB version). Reset is
 the one write and lives here, not in aq/ (CI guard), exactly as page 1 keeps
 its own read-write connection for section 6.
@@ -55,6 +59,7 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "multinode_aq/0.8"
     data = None          # aq.webdata.WebData, set by serve()
     quiet = False
+    public = False       # --public: no export, no reset
 
     # ---- plumbing -----------------------------------------------------------------------
     def log_message(self, fmt, *args):     # default access log is noisy; perf lines instead
@@ -126,6 +131,8 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             return self._error(400, "bad json")
         if url.path == "/api/reset":
+            if self.public:
+                return self._error(403, "reset is disabled on the public instance")
             return self._reset(body)
         self._error(404, "not found")
 
@@ -144,7 +151,7 @@ class Handler(BaseHTTPRequestHandler):
     def _api(self, name: str, q: dict) -> None:
         d = self.data
         if name == "status":
-            return self._json(d.status())
+            return self._json({**d.status(), "public": self.public})
         if name == "live":
             return self._json(d.live())
         if name == "stats":
@@ -159,6 +166,8 @@ class Handler(BaseHTTPRequestHandler):
         if name == "analysis":
             return self._json(d.analysis())
         if name == "export":
+            if self.public:
+                return self._error(403, "export is disabled on the public instance")
             return self._export(q)
         self._error(404, "unknown endpoint")
 
@@ -216,16 +225,17 @@ def _default(o):
     raise TypeError(f"not serialisable: {type(o).__name__}")
 
 
-def make_server(host: str, port: int, data, quiet: bool = False) -> ThreadingHTTPServer:
-    handler = type("BoundHandler", (Handler,), {"data": data, "quiet": quiet})
+def make_server(host: str, port: int, data, quiet: bool = False,
+                public: bool = False) -> ThreadingHTTPServer:
+    handler = type("BoundHandler", (Handler,), {"data": data, "quiet": quiet, "public": public})
     srv = ThreadingHTTPServer((host, port), handler)
     srv.daemon_threads = True
     return srv
 
 
-def serve_in_thread(data, host: str = "127.0.0.1", port: int = 0):
+def serve_in_thread(data, host: str = "127.0.0.1", port: int = 0, public: bool = False):
     """Tests: start on an ephemeral port, return (server, base_url)."""
-    srv = make_server(host, port, data, quiet=True)
+    srv = make_server(host, port, data, quiet=True, public=public)
     th = threading.Thread(target=srv.serve_forever, daemon=True)
     th.start()
     return srv, f"http://{host}:{srv.server_address[1]}"
@@ -239,12 +249,15 @@ def main(argv=None) -> int:
     ap.add_argument("--nodes", default=str(HUB / "nodes.json"))
     ap.add_argument("--models-dir", dest="models_dir", default=str(HUB / "models"))
     ap.add_argument("--quiet", action="store_true", help="no per-request access log")
+    ap.add_argument("--public", action="store_true",
+                    help="monitoring-only: no CSV export, no reset (pages hide sections 5-6)")
     a = ap.parse_args(argv)
     from aq.webdata import WebData
 
     data = WebData(a.db, a.nodes, a.models_dir)
-    srv = make_server(a.host, a.port, data, quiet=a.quiet)
-    _log(f"[webapp] serving {WEB} + /api on http://{a.host}:{a.port}  db={a.db}")
+    srv = make_server(a.host, a.port, data, quiet=a.quiet, public=a.public)
+    _log(f"[webapp] serving {WEB} + /api on http://{a.host}:{a.port}  db={a.db}"
+         f"{'  [public: no export / reset]' if a.public else ''}")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
