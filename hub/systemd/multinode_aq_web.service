@@ -1,10 +1,10 @@
 [Unit]
-Description=multinode_aq web front end (JSON API + static pages, port 8502)
+Description=multinode_aq web front end (JSON API + static pages, port 8501)
 After=network-online.target multinode_aq_hub.service
 Wants=network-online.target
 
 [Service]
-ExecStart=/home/arduino/multinode_aq/hub/.venv/bin/python /home/arduino/multinode_aq/hub/webapp.py --port 8502 --quiet
+ExecStart=/home/arduino/multinode_aq/hub/.venv/bin/python /home/arduino/multinode_aq/hub/webapp.py --port 8501 --quiet
 WorkingDirectory=/home/arduino/multinode_aq/hub
 Restart=always
 RestartSec=5

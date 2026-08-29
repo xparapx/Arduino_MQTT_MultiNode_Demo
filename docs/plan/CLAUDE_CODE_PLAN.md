@@ -280,20 +280,20 @@ hourly 성공 48±1, 5분 판정 대비 평활 판정 전이 수 비율, `actuat
 
 ---
 
-## 12. Phase 8 — 웹 프런트엔드 (정적 HTML/JS + 보드 JSON API) — 사용자 결정 2026-08-29 (경로 C, 두 페이지 동시)
+## 12. Phase 8 — 웹 프런트엔드 (정적 HTML/JS + 보드 JSON API) ✅ 완료 `v0.8-phase8` — 사용자 결정 2026-08-29 (경로 C, 두 페이지 동시)
 Streamlit의 완성도 한계(목업 스타일 미반영, 라이트/다크 토글, 차트·표 정렬) 때문에 화면을 브라우저 JS로 옮긴다. 디자인은 캔버스 `multinode_aq 대시보드`(4 아트보드, docs/plan/dashboard_mockup_v2.html 토큰 + 라이트 반전 토큰)가 정본.
 
 ### 12.1 구조
-- `hub/webapp.py` — 표준 라이브러리 `ThreadingHTTPServer`(의존성 추가 없음). `/` `/diagnosis` 정적 페이지, `/static/*`, `/api/status|live|stats|series|bounds|analysis|export`, `POST /api/reset`. gzip, `[perf] /api/… s` 저널 로그. 포트 **8502**(Streamlit 8501과 병행).
+- `hub/webapp.py` — 표준 라이브러리 `ThreadingHTTPServer`(의존성 추가 없음). `/` `/diagnosis` 정적 페이지, `/static/*`, `/api/status|live|stats|series|bounds|analysis|export`, `POST /api/reset`. gzip, `[perf] /api/… s` 저널 로그. 포트 **8501**(처음엔 8502로 Streamlit과 병행, 사용자 결정 2026-08-29로 Streamlit 정지 후 8501 인수).
 - `hub/aq/webdata.py` — 읽기 전용 데이터층. `ui_common`(페이지 1 계산)과 `analysis_view`(페이지 2 읽기)를 **streamlit 없이** 재구현, DB 버전(readings MAX(id)·5분 버킷, analysis MAX(id))에 메모이즈. `aq/derive.py` — plots.py의 순수 로직(행동 요약·라벨 분산·전이 합산)을 분리해 두 화면이 공유.
 - `hub/web/` — `index.html`(페이지 1) · `diagnosis.html`(페이지 2) · `app.css`(토큰, `data-theme` 다크/라이트) · `app.js`(테마·사이드바·툴팁·섹션 칩) · `charts.js`(SVG 차트: 레이더·박스·막대·시계열·평면·밴드·전이·상관·밀도) · `page1.js` · `page2.js`. 외부 라이브러리 없음(Plotly.js 미사용), 폰트만 Google Fonts.
-- systemd `multinode_aq_web.service`(port 8502), `deploy.sh`가 `webapp.py|web/*|aq/*` 변경 시 재시작 대상에 포함.
+- systemd `multinode_aq_web.service`(port 8501), `deploy.sh`가 `webapp.py|web/*|aq/*` 변경 시 재시작 대상에 포함.
 
 ### 12.2 완료 기준
-- [ ] 페이지 1·2가 API만으로 렌더 — Streamlit 페이지와 **내용 동등**(섹션 1~6, A~I, 사이드바), 캔버스 디자인(칩·E 카드 2×4·B 평면/표 등높이·다크/라이트) 반영
-- [ ] API 응답: 60 s 폴링분(`status`+`live`+`series`) < 50 KB, `analysis` < 200 KB, warm 캐시 < 50 ms(보드)
-- [ ] `webapp.py`는 readings/occupancy를 `mode=ro`로만 읽음(reset 제외, dashboard.py와 동일 동작) · CI 가드 통과 · pytest e2e(정적·JSON·CSV·gzip·경로 탈출·reset 가드)
-- [ ] 보드: 유닛 설치 후 `is-active`, 태블릿/PC에서 두 페이지 확인, Streamlit 병행 유지(교체는 사용자 확인 후 별도 결정)
+- [x] 페이지 1·2가 API만으로 렌더 — Streamlit 페이지와 **내용 동등**(섹션 1~6, A~I, 사이드바), 캔버스 디자인(칩·E 카드 2×4·B 평면/표 등높이·다크/라이트) 반영
+- [x] API 응답: 60 s 폴링분(`status`+`live`+`series`) < 50 KB, `analysis` < 200 KB, warm 캐시 < 50 ms(보드)
+- [x] `webapp.py`는 readings/occupancy를 `mode=ro`로만 읽음(reset 제외, dashboard.py와 동일 동작) · CI 가드 통과 · pytest e2e(정적·JSON·CSV·gzip·경로 탈출·reset 가드)
+- [x] 보드: 유닛 설치 후 `is-active`, 태블릿/PC에서 두 페이지 확인, Streamlit 병행 유지(교체는 사용자 확인 후 별도 결정)
 
 ## 부록 A — 롤백
 `Q: cd ~/multinode_aq && git checkout v0.N-phaseN && hub/deploy.sh` 후 재시작 명령은 사용자. `DELETE FROM analysis`는 수집·표시 무영향. `analyst.py model rollback --to vN`.
