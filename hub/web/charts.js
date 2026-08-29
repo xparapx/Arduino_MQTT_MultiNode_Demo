@@ -117,6 +117,9 @@ const CH = (() => {
     const grid = css("--grid"), dim = css("--dim"), ink = css("--ink"), plot = css("--plot"), foot = css("--foot");
     let s = `<svg class="chart" viewBox="0 0 ${Wd} ${H}" preserveAspectRatio="xMidYMid meet" style="height:${H}px">`;
     s += `<rect x="${L}" y="${T}" width="${Wd - L - R}" height="${H - T - B}" fill="${plot}"/>`;
+    for (const [k, x0, y0, x1, y1] of [["clean", 0, 0, ax, ay], ["matter", 0, ay, ax, ymax], ["human", ax, 0, xmax, ay], ["mixed", ax, ay, xmax, ymax]]) {
+      s += `<rect x="${f1(px(x0))}" y="${f1(py(y1))}" width="${f1(px(x1) - px(x0))}" height="${f1(py(y0) - py(y1))}" fill="${AQ.regimeColor(k)}" opacity="0.07"/>`;
+    }
     for (let i = 0; i <= Math.floor(xmax); i++) s += `<line x1="${f1(px(i))}" y1="${T}" x2="${f1(px(i))}" y2="${H - B}" stroke="${grid}"/><text x="${f1(px(i))}" y="${H - B + 16}" font-size="10" fill="${dim}" text-anchor="middle">${i}</text>`;
     for (let i = 0; i <= Math.floor(ymax); i++) s += `<line x1="${L}" y1="${f1(py(i))}" x2="${Wd - R}" y2="${f1(py(i))}" stroke="${grid}"/><text x="${L - 8}" y="${f1(py(i) + 4)}" font-size="10" fill="${dim}" text-anchor="end">${i}</text>`;
     s += `<line x1="${f1(px(ax))}" y1="${T}" x2="${f1(px(ax))}" y2="${H - B}" stroke="${dim}" stroke-dasharray="5 4"/><line x1="${L}" y1="${f1(py(ay))}" x2="${Wd - R}" y2="${f1(py(ay))}" stroke="${dim}" stroke-dasharray="5 4"/>`;
@@ -203,17 +206,28 @@ const CH = (() => {
   function density(d, current) {
     const Wd = 300, H = 280, L = 34, R = 8, T = 8, B = 30, amax = d.amax, bins = d.bins;
     const px = (x) => L + (x + amax) / (2 * amax) * (Wd - L - R), py = (y) => H - B - (y + amax) / (2 * amax) * (H - T - B);
-    const plot = css("--plot"), ink = css("--ink"), dim = css("--dim"), dens = css("--dens");
-    let s = `<svg class="chart" viewBox="0 0 ${Wd} ${H}"><rect x="${L}" y="${T}" width="${Wd - L - R}" height="${H - T - B}" fill="${plot}"/>`;
+    const plot = css("--plot"), ink = css("--ink"), dim = css("--dim");
+    const uid = "q" + Math.random().toString(36).slice(2, 8);
+    // quadrant colours: x = CO2 (human factor), y = VOC (matter factor)
+    const qcol = (x, y) => AQ.regimeColor(x >= 0 ? (y >= 0 ? "mixed" : "human") : (y >= 0 ? "matter" : "clean"));
+    let s = `<svg class="chart" viewBox="0 0 ${Wd} ${H}"><defs>`;
+    const quads = [["clean", L, py(0), px(0) - L, H - B - py(0), px(0), py(0)], ["matter", L, T, px(0) - L, py(0) - T, px(0), py(0)],
+                   ["human", px(0), py(0), Wd - R - px(0), H - B - py(0), px(0), py(0)], ["mixed", px(0), T, Wd - R - px(0), py(0) - T, px(0), py(0)]];
+    for (const [k, x, y, w, h, cx, cy] of quads) {
+      const fx = ((cx - x) / w) * 100, fy = ((cy - y) / h) * 100;      // gradient origin = the anchor corner
+      s += `<radialGradient id="${uid}-${k}" cx="${f1(fx)}%" cy="${f1(fy)}%" r="110%"><stop offset="0%" stop-color="${AQ.regimeColor(k)}" stop-opacity="0.04"/><stop offset="100%" stop-color="${AQ.regimeColor(k)}" stop-opacity="0.22"/></radialGradient>`;
+    }
+    s += `</defs><rect x="${L}" y="${T}" width="${Wd - L - R}" height="${H - T - B}" fill="${plot}"/>`;
+    for (const [k, x, y, w, h] of quads) s += `<rect x="${f1(x)}" y="${f1(y)}" width="${f1(w)}" height="${f1(h)}" fill="url(#${uid}-${k})"/>`;
     const cw = (Wd - L - R) / bins, ch = (H - T - B) / bins, step = 2 * amax / bins;
     const zmax = Math.max(1e-9, ...d.hist.flat());
     d.hist.forEach((col, i) => col.forEach((z, j) => {
       if (!z) return;
       const x = -amax + i * step, y = -amax + (j + 1) * step;
-      s += `<rect x="${f1(px(x))}" y="${f1(py(y))}" width="${f1(cw + 0.3)}" height="${f1(ch + 0.3)}" fill="rgba(${dens},${f1(Math.min(0.6, 0.08 + 0.55 * z / zmax))})"/>`;
+      s += `<rect x="${f1(px(x))}" y="${f1(py(y))}" width="${f1(cw + 0.3)}" height="${f1(ch + 0.3)}" fill="${qcol(x + step / 2, y - step / 2)}" opacity="${f1(Math.min(0.85, 0.12 + 0.75 * Math.sqrt(z / zmax)))}"/>`;
     }));
     s += `<line x1="${f1(px(0))}" y1="${T}" x2="${f1(px(0))}" y2="${H - B}" stroke="${ink}" stroke-width="1.5"/><line x1="${L}" y1="${f1(py(0))}" x2="${Wd - R}" y2="${f1(py(0))}" stroke="${ink}" stroke-width="1.5"/>`;
-    for (const [x, y, t] of [[0.6, 0.6, "Human ≈ Matter"], [-0.6, 0.6, "Matter > Human"], [0.6, -0.6, "Human > Matter"], [-0.6, -0.6, "Clean"]]) s += `<text x="${f1(px(x * amax))}" y="${f1(py(y * amax))}" font-size="9" fill="${dim}" text-anchor="middle" class="sans">${t}</text>`;
+    for (const [x, y, t, k] of [[0.6, 0.6, "Human ≈ Matter", "mixed"], [-0.6, 0.6, "Matter > Human", "matter"], [0.6, -0.6, "Human > Matter", "human"], [-0.6, -0.6, "Clean", "clean"]]) s += `<text x="${f1(px(x * amax))}" y="${f1(py(y * amax))}" font-size="9" font-weight="600" fill="${AQ.regimeColor(k)}" text-anchor="middle" class="sans">${t}</text>`;
     for (const c of current) {
       const cx = Math.max(-amax, Math.min(amax, c.x)), cy = Math.max(-amax, Math.min(amax, c.y)), X = px(cx), Y = py(cy);
       const star = [...Array(10).keys()].map((j) => { const r = j % 2 ? 3.5 : 8, a = -Math.PI / 2 + j * Math.PI / 5; return `${f1(X + r * Math.cos(a))},${f1(Y + r * Math.sin(a))}`; }).join(" ");

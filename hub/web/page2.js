@@ -5,7 +5,7 @@
   let A = null, within = null;
   const pct = (v) => v === null || v === undefined ? "—" : `${Number(v).toFixed(1)}%`;
   const kstRange = (w) => w ? `${w.start.slice(5, 10)} → ${w.end.slice(5, 10)}` : "—";
-  const actionColor = { fan: "--red", purifier: "--orange", both: "--purple", none: "--dim", hold: "--grid" };
+  const actionColor = { fan: "--rg-human", purifier: "--rg-matter", both: "--rg-mixed", none: "--rg-clean", hold: "--grid" };
 
   function metric(l, v, d) { return `<div class="metric"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d || ""}</div></div>`; }
   const nm = (r) => `${dot(r.color)}${esc(r.label)}`;
