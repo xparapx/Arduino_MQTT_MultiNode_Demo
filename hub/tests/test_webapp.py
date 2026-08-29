@@ -114,7 +114,9 @@ def test_analysis_bundle(site):
     assert a["transition"]["valid_pairs"] > 0 and len(a["transition"]["rows"]) == 4
     assert a["occ_co2"]["by_room"] and any(r["stopped"] for r in a["occ_co2"]["by_room"])
     assert a["explore"]["pooled"]["bins"] == len(a["explore"]["pooled"]["hist"])
-    assert a["summary"]["lines"] and a["qc"]
+    assert a["summary"]["lines"]
+    assert len(a["qc"]) == 8 and all(len(q["days"]) <= 8 for q in a["qc"])   # one row per node
+    assert any(q["failed_days"] for q in a["qc"])
     json.dumps(a, allow_nan=False)                                   # no NaN anywhere
 
 

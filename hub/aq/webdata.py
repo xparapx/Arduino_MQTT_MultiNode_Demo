@@ -413,14 +413,29 @@ class WebData:
                          "daily_kst": kst(L["band"][0]["run_at"]) if L["band"] else None}
         out["daily_window"] = ({"start": L["band"][0]["win_start"], "end": L["band"][0]["win_end"]}
                                if L["band"] else None)
-        # A: QC (latest run, per node@day scope)
-        qc = []
+        # A: QC -- one row per node. The node-scoped row (hourly) is "today"; the
+        # node@day rows (daily) become a 7-day pass / fail strip.
+        qc_today: dict[str, dict] = {}
+        qc_days: dict[str, list] = {}
         for r in L["qc"]:
-            node = r["scope"].split("@")[0]
+            node, _, day = r["scope"].partition("@")
             p = r["payload"]
-            qc.append({**self.node_info(node, colors), "scope": r["scope"],
-                       "valid_co2_pct": p["valid_co2_pct"], "valid_voc_pct": p["valid_voc_pct"],
-                       "passed": p["passed"], "reason": p["reason"]})
+            if day:
+                qc_days.setdefault(node, []).append({"date": day, "passed": p["passed"],
+                                                     "valid_co2_pct": p["valid_co2_pct"]})
+            else:
+                qc_today[node] = p
+        qc = []
+        for n in nodes:
+            days = sorted(qc_days.get(n, []), key=lambda d: d["date"])
+            p = qc_today.get(n) or (dict(days[-1]) if days else None)
+            if p is None and n not in qc_days:
+                continue
+            qc.append({**self.node_info(n, colors),
+                       "valid_co2_pct": (p or {}).get("valid_co2_pct"),
+                       "valid_voc_pct": (p or {}).get("valid_voc_pct"),
+                       "passed": (p or {}).get("passed", False), "reason": (p or {}).get("reason", ""),
+                       "days": days, "failed_days": sum(1 for d in days if not d["passed"])})
         out["qc"] = qc
         # B: regime now + one action row per room, all env nodes listed
         regime_now = {r["scope"]: r["payload"] for r in reg_rows}

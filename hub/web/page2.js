@@ -32,7 +32,8 @@
       + metric("hourly 마지막 실행", esc(A.run_at.hourly_kst || "—"), `${judged}노드 판정${held ? ` · 보류 ${held}` : ""}`)
       + `</div>`;
     if (A.qc.length) {
-      h += table(["교실", "노드", "CO₂ 유효율", "VOC 유효율", "판정", "사유"], A.qc.map((q) => ({ cells: [nm(q), esc(q.node), pct(q.valid_co2_pct), pct(q.valid_voc_pct), q.passed ? chip("사용", "ok") : chip("제외", "ex"), esc(q.reason || "—")], txt: [5] })), "").replace('<div class="wrap">', '<div class="wrap" style="margin-top:12px">');
+      const strip = (q) => q.days.length ? `<span class="row" style="gap:3px" data-tip="${esc(q.days.map((d) => `${d.date.slice(5)} ${d.passed ? "통과" : "탈락"} (co2 ${pct(d.valid_co2_pct)})`).join("\n"))}">${q.days.map((d) => `<i style="width:9px;height:9px;border-radius:2px;display:inline-block;background:${d.passed ? css("--green") : css("--red")};opacity:${d.passed ? 0.7 : 1}"></i>`).join("")}${q.failed_days ? `<span class="tt" style="margin-left:4px">탈락 ${q.failed_days}일</span>` : ""}</span>` : "—";
+      h += table(["교실", "노드", "CO₂ 유효율", "VOC 유효율", "판정", "사유", `최근 ${run.daily_window_days}일`], A.qc.map((q) => ({ cells: [nm(q), esc(q.node), pct(q.valid_co2_pct), pct(q.valid_voc_pct), q.passed ? chip("사용", "ok") : chip("제외", "ex"), esc(q.reason || "—"), strip(q)], txt: [5] })), "").replace('<div class="wrap">', '<div class="wrap" style="margin-top:12px">');
     }
     h += `<p class="note">QC: 노드×일 CO₂ 유효율 ≥ ${cfg.qc.daily_valid_pct_min}%(수신 행 기준, KST 일)만 사용 · ${cfg.regime.bucket_minutes}분 floor 버킷 · 보간 없음</p></div>`;
 
