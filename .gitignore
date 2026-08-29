@@ -44,3 +44,4 @@ hub/secrets.env
 secrets.env
 *.bak
 *.save
+_phase0_backup/

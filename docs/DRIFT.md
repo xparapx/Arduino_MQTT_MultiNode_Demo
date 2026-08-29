@@ -38,3 +38,12 @@
 - **(A) 권장** `~/multinode_aq/hub/`를 uv 프로젝트·런타임 디렉터리로: 보드에서 `.venv`, `sensor_data.db`, `pyproject.toml`, `uv.lock`, `.python-version`을 `hub/`로 `mv`, 두 유닛의 `WorkingDirectory`/`ExecStart`를 `/home/arduino/multinode_aq/hub/...`로 수정 + `EnvironmentFile=/home/arduino/multinode_aq/hub/secrets.env`. 저장소 `hub/` == 보드 `hub/` 가 그대로 성립하고 Phase 1 `hub/deploy.sh`, Phase 6 유닛 파일과 일관됨. 비용: hub 서비스 정지 → 이동 → 기동 (수 초 수집 공백).
 - (B) 저장소를 평면으로 재구성(`hub/` 내용을 루트로): 플랜 §4.1 구조와 충돌.
 - (C) 보드에 심링크(`~/multinode_aq/hub.py → hub/hub.py` 등): untracked 항목 증가, DB 경로 혼란.
+
+**결정 (플랜 v2 §3.1): (A) 채택.** 저장소 `hub/systemd/*.service`는 `hub/` 경로 + `EnvironmentFile=` + dashboard `After=multinode_aq_hub.service`(오타 수정)로 갱신. 보드 평면 파일은 `_phase0_backup/`(gitignore)로 이동. 보드의 uv 기본 `.gitignore`도 저장소 `.gitignore`와 충돌하므로 같은 백업 폴더로 이동.
+
+## 플랜 v2 반영 후 추가 드리프트
+| 항목 | 기재 | 실물 |
+|---|---|---|
+| 플랜 위치 | CLAUDE.md·플랜 §4.1: `plan/CLAUDE_CODE_PLAN.md`, `plan/dashboard_mockup.html` | 실제 파일은 `docs/plan/CLAUDE_CODE_PLAN.md`, `docs/plan/dashboard_mockup_v2.html` (2026-08-29 이동) |
+| 저장소 `.gitignore` `*.db` | (기존 규칙) | `fixtures/sample.db`(Phase 1)를 커밋하려면 예외 규칙 `!fixtures/sample.db` 필요 |
+| 저장소 히스토리 | 비밀값 없음 | `docs/manual.html` 2826·3205행(펌웨어 예제)에 실제 HiveMQ 클러스터 **호스트명**이 main 히스토리에 있음(계정·비밀번호는 없음). 처리 시점 [ASK] |

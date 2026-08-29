@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>multinode_aq — 대시보드 목업 v2 (2페이지 · 실물 구조 반영)</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1a1d24;--panel:#242832;--panel2:#2b303b;--ink:#e6e8ec;--dim:#aab2bd;--grid:#3a414e;
+--blue:#a1c9f4;--orange:#ffb482;--green:#8de5a1;--red:#ff9f9b;--purple:#d0bbff;--brown:#debb9b;--pink:#fab0e4;--gray:#cfcfcf;--yellow:#fffea3;--cyan:#b9f2f0;
+--sans:"IBM Plex Sans KR",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.side{background:#14171d;border-right:1px solid var(--grid);padding:18px 14px;position:sticky;top:0;height:100vh}
+.brand{font-family:var(--mono);font-size:12px;color:var(--dim)}.brand b{display:block;color:var(--ink);font-family:var(--sans);font-size:15px;font-weight:600}
+.nav{margin:22px 0 0;padding:0;list-style:none}.nav li{padding:10px 12px;border-radius:8px;cursor:pointer;display:flex;gap:10px;align-items:center;color:var(--dim);margin-bottom:4px}
+.nav li .n{font-family:var(--mono);font-size:11px;width:18px;height:18px;border-radius:5px;display:grid;place-items:center;background:var(--grid);color:var(--ink)}
+.nav li.on{background:var(--panel);color:var(--ink)}.nav li.on .n{background:var(--cyan);color:#111}.nav li:nth-child(2).on .n{background:var(--purple)}
+.status{margin-top:26px;border-top:1px solid var(--grid);padding-top:14px;font-size:12px;color:var(--dim)}.status div{display:flex;justify-content:space-between;padding:4px 0}
+.status .ok{color:var(--green)}.status .warn{color:var(--orange)}.status .mono{font-family:var(--mono)}
+.foot{position:absolute;bottom:16px;left:14px;right:14px;font-size:11px;color:#6b7482;font-family:var(--mono);line-height:1.5}
+main{padding:22px 28px 60px;max-width:1500px}.page{display:none}.page.on{display:block}
+h1{font-size:20px;font-weight:600;margin:0 0 4px}.sub{color:var(--dim);font-size:13px;margin:0 0 20px}
+.sec{margin:26px 0 12px;display:flex;align-items:center;gap:10px}.sec .b{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:600;color:#111}
+.sec h2{font-size:15px;font-weight:600;margin:0}.sec .meta{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--dim)}
+.panel{background:var(--panel);border:1px solid var(--grid);border-radius:10px;padding:14px 16px}
+.grid{display:grid;gap:12px}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:1fr 1fr}.g6{grid-template-columns:repeat(6,1fr)}
+.card h3{margin:0 0 4px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;justify-content:center}
+.card.down{opacity:.55}.card .dn{font-family:var(--mono);font-size:10px;color:var(--red);text-align:center}
+.tt{font-family:var(--mono);font-size:11px;color:var(--dim)}.mini{width:100%;height:110px;display:block}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}.tbl th{color:var(--dim);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--grid)}
+.tbl td{padding:7px 8px;border-bottom:1px solid #2f3541;font-family:var(--mono);font-size:12px}.tbl td:first-child{font-family:var(--sans)}
+.btn{display:inline-block;background:var(--panel2);border:1px solid var(--grid);color:var(--ink);padding:7px 12px;border-radius:7px;font-size:12px;margin:0 8px 8px 0}
+.btn.primary{background:var(--blue);color:#111;border-color:var(--blue)}.btn.ghost{color:var(--dim)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:11px;font-family:var(--mono);border:1px solid var(--grid);color:var(--dim)}
+.chip.ok{color:var(--green);border-color:#3b6b4c}.chip.ex{color:var(--red);border-color:#7a3f3f}.chip.warn{color:var(--orange);border-color:#7a5a3f}
+.regime{padding:2px 8px;border-radius:5px;font-weight:600;font-size:12px;display:inline-block}
+.r-clean{background:#1f3b2c;color:var(--green)}.r-matter{background:#3d2f1c;color:var(--orange)}.r-human{background:#3d2424;color:var(--red)}.r-mixed{background:#33244a;color:var(--purple)}
+.rg{display:grid;grid-template-columns:1.1fr 1fr;gap:12px}.rlist{display:flex;flex-direction:column;gap:6px}
+.rrow{display:grid;grid-template-columns:96px 90px 1fr 1fr 1fr;align-items:center;gap:10px;background:var(--panel2);border-radius:8px;padding:7px 12px;font-size:12px}
+.rrow .nm{font-weight:600;display:flex;align-items:center;gap:7px}.rrow .k{color:var(--dim);font-size:10px;display:block}.rrow .mono{font-family:var(--mono);font-size:13px}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.act{background:var(--panel2);border-radius:10px;padding:14px;border-left:4px solid var(--grid)}
+.act.on{border-left-color:var(--red)}.act.on2{border-left-color:var(--orange)}.act.off{border-left-color:#4a5563}
+.act h4{margin:0 0 6px;font-size:14px;display:flex;align-items:center;gap:8px}.act .do{font-size:18px;font-weight:700;margin:6px 0 10px}.act.off .do{color:var(--dim);font-weight:500}
+.chain{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px}.chain div{background:#1e222b;border-radius:6px;padding:7px 8px}.chain b{display:block;color:var(--dim);font-weight:500;font-size:10px;margin-bottom:3px}.chain .mono{font-family:var(--mono)}
+.why{font-size:11px;color:var(--dim);margin-top:10px;line-height:1.5}
+.legend{display:flex;gap:14px;font-size:11px;color:var(--dim);flex-wrap:wrap}.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:var(--sw)}
+.kv{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.kv div{background:var(--panel2);border-radius:8px;padding:10px 12px}.kv b{display:block;font-family:var(--mono);font-size:18px;font-weight:600}.kv span{font-size:11px;color:var(--dim)}
+.note{font-size:11px;color:var(--dim);margin-top:8px}.danger{border-color:#5a3434;background:#261e20}.danger summary{cursor:pointer;color:var(--red);font-size:13px}
+.vp{background:var(--panel2);border-radius:10px;padding:12px 14px}.vp .hd{display:flex;justify-content:space-between;font-size:13px;font-weight:600}
+.vp .live{font-size:10px;padding:2px 9px;border-radius:20px;border:1px solid var(--grid);color:var(--green)}.vp .chips{display:flex;gap:8px;margin:8px 0 10px}
+.vp .chip2{background:#1a1f29;border:1px solid #333b49;border-radius:8px;padding:4px 12px;text-align:center;flex:1}.vp .chip2 .v{font-size:19px;font-weight:800;font-family:var(--mono)}.vp .chip2.acc .v{color:#FFB300}.vp .chip2 .l{font-size:9.5px;color:var(--dim);letter-spacing:.08em}
+.vp .maprow{display:flex;gap:12px}.vp .map{position:relative;flex:0 0 55%;aspect-ratio:4/3;background:#161a22;border:1px dashed var(--grid);border-radius:8px;overflow:hidden;background-image:repeating-linear-gradient(0deg,transparent,transparent 23px,#2a3140 24px),repeating-linear-gradient(90deg,transparent,transparent 23px,#2a3140 24px)}
+.vp .ch{position:absolute;width:38px;height:38px;transform:translate(-50%,-50%);animation:vb 1.15s ease-in-out infinite}.vp .ch::before{content:'';position:absolute;left:50%;top:-4px;bottom:-4px;width:2px;background:#FFB300;transform:translateX(-50%)}.vp .ch::after{content:'';position:absolute;top:50%;left:-4px;right:-4px;height:2px;background:#FFB300;transform:translateY(-50%)}.vp .ch b{position:absolute;inset:9px;border:2px solid #FFB300;border-radius:50%}
+@keyframes vb{0%,100%{opacity:1}50%{opacity:.18}}.vp .side2{flex:1;display:flex;flex-direction:column;justify-content:flex-end}.vp .bars{display:flex;align-items:flex-end;gap:2px;height:74px}.vp .bars i{flex:1;background:#3d4c60;border-radius:2px 2px 0 0;min-height:2px}.vp .bars i.now{background:#FFB300}.vp .ft{font-size:9.5px;color:#5f6f7e;margin-top:8px}
+@media(max-width:1100px){.g4,.g6{grid-template-columns:repeat(2,1fr)}.g3,.acts{grid-template-columns:1fr}.rg{grid-template-columns:1fr}.app{grid-template-columns:1fr}.side{position:static;height:auto}}
+</style></head>
+<body><div class="app">
+<aside class="side">
+  <div class="brand">multinode_aq · UNO Q (aqhub)<b>교실 공기질 모니터</b></div>
+  <ul class="nav" id="nav"><li class="on" data-p="p1"><span class="n">1</span>모니터링</li><li data-p="p2"><span class="n">2</span>진단 · 추론 · 행동지침</li></ul>
+  <div class="status">
+    <div><span>hub.py</span><span class="ok">● 수집 중</span></div>
+    <div><span>마지막 수신</span><span class="mono">08-29 10:01 KST</span></div>
+    <div><span>환경 노드</span><span class="mono warn">6 / 8 활성</span></div>
+    <div><span>비전 노드</span><span class="mono">1 / 5 최근</span></div>
+    <div><span>readings</span><span class="mono">114,375 행</span></div>
+    <div><span>analyst.py</span><span class="ok">● 06:00 UTC 완료</span></div>
+    <div><span>진단 모델</span><span class="mono">v1 · 28d</span></div>
+  </div>
+  <div class="foot">sensor_data.db · WAL<br>readings / occupancy / analysis<br>dashboard v2 · pages/ · fragment 60s</div>
+</aside>
+<main>
+<!-- ================= PAGE 1 ================= -->
+<section class="page on" id="p1">
+  <h1>Multinode Environmental Sensing Monitor</h1>
+  <p class="sub">8 nodes: CLASS_01 … CLASS_08 &nbsp;|&nbsp; 114,375 rows — last seen 2026-08-29 10:01:27 (KST) &nbsp;·&nbsp; 온습도 대표값 SCD30 · 데이터가 바뀔 때만 다시 그림</p>
+
+  <div class="sec"><span class="b" style="background:var(--cyan)">1</span><h2>Live status by node — 레이더 (6변수 정규화)</h2><span class="meta">fragment 60 s · 이름표 숫자순</span></div>
+  <div class="grid g4" id="cards"></div>
+
+  <div class="sec"><span class="b" style="background:var(--orange)">2</span><h2>Overall stats — 최근 28일</h2><span class="meta">fragment 5 min · 서버 집계본만 전송 (q1·median·q3)</span></div>
+  <div class="grid g6" id="boxes"></div>
+  <div class="grid g2" style="margin-top:12px">
+    <div class="panel"><div class="tt" style="margin-bottom:6px">CO₂ mean by node (ppm) ★</div><svg id="co2bar" viewBox="0 0 400 190" style="width:100%;height:auto"></svg></div>
+    <div class="panel"><div class="tt" style="margin-bottom:6px">VOC mean by node (idx) ★</div><svg id="vocbar" viewBox="0 0 400 190" style="width:100%;height:auto"></svg></div>
+  </div>
+  <p class="note">상관 히트맵 · CO₂-VOC 레짐 산점도(pooled / 노드별)는 <b>2) 진단</b> 페이지로 이동. 이 페이지는 "지금 상태"만.</p>
+
+  <div class="sec"><span class="b" style="background:var(--blue)">3</span><h2>Time series by node + 재실 탐지</h2><span class="meta">fragment 60 s · 선택 상태 유지</span></div>
+  <div class="panel">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><span class="tt">Select node</span><span class="btn">CLASS_05 (node_E84DF0) ▾</span><span class="tt">최근 60 버킷 = 5시간</span></div>
+    <div class="grid g6" id="ts"></div>
+    <div class="grid g2" style="margin-top:12px">
+      <div class="vp">
+        <div class="hd"><span>재실 탐지 — CLASS_05 <span style="color:#7c8b9c">(node_E1B3AA)</span></span><span class="live" style="color:var(--red)">지연</span></div>
+        <div class="chips"><div class="chip2 acc"><div class="v">2.4</div><div class="l">5분 평균</div></div><div class="chip2"><div class="v">3</div><div class="l">중앙값</div></div><div class="chip2"><div class="v">4</div><div class="l">최대</div></div><div class="chip2"><div class="v">30</div><div class="l">샘플 n</div></div></div>
+        <div class="maprow"><div class="map"><div class="ch" style="left:50%;top:31%"><b></b></div><div class="ch" style="left:64%;top:57%;animation-delay:.15s"><b></b></div></div>
+          <div class="side2"><div class="tt" style="margin-bottom:6px">최근 버킷 추이 (평균 인원)</div><div class="bars" id="occbars"></div><div class="ft">조준선 = 최대 인원 시점 위치 (4:3) · 마지막 버킷 08-10 07:04 KST<br>영상 비전송 · 좌표만 수집 (온디바이스 추론)</div></div></div>
+      </div>
+      <div class="panel" style="display:grid;place-items:center;text-align:center;color:var(--dim);font-size:12px">이 자리의 <b>노드별 레짐 산점도</b>는 2페이지 H(탐색 시각화)로 이동<br><span class="tt">→ Phase 5에서 비전 패널을 전폭으로 확장하거나 재실×CO₂ 미니 산점도 배치 [ASK]</span></div>
+    </div>
+  </div>
+
+  <div class="sec"><span class="b" style="background:var(--blue)">4</span><h2>Recent records — CLASS_05</h2><span class="meta">fragment 60 s</span></div>
+  <div class="panel"><table class="tbl"><tr><th>recv_time (KST)</th><th>pm1p0</th><th>pm2p5</th><th>pm4p0</th><th>pm10p0</th><th>voc</th><th>nox</th><th>co2</th><th>scd_temp</th><th>scd_hum</th></tr>
+    <tr><td>08-29 10:00:25</td><td>8.1</td><td>9.4</td><td>10.2</td><td>11.0</td><td>96</td><td>1</td><td>1184</td><td>26.1</td><td>58.0</td></tr>
+    <tr><td>08-29 09:55:24</td><td>8.0</td><td>9.2</td><td>10.0</td><td>10.8</td><td>95</td><td>1</td><td>1146</td><td>26.0</td><td>58.2</td></tr>
+    <tr><td>08-29 09:50:26</td><td>7.9</td><td>9.1</td><td>9.9</td><td>10.7</td><td>93</td><td>1</td><td>1102</td><td>26.0</td><td>58.4</td></tr>
+    <tr><td>08-29 09:45:25</td><td>7.8</td><td>9.0</td><td>9.8</td><td>10.6</td><td>92</td><td>1</td><td>1058</td><td>25.9</td><td>58.5</td></tr>
+    <tr><td>08-29 09:40:24</td><td>7.8</td><td>8.9</td><td>9.7</td><td>10.5</td><td>91</td><td>1</td><td>1010</td><td>25.9</td><td>58.6</td></tr></table></div>
+
+  <div class="sec"><span class="b" style="background:var(--purple)">5</span><h2>Data export (CSV) — 요청 시 생성</h2><span class="meta">버튼을 누르기 전엔 쿼리·직렬화 없음</span></div>
+  <div class="grid g2">
+    <div class="panel">
+      <p class="tt" style="margin:0 0 10px">DB = 영구 원본 · CSV = 그 순간의 사본. 준비 → 다운로드 2단계.</p>
+      <span class="btn">전체 readings CSV 준비 (114,375행)</span><span class="btn">env × occupancy 병합 CSV 준비</span><span class="btn">occupancy 원본 CSV 준비</span>
+      <div style="margin-top:8px"><span class="btn primary">⬇ sensor_all_2026-08-29.csv (15.2 MB)</span><span class="tt">준비 완료 — 세션에 보관</span></div>
+    </div>
+    <div class="panel">
+      <p class="tt" style="margin:0 0 8px">Export by date range (KST)</p>
+      <span class="btn ghost">Start 2026-08-22 ▾</span><span class="btn ghost">00:00 ▾</span><span class="btn ghost">End 2026-08-29 ▾</span><span class="btn ghost">23:00 ▾</span>
+      <div><span class="btn">조회</span><span class="tt">→ 12,904 rows</span> <span class="btn primary">⬇ range CSV</span></div>
+      <details class="panel danger" style="margin-top:12px"><summary>6) Data reset (DANGER)</summary><p class="tt">CSV 자동 백업 후 readings 비우기. hub는 멈추지 않음.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PAGE 2 ================= -->
+<section class="page" id="p2">
+  <h1>진단 · 추론 · 행동지침</h1>
+  <p class="sub">analyst.py가 저장한 <code>analysis</code> 테이블만 읽어 표시 — ML(GMM)이 "무엇이 문제인지", 규칙이 "행동할 때인지" · 이 페이지는 readings를 직접 읽지 않음</p>
+
+  <div class="sec"><span class="b" style="background:var(--green)">A</span><h2>유효 범위 — 이 페이지의 해석이 성립하는 조건</h2><span class="meta">daily 06:00 UTC · 28일 이동창</span></div>
+  <div class="panel">
+    <div class="kv"><div><b>08-01 → 08-28</b><span>분석 창 · 5분 floor 버킷 · 8노드 중 6 사용</span></div><div><b>v1</b><span>진단 모델 · 28d 학습 · 다음 후보 09-06(일)</span></div><div><b>31,204</b><span>전이 집계 유효 쌍 · 결측 단절 118회 제외</span></div><div><b>hourly 10:05</b><span>마지막 실행 · 0.8 s · RSS 210 MB</span></div></div>
+    <table class="tbl" style="margin-top:12px"><tr><th>노드</th><th>ID</th><th>CO₂ 유효율</th><th>VOC 유효율</th><th>판정</th><th>사유</th></tr>
+      <tr><td>CLASS_01</td><td>node_D0C12C</td><td>0%</td><td>0%</td><td><span class="chip ex">제외</span></td><td>08-28 13:21 KST 이후 수신 없음 (다운 21h)</td></tr>
+      <tr><td>CLASS_02</td><td>node_4C22A7</td><td>99.6%</td><td>99.7%</td><td><span class="chip ok">사용</span></td><td>정각 버킷 노드</td></tr>
+      <tr><td>CLASS_03</td><td>node_5040F0</td><td>98.9%</td><td>99.1%</td><td><span class="chip ok">사용</span></td><td>—</td></tr>
+      <tr><td>CLASS_04</td><td>node_8C8B35</td><td>99.2%</td><td>99.0%</td><td><span class="chip ok">사용</span></td><td>—</td></tr>
+      <tr><td>CLASS_05</td><td>node_E84DF0</td><td>99.4%</td><td>99.6%</td><td><span class="chip ok">사용</span></td><td>—</td></tr>
+      <tr><td>CLASS_06</td><td>node_E04537</td><td>96.8%</td><td>97.1%</td><td><span class="chip warn">사용 · 주의</span></td><td>이상값 행 (co2 0 · temp −98) 범위규칙으로 NaN 처리 · 오늘 3.2%</td></tr>
+      <tr><td>CLASS_07</td><td>node_3093F0</td><td>99.5%</td><td>99.5%</td><td><span class="chip ok">사용</span></td><td>—</td></tr>
+      <tr><td>CLASS_08</td><td>node_B80DC8</td><td>0%</td><td>0%</td><td><span class="chip ex">제외</span></td><td>08-27 09:30 KST 이후 수신 없음 (다운 2d)</td></tr></table>
+  </div>
+
+  <div class="sec"><span class="b" style="background:var(--cyan)">B</span><h2>현재 레짐 — 고정 스케일 CO₂×VOC 평면</h2><span class="meta">hourly · v1 predict · 45분 평활 · CO₂÷400 · VOC÷100</span></div>
+  <div class="rg"><div class="panel"><svg id="plane" viewBox="0 0 520 400" style="width:100%;height:auto;display:block"></svg></div>
+    <div class="panel"><div class="rlist" id="rlist"></div><p class="note">체류 = 현재 레짐에 머문 시간(관측 하한). 축은 외기 기준 고정 — 재학습해도 4분면 위치가 유지되어 지난주와 비교 가능.</p></div></div>
+
+  <div class="sec"><span class="b" style="background:var(--orange)">C</span><h2>레짐 스위칭 밴드 — 28일 × 6교실</h2><span class="meta">daily · 시간 단위 mode · 회색 = 결측/게이트 탈락</span></div>
+  <div class="panel"><svg id="band" viewBox="0 0 1100 280" style="width:100%;height:auto;display:block"></svg>
+    <div class="legend" style="margin-top:8px"><span style="--sw:#3ddc97">청정 55.1%</span><span style="--sw:#ffb482">물질 26.4%</span><span style="--sw:#ff9f9b">인체 14.9%</span><span style="--sw:#d0bbff">복합 3.6%</span><span style="--sw:#3a414e">결측</span></div></div>
+
+  <div class="sec"><span class="b" style="background:var(--pink)">D</span><h2>전이확률 · 체류시간</h2><span class="meta">Δt = 5 min ± 2 · 단절 쌍 제외</span></div>
+  <div class="grid g2"><div class="panel"><svg id="trans" viewBox="0 0 460 300" style="width:100%;max-width:460px;height:auto;display:block"></svg></div>
+    <div class="panel"><table class="tbl"><tr><th>레짐</th><th>지속확률</th><th>중앙 체류</th><th>가장 흔한 다음 전이</th><th>읽는 법</th></tr>
+      <tr><td><span class="regime r-clean">청정</span></td><td>0.989</td><td>470 min</td><td>→ 물질 0.007</td><td>배경 오염원이 서서히</td></tr>
+      <tr><td><span class="regime r-matter">물질</span></td><td>0.977</td><td>215 min</td><td>→ 청정 0.021</td><td>사람 없이도 남음</td></tr>
+      <tr><td><span class="regime r-human">인체</span></td><td>0.968</td><td>150 min</td><td>→ 청정 0.028</td><td>환기·하교로 해소</td></tr>
+      <tr><td><span class="regime r-mixed">복합</span></td><td>0.954</td><td>109 min</td><td>→ 인체 0.042</td><td>공청기가 먼저 듣는다</td></tr></table>
+      <p class="note">물질 → 인체 0.001 — CO₂ ⊥ VOC (Spearman ρ = 0.10) 와 일치. 체류시간은 결측 단절로 잘린 구간을 포함하므로 하한.</p></div></div>
+
+  <div class="sec"><span class="b" style="background:var(--red)">E</span><h2>행동지침 — 레짐(ML) × 임계(규칙) × 히스테리시스</h2><span class="meta">hourly · ON CO₂>1000 / OFF <700 · ON VOC>200 / OFF <120 · 최소 10분</span></div>
+  <div class="acts" id="acts"></div>
+
+  <div class="sec"><span class="b" style="background:var(--blue)">F</span><h2>예측 · 경보 — 30분 후 CO₂ · VOC</h2><span class="meta">hourly · 다중출력 회귀 · 타깃 = 미래 실측값</span></div>
+  <div class="grid g3" id="fc"></div>
+
+  <div class="sec"><span class="b" style="background:#FFB300">G</span><h2>재실 × CO₂ — 비전 노드 조인</h2><span class="meta">daily · (교실, 5분 버킷) 정확 조인 · occ n ≥ 25</span></div>
+  <div class="grid g2">
+    <div class="panel"><svg id="occ" viewBox="0 0 460 260" style="width:100%;height:auto;display:block"></svg></div>
+    <div class="panel"><table class="tbl"><tr><th>교실</th><th>비전 노드</th><th>조인 행</th><th>Spearman ρ</th><th>기울기</th><th>마지막 비전 버킷</th></tr>
+      <tr><td>CLASS_01</td><td>node_44F2FB</td><td>3,812</td><td>0.61</td><td>+74 ppm/인</td><td>08-29 06:59</td></tr>
+      <tr><td>CLASS_02</td><td>node_E29568</td><td>2,455</td><td>0.58</td><td>+68 ppm/인</td><td>08-15 07:00 <span class="chip warn">중단</span></td></tr>
+      <tr><td>CLASS_03</td><td>node_E647F1</td><td>3,904</td><td>0.66</td><td>+81 ppm/인</td><td>08-24 08:33 <span class="chip warn">중단</span></td></tr>
+      <tr><td>CLASS_05</td><td>node_E1B3AA</td><td>640</td><td>0.49</td><td>+52 ppm/인</td><td>08-10 07:04 <span class="chip warn">중단</span></td></tr>
+      <tr><td>CLASS_08</td><td>node_2A8454</td><td>4,010</td><td>0.63</td><td>+77 ppm/인</td><td>08-22 07:04 <span class="chip warn">중단</span></td></tr></table>
+      <p class="note">ρ는 포화형 관계라 Spearman. 기울기는 참고값(환기 상태에 따라 달라짐). 비전 노드 5개 중 4개가 개학 전 중단 — 재가동 전엔 방학 데이터가 대부분.</p></div></div>
+
+  <div class="sec"><span class="b" style="background:var(--gray)">H</span><h2>탐색 시각화 — 상관 · 상대 레짐 (RobustScaling)</h2><span class="meta">daily · 페이지 1에서 이관 · 판정에 쓰지 않음 · 서버 집계본(24×24)</span></div>
+  <div class="grid g3">
+    <div class="panel"><div class="tt" style="margin-bottom:6px">Spearman 상관 (6변수 · 28일)</div><svg id="corr" viewBox="0 0 300 260" style="width:100%;height:auto"></svg></div>
+    <div class="panel"><div class="tt" style="margin-bottom:6px">Pooled 상대 레짐 — 노드 간 비교 · ★ 현재</div><svg id="pooled" viewBox="0 0 300 260" style="width:100%;height:auto"></svg></div>
+    <div class="panel"><div class="tt" style="margin-bottom:6px">CLASS_05 자기 기준 (within-node)</div><svg id="within" viewBox="0 0 300 260" style="width:100%;height:auto"></svg></div>
+  </div>
+  <p class="note">여기 두 산점도는 슬라이드의 "층위 1: 보는 도구". 판정 엔진(B~E)은 고정 스케일 GMM만 사용 — 데이터 의존 스케일러는 재학습 때 군집이 뒤집히기 때문.</p>
+
+  <div class="sec"><span class="b" style="background:var(--purple)">I</span><h2>모델 이력</h2><span class="meta">weekly · refit → 비교 → 조건부 승격</span></div>
+  <div class="panel"><table class="tbl"><tr><th>버전</th><th>학습 창</th><th>행 수</th><th>중심 이동</th><th>로그우도 Δ</th><th>결정</th><th>사유</th></tr>
+    <tr><td>v1</td><td>08-01 → 08-28</td><td>44,912</td><td>—</td><td>—</td><td><span class="chip ok">초기 · 08-30</span></td><td>보드 실데이터 28일. 학기·방학 혼합 창 (메타 기록)</td></tr>
+    <tr><td colspan="7" class="tt" style="text-align:center;padding:12px">다음 후보: 09-06 (일) 06:30 UTC · 학사 경계일 refit: calendar.json 미설정 [ASK]</td></tr></table></div>
+</section>
+</main></div>
+
+<script>
+const $=s=>document.querySelector(s);
+// ---- real node table (INVENTORY) ----
+const PAL=["#FF5CA8","#8B7CFF","#00E5B0","#FFB300","#4DD2FF","#C4FF4D","#FF8A5C","#EAEAEA"];
+const nodes=[
+ {nm:"CLASS_01",id:"node_D0C12C",down:"다운 21h",co2:null,voc:null,pm25:null,pm10:null,t:null,h:null,reg:null,dw:"—"},
+ {nm:"CLASS_02",id:"node_4C22A7",co2:512,voc:214,pm25:14.8,pm10:22,t:27.0,h:61,reg:"matter",dw:"3h 10m"},
+ {nm:"CLASS_03",id:"node_5040F0",co2:1702,voc:221,pm25:13.1,pm10:19,t:26.9,h:60,reg:"mixed",dw:"25m"},
+ {nm:"CLASS_04",id:"node_8C8B35",co2:468,voc:71,pm25:9.4,pm10:14,t:25.8,h:57,reg:"clean",dw:"6h 05m"},
+ {nm:"CLASS_05",id:"node_E84DF0",co2:1184,voc:96,pm25:9.4,pm10:11,t:26.1,h:58,reg:"human",dw:"42m"},
+ {nm:"CLASS_06",id:"node_E04537",co2:742,voc:118,pm25:12.0,pm10:18,t:26.4,h:59,reg:"clean",dw:"1h 15m"},
+ {nm:"CLASS_07",id:"node_3093F0",co2:905,voc:88,pm25:10.5,pm10:16,t:26.2,h:58,reg:"human",dw:"20m"},
+ {nm:"CLASS_08",id:"node_B80DC8",down:"다운 2d",co2:null,voc:null,pm25:null,pm10:null,t:null,h:null,reg:null,dw:"—"},
+].map((n,i)=>({...n,c:PAL[i]}));
+const RG={clean:["청정","r-clean","#3ddc97"],matter:["물질","r-matter","#ffb482"],human:["인체","r-human","#ff9f9b"],mixed:["복합","r-mixed","#d0bbff"]};
+const M=[["pm25","PM2.5","µg/m³",0,100],["pm10","PM10","µg/m³",0,150],["t","Temp","°C",0,50],["h","Hum","%",0,100],["co2","CO₂","ppm",400,2000],["voc","VOC","idx",0,500]];
+// radar
+function radar(n){const cx=110,cy=95,R=62,k=6;const pt=(i,r)=>{const a=-Math.PI/2+i*2*Math.PI/k;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]};
+ let s=`<svg viewBox="0 0 220 190" style="width:100%;height:auto;display:block">`;
+ [.33,.66,1].forEach(f=>{s+=`<polygon points="${[...Array(k)].map((_,i)=>pt(i,R*f).join(",")).join(" ")}" fill="none" stroke="#3a414e"/>`});
+ for(let i=0;i<k;i++){const [x,y]=pt(i,R);s+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#3a414e"/>`}
+ if(!n.down){const vals=M.map(([key,,,mn,mx])=>Math.min(1,Math.max(0,(n[key]-mn)/(mx-mn))));
+  s+=`<polygon points="${vals.map((v,i)=>pt(i,R*v).join(",")).join(" ")}" fill="${n.c}" fill-opacity=".32" stroke="${n.c}" stroke-width="2"/>`;
+  vals.forEach((v,i)=>{const [x,y]=pt(i,R*v);s+=`<circle cx="${x}" cy="${y}" r="2.5" fill="${n.c}"/>`})}
+ M.forEach(([key,l,u],i)=>{const [x,y]=pt(i,R+26);const v=n.down?"-":n[key];const star=key==="co2"||key==="voc"?" ★":"";s+=`<text x="${x}" y="${y-4}" font-size="9" fill="#aab2bd" text-anchor="middle" font-family="IBM Plex Sans KR">${l}${star}</text><text x="${x}" y="${y+7}" font-size="10" font-weight="600" fill="${n.down?'#6b7482':'#e6e8ec'}" text-anchor="middle" font-family="IBM Plex Mono">${v} <tspan font-size="8" fill="#aab2bd">${u}</tspan></text>`});
+ return s+"</svg>"}
+$("#cards").innerHTML=nodes.map(n=>`<div class="panel card${n.down?' down':''}"><h3><span style="color:${n.c}">●</span>${n.nm}</h3>${n.down?`<div class="dn">${n.down} · 마지막 ${n.nm==='CLASS_01'?'08-28 13:21':'08-27 09:30'}</div>`:''}${radar(n)}</div>`).join("");
+// boxplots (precomputed q1/median/q3)
+function box(l,c,q,star){const [lo,q1,md,q3,hi]=q;const s=v=>100-(v/1.2)*100;return `<div class="panel" style="padding:10px"><div class="tt" style="margin-bottom:4px;${star?'color:'+c:''}">${l}${star?' ★':''}</div><svg class="mini" viewBox="0 0 100 100"><line x1="50" y1="${s(hi)}" x2="50" y2="${s(lo)}" stroke="${c}" stroke-width="1.5"/><rect x="30" y="${s(q3)}" width="40" height="${s(q1)-s(q3)}" fill="${c}" opacity="${star?.6:.3}" stroke="${c}"/><line x1="30" y1="${s(md)}" x2="70" y2="${s(md)}" stroke="#1a1d24" stroke-width="2.5"/><line x1="40" y1="${s(hi)}" x2="60" y2="${s(hi)}" stroke="${c}"/><line x1="40" y1="${s(lo)}" x2="60" y2="${s(lo)}" stroke="${c}"/></svg></div>`}
+$("#boxes").innerHTML=[["PM2.5","#ffb482",[.1,.25,.32,.45,.7]],["PM10","#ff9f9b",[.15,.3,.4,.52,.8]],["Temp","#fffea3",[.55,.62,.68,.75,.85]],["Hum","#a1c9f4",[.4,.55,.6,.68,.8]],["CO₂","#b9f2f0",[.2,.28,.42,.7,1.1],1],["VOC","#8de5a1",[.15,.22,.3,.55,.9],1]].map(a=>box(...a)).join("");
+// horizontal bars
+function hbar(id,key,col,max){const d=nodes.filter(n=>!n.down).map(n=>({nm:n.nm,v:key==="co2"?n.co2*0.75:n.voc*0.8,c:n.c})).sort((a,b)=>b.v-a.v);let s="";d.forEach((r,i)=>{const y=8+i*29;const w=(r.v/max)*300;s+=`<text x="60" y="${y+14}" font-size="11" fill="#e6e8ec" text-anchor="end" font-family="IBM Plex Mono">${r.nm}</text><rect x="68" y="${y}" width="${w}" height="20" rx="3" fill="${col}" opacity="${.35+.6*(i===0?1:(d.length-i)/d.length)}"/><text x="${72+w}" y="${y+14}" font-size="10" fill="#aab2bd" font-family="IBM Plex Mono">${r.v.toFixed(0)}</text>`});$(id).innerHTML=s}
+hbar("#co2bar","co2","#b9f2f0",1400);hbar("#vocbar","voc","#8de5a1",200);
+// timeseries
+function line(c,arr,th,h){const pts=arr.map((v,i)=>`${i*(100/(arr.length-1))},${100-v*90}`).join(" ");return `<svg class="mini" viewBox="0 0 100 100" preserveAspectRatio="none" ${h?`style="height:${h}px"`:''}>${th?`<line x1="0" y1="${100-th*90}" x2="100" y2="${100-th*90}" stroke="#ff9f9b" stroke-dasharray="3 3" opacity=".7"/>`:""}<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>`}
+$("#ts").innerHTML=[["PM2.5 (µg/m³)","#ffb482",[.3,.32,.28,.35,.4,.38,.42,.45,.4,.36,.33,.3,.31,.3]],["PM10 (µg/m³)","#ff9f9b",[.3,.33,.3,.36,.42,.4,.44,.48,.42,.38,.35,.32,.33,.31]],["Temp (°C)","#fffea3",[.5,.5,.52,.55,.6,.66,.7,.72,.7,.66,.62,.58,.55,.54]],["Hum (%)","#a1c9f4",[.6,.6,.58,.57,.55,.5,.48,.47,.5,.53,.56,.58,.6,.6]],["CO₂ (ppm) ★","#b9f2f0",[.1,.12,.1,.15,.35,.55,.7,.62,.75,.8,.6,.3,.2,.15],.5],["VOC (idx) ★","#8de5a1",[.2,.2,.22,.25,.28,.3,.32,.3,.28,.3,.27,.25,.24,.22],.5]].map(([l,c,a,th])=>`<div><div class="tt" style="${th?'color:'+c:''}">${l}</div>${line(c,a,th)}</div>`).join("");
+$("#occbars").innerHTML=[1,2,2,3,4,3,2,2,1,0,0,1,2,3,3,4,4,3,2,2,1,1,2,2].map((v,i,a)=>`<i${i===a.length-1?' class="now"':''} style="height:${Math.max(3,v/4*100)}%"></i>`).join("");
+// ---- page 2: plane ----
+(function(){const W=520,H=400,L=60,R=20,T=20,B=44;const px=x=>L+(x/5)*(W-L-R),py=y=>H-B-(y/3)*(H-T-B);
+ let s=`<rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="#1e222b"/>`;
+ [[0,0,2.5,1.5,"#3ddc97","청정 · 조치 없음"],[0,1.5,2.5,1.5,"#ffb482","물질 · 공기청정기"],[2.5,0,2.5,1.5,"#ff9f9b","인체 · 환기"],[2.5,1.5,2.5,1.5,"#d0bbff","복합 · 둘 다"]].forEach(([x,y,w,h,c,l])=>{s+=`<rect x="${px(x)}" y="${py(y+h)}" width="${px(w)-L}" height="${py(0)-py(h)}" fill="${c}" opacity=".07"/><text x="${px(x)+8}" y="${py(y+h)+16}" font-size="11" fill="${c}" font-family="IBM Plex Sans KR">${l}</text>`});
+ [[1.17,.69,.35,"#3ddc97"],[1.2,1.55,.3,"#ffb482"],[2.65,.91,.4,"#ff9f9b"],[4.3,2.03,.45,"#d0bbff"]].forEach(([x,y,r,c])=>{for(let k=3;k>0;k--)s+=`<ellipse cx="${px(x)}" cy="${py(y)}" rx="${r*k*28}" ry="${r*k*22}" fill="${c}" opacity=".06"/>`});
+ for(let i=0;i<=5;i++)s+=`<text x="${px(i)}" y="${H-B+16}" font-size="10" fill="#aab2bd" text-anchor="middle" font-family="IBM Plex Mono">${i*400}</text>`;
+ for(let i=0;i<=3;i++)s+=`<text x="${L-8}" y="${py(i)+4}" font-size="10" fill="#aab2bd" text-anchor="end" font-family="IBM Plex Mono">${i*100}</text>`;
+ s+=`<text x="${(L+W-R)/2}" y="${H-8}" font-size="11" fill="#aab2bd" text-anchor="middle" font-family="IBM Plex Sans KR">CO₂ (ppm) — 인체 팩터</text><text transform="translate(14 ${(T+H-B)/2}) rotate(-90)" font-size="11" fill="#aab2bd" text-anchor="middle" font-family="IBM Plex Sans KR">VOC index — 물질 팩터</text>`;
+ const trails={CLASS_05:[[900,80],[980,84],[1060,90],[1184,96]],CLASS_03:[[1300,170],[1450,190],[1600,210],[1702,221]],CLASS_02:[[520,190],[505,200],[515,208],[512,214]],CLASS_04:[[470,70],[465,72],[470,70],[468,71]],CLASS_06:[[700,110],[720,114],[735,116],[742,118]],CLASS_07:[[820,84],[850,86],[880,87],[905,88]]};
+ nodes.filter(n=>!n.down).forEach(n=>{const t=trails[n.nm];s+=`<polyline points="${t.map(([a,b])=>`${px(a/400)},${py(b/100)}`).join(" ")}" fill="none" stroke="${n.c}" stroke-width="1.5" opacity=".5"/><circle cx="${px(n.co2/400)}" cy="${py(n.voc/100)}" r="7" fill="${n.c}" stroke="#1a1d24" stroke-width="2"/><text x="${px(n.co2/400)+11}" y="${py(n.voc/100)+4}" font-size="11" fill="#e6e8ec" font-family="IBM Plex Mono">${n.nm}</text>`});
+ s+=`<text x="${W-R}" y="${T-6}" font-size="10" fill="#6b7482" text-anchor="end" font-family="IBM Plex Mono">● 현재 — 최근 20분 궤적 · 음영 = v1 군집 밀도</text>`;$("#plane").innerHTML=s})();
+$("#rlist").innerHTML=nodes.map(n=>{const r=n.reg?RG[n.reg]:null;return `<div class="rrow"><div class="nm"><span style="color:${n.c}">●</span>${n.nm}</div><div>${r?`<span class="regime ${r[1]}">${r[0]}</span>`:`<span class="chip ex">제외</span>`}</div><div><span class="k">CO₂</span><span class="mono">${n.co2??'—'}</span></div><div><span class="k">VOC</span><span class="mono">${n.voc??'—'}</span></div><div><span class="k">체류</span><span class="mono">${n.dw}</span></div></div>`}).join("");
+// band
+(function(){const rows=nodes.filter(n=>!n.down).map(n=>n.nm);const cols={clean:"#3ddc97",matter:"#ffb482",human:"#ff9f9b",mixed:"#d0bbff",na:"#3a414e"};let seed=11;const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280};
+ const W=1100,L=80,T=18,rowH=32,gap=6,days=28,slots=days*24,cw=(W-L-10)/slots;let s="";
+ rows.forEach((nm,ri)=>{const y=T+ri*(rowH+gap);s+=`<text x="${L-10}" y="${y+rowH/2+4}" font-size="11" fill="#e6e8ec" text-anchor="end" font-family="IBM Plex Mono">${nm}</text>`;let cur="clean";
+  for(let i=0;i<slots;i++){const d=Math.floor(i/24),h=i%24;const vac=d<19;let r;
+   if(nm==="CLASS_02"&&h>=6&&h<22)r=rnd()<.8?"matter":"clean";else if(!vac&&h>=9&&h<17)r=rnd()<.7?"human":(rnd()<.5?"mixed":"matter");else if(vac&&h>=8&&h<18)r=rnd()<.35?"matter":"clean";else r=rnd()<.9?"clean":"matter";
+   if(nm==="CLASS_03"&&!vac&&h>=10&&h<16)r=rnd()<.4?"mixed":r;if(nm==="CLASS_06"&&rnd()<.03)r="na";if(nm==="CLASS_05"&&d>=11&&d<=12)r="na";
+   if(rnd()<.85)cur=r;s+=`<rect x="${L+i*cw}" y="${y}" width="${cw+.3}" height="${rowH}" fill="${cols[cur]}"/>`}});
+ const bot=T+rows.length*(rowH+gap);for(let d=0;d<=days;d+=7)s+=`<line x1="${L+d*24*cw}" y1="${T-4}" x2="${L+d*24*cw}" y2="${bot}" stroke="#1a1d24" stroke-width="2"/><text x="${L+d*24*cw+3}" y="${bot+14}" font-size="10" fill="#aab2bd" font-family="IBM Plex Mono">08-${String(d+1).padStart(2,"0")}</text>`;
+ const x0=L+19*24*cw;s+=`<line x1="${x0}" y1="${T-6}" x2="${x0}" y2="${bot}" stroke="#e6e8ec" stroke-dasharray="4 3"/><text x="${x0+5}" y="${T-6}" font-size="10" fill="#e6e8ec" font-family="IBM Plex Sans KR">개학 08-20 (calendar.json)</text>`;$("#band").innerHTML=s})();
+// transition
+(function(){const lab=["청정","물질","인체","복합"],col=["#3ddc97","#ffb482","#ff9f9b","#d0bbff"];const Mx=[[.989,.007,.004,.000],[.021,.977,.001,.001],[.028,.002,.968,.002],[.003,.013,.042,.942]];const L=70,T=40,c=58;
+ let s=`<text x="${L}" y="16" font-size="11" fill="#aab2bd" font-family="IBM Plex Sans KR">→ 다음 레짐 (5분 후)</text>`;lab.forEach((l,j)=>s+=`<text x="${L+j*c+c/2}" y="${T-8}" font-size="11" fill="${col[j]}" text-anchor="middle" font-family="IBM Plex Sans KR">${l}</text>`);
+ Mx.forEach((row,i)=>{s+=`<text x="${L-10}" y="${T+i*c+c/2+4}" font-size="11" fill="${col[i]}" text-anchor="end" font-family="IBM Plex Sans KR">${lab[i]}</text>`;row.forEach((v,j)=>{const dg=i===j;s+=`<rect x="${L+j*c}" y="${T+i*c}" width="${c-3}" height="${c-3}" rx="4" fill="${dg?col[i]:'#ff9f9b'}" opacity="${(dg?.55:Math.min(.9,v*14))+.05}"/><text x="${L+j*c+c/2-1.5}" y="${T+i*c+c/2+4}" font-size="12" fill="${dg?'#111':'#e6e8ec'}" text-anchor="middle" font-family="IBM Plex Mono" font-weight="${dg||v>=.04?600:400}">${v.toFixed(3)}</text>`})});
+ s+=`<text x="${L}" y="${T+4*c+18}" font-size="10" fill="#6b7482" font-family="IBM Plex Sans KR">대각 = 지속확률 · 오프대각 최댓값 복합→인체 0.042 = 환기 개입의 흔적</text>`;$("#trans").innerHTML=s})();
+// actions
+const acts=[
+ ["on","CLASS_05","#4DD2FF","r-human","인체","환풍기 켜기","인체 · 체류 42분","CO₂ 1,184 > 1,000","최소 10분 · OFF < 700","CO₂ 기울기 +38 ppm/10min · 30분 후 예측 1,310 — 환기 없으면 계속 상승. 비전 노드 중단으로 재실 미확인."],
+ ["on2","CLASS_02","#8B7CFF","r-matter","물질","공기청정기 켜기","물질 · 체류 3h 10분","VOC 214 > 200","최소 10분 · OFF < 120","CO₂ 512로 사람이 원인이 아님 — 청소용품·자재 등 물질 발생원 점검 권장."],
+ ["on","CLASS_03","#00E5B0","r-mixed","복합","환풍기 + 공기청정기","복합 · 체류 25분","CO₂ 1,702 · VOC 221","둘 다 ON · 각각 OFF 기준","복합→인체 전이가 가장 흔함(0.042): 공청기가 VOC를 먼저 내리고 CO₂는 환기로만 해소."],
+ ["off","CLASS_07","#FF8A5C","r-human","인체","대기 (임계 미달)","인체 · 체류 20분","CO₂ 905 < 1,000","OFF 유지","레짐은 인체지만 절대값이 임계 아래 — ML이 기기를 고르고 규칙이 타이밍을 정하는 사례."],
+ ["off","CLASS_04","#FFB300","r-clean","청정","조치 없음","청정 · 체류 6h 05분","CO₂ 468 · VOC 71","모두 OFF","외기 수준."],
+ ["off","CLASS_06","#C4FF4D","r-clean","청정","조치 없음 · 센서 주의","청정 · 체류 1h 15분","CO₂ 742 · VOC 118","모두 OFF","오늘 이상값 행 3.2% (co2 0 · temp −98) — 범위규칙으로 걸러졌으나 센서 점검 권장."],
+];
+$("#acts").innerHTML=acts.map(([cls,nm,c,rc,rl,doTxt,d1,d2,d3,why])=>`<div class="act ${cls}"><h4><span style="color:${c}">●</span> ${nm} <span class="regime ${rc}">${rl}</span></h4><div class="do">${doTxt}</div><div class="chain"><div><b>진단 (ML)</b>${d1}</div><div><b>판단 (규칙)</b><span class="mono">${d2}</span></div><div><b>안정화</b><span class="mono">${d3}</span></div></div><p class="why">${why}</p></div>`).join("")+
+ `<div class="act off"><h4>CLASS_01 · CLASS_08 <span class="chip ex">제외</span></h4><div class="do">판정 보류</div><div class="chain"><div><b>진단 (ML)</b>—</div><div><b>판단 (규칙)</b><span class="mono">수신 없음 21h / 2d</span></div><div><b>안정화</b>—</div></div><p class="why">QC 게이트 미달. 규칙층도 돌리지 않음 — 노드 전원·WiFi·I2C 확인 필요.</p></div>
+  <div class="act off" style="background:#1e222b;border-left-color:var(--grid)"><h4>이번 주 핵심 요약</h4><p class="why" style="margin-top:4px">· 인체 레짐 비율 개학 후 2.6% → 31.8%<br>· CLASS_02 물질 레짐 방학 내내 지속 — 배경 오염원<br>· 환경 노드 2개 다운, 비전 노드 4개 중단 — 재가동 필요<br>· CLASS_06 이상값 행 증가 추세 — 센서 교체 검토</p><p class="note" style="margin-top:8px">결정론적 템플릿 문장 · 판단 루프 밖</p></div>`;
+// forecast
+$("#fc").innerHTML=[["CLASS_05","#4DD2FF",[.3,.36,.42,.5,.56,.62,.66],.66,"1,184 → 1,310","⚠ 환기 없으면 상승",1],["CLASS_03","#00E5B0",[.6,.66,.72,.78,.82,.85,.88],.9,"1,702 → 1,840","⚠ 30분 내 1,800 초과",1],["CLASS_02","#8B7CFF",[.5,.52,.55,.54,.56,.58,.6],.6,"VOC 214 → 231","공청기 ON 유지",1],["CLASS_07","#FF8A5C",[.25,.28,.32,.36,.4,.44,.47],.5,"905 → 1,020","⚠ 30분 내 임계 도달 예상",1],["CLASS_04","#FFB300",[.1,.11,.1,.12,.11,.12,.13],.12,"468 → 490","청정 유지"],["CLASS_06","#C4FF4D",[.2,.22,.21,.23,.24,.25,.26],.26,"742 → 780","청정 유지"]].map(([nm,c,a,e,txt,msg,w])=>`<div class="panel"><h3 style="margin:0 0 6px;font-size:13px;display:flex;gap:8px;align-items:center"><span style="color:${c}">●</span>${nm}<span class="tt" style="margin-left:auto">+30 min</span></h3>${line(c,a.concat([e,e+.02]),.5,70)}<div class="tt" style="margin-top:4px;color:${w?'var(--orange)':'var(--dim)'}">${txt} · ${msg}</div></div>`).join("");
+// occ x co2
+(function(){const W=460,H=260,L=50,R=14,T=14,B=36;const px=x=>L+(x/8)*(W-L-R),py=y=>H-B-((y-400)/1600)*(H-T-B);let seed=5;const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280};
+ let s=`<rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="#1e222b"/>`;for(let i=0;i<=8;i+=2)s+=`<text x="${px(i)}" y="${H-B+14}" font-size="10" fill="#aab2bd" text-anchor="middle" font-family="IBM Plex Mono">${i}</text>`;[400,800,1200,1600,2000].forEach(v=>s+=`<text x="${L-6}" y="${py(v)+4}" font-size="10" fill="#aab2bd" text-anchor="end" font-family="IBM Plex Mono">${v}</text>`);
+ const col={CLASS_01:"#FF5CA8",CLASS_03:"#00E5B0",CLASS_08:"#EAEAEA"};Object.entries(col).forEach(([nm,c])=>{for(let i=0;i<60;i++){const o=Math.floor(rnd()*7);const y=450+o*75+ (rnd()-.5)*220 + (nm==="CLASS_03"?60:0);s+=`<circle cx="${px(o+(rnd()-.5)*.6)}" cy="${py(Math.min(2000,y))}" r="2.2" fill="${c}" opacity=".45"/>`}});
+ s+=`<line x1="${px(0)}" y1="${py(450)}" x2="${px(7)}" y2="${py(450+7*74)}" stroke="#e6e8ec" stroke-dasharray="4 3"/><text x="${px(4.5)}" y="${py(450+4.5*74)-8}" font-size="10" fill="#e6e8ec" font-family="IBM Plex Mono">+74 ppm/인 (CLASS_01)</text>`;
+ s+=`<text x="${(L+W-R)/2}" y="${H-4}" font-size="10" fill="#aab2bd" text-anchor="middle" font-family="IBM Plex Sans KR">재실 인원 (occ 5분 평균)</text><text transform="translate(12 ${(T+H-B)/2}) rotate(-90)" font-size="10" fill="#aab2bd" text-anchor="middle" font-family="IBM Plex Sans KR">CO₂ (ppm)</text>`;$("#occ").innerHTML=s})();
+// corr heatmap
+(function(){const lab=["PM2.5","PM10","Temp","Hum","CO₂","VOC"];const V=[[1,1,-.2,.1,.05,.12],[1,1,-.2,.1,.05,.12],[-.2,-.2,1,-.4,-.56,.15],[.1,.1,-.4,1,.3,.05],[.05,.05,-.56,.3,1,.10],[.12,.12,.15,.05,.10,1]];const L=44,T=30,c=40;let s="";
+ lab.forEach((l,j)=>s+=`<text x="${L+j*c+c/2}" y="${T-8}" font-size="9" fill="#aab2bd" text-anchor="middle" font-family="IBM Plex Sans KR">${l}</text>`);
+ V.forEach((row,i)=>{s+=`<text x="${L-6}" y="${T+i*c+c/2+3}" font-size="9" fill="#aab2bd" text-anchor="end" font-family="IBM Plex Sans KR">${lab[i]}</text>`;row.forEach((v,j)=>{const f=v>0?`rgba(161,201,244,${.15+.85*v})`:`rgba(255,159,155,${.15+.85*-v})`;s+=`<rect x="${L+j*c}" y="${T+i*c}" width="${c-2}" height="${c-2}" rx="3" fill="${f}"/><text x="${L+j*c+c/2-1}" y="${T+i*c+c/2+3}" font-size="9" fill="#2a2d34" text-anchor="middle" font-family="IBM Plex Mono">${v.toFixed(2)}</text>`})});
+ $("#corr").innerHTML=s})();
+// pooled / within scatters (density heat + current stars)
+function relscatter(id,cur,title){const W=300,H=260,L=34,R=8,T=8,B=30;const px=x=>L+((x+3)/6)*(W-L-R),py=y=>H-B-((y+3)/6)*(H-T-B);let seed=3;const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280};
+ let s=`<rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="#1e222b"/>`;for(let i=0;i<24;i++)for(let j=0;j<24;j++){const x=-3+i/4,y=-3+j/4;const d=Math.exp(-((x+.3)**2+(y+.2)**2)/1.2)+.5*Math.exp(-((x-1.6)**2+(y-.1)**2)/.9)+.35*Math.exp(-((x+.2)**2+(y-1.7)**2)/.8);s+=`<rect x="${px(x)}" y="${py(y+.25)}" width="${(W-L-R)/24}" height="${(H-T-B)/24}" fill="rgba(120,170,255,${Math.min(.55,d*.5)})"/>`}
+ s+=`<line x1="${px(0)}" y1="${T}" x2="${px(0)}" y2="${H-B}" stroke="#e6e8ec" stroke-width="1.5"/><line x1="${L}" y1="${py(0)}" x2="${W-R}" y2="${py(0)}" stroke="#e6e8ec" stroke-width="1.5"/>`;
+ [[1.8,1.8,"Human≈Matter"],[-1.8,1.8,"Matter>Human"],[1.8,-1.8,"Human>Matter"],[-1.8,-1.8,"Clean"]].forEach(([x,y,t])=>s+=`<text x="${px(x)}" y="${py(y)}" font-size="9" fill="#e6e8ec" text-anchor="middle" font-family="IBM Plex Sans KR">${t}</text>`);
+ cur.forEach(([nm,c,x,y])=>{s+=`<line x1="${px(0)}" y1="${py(0)}" x2="${px(x)}" y2="${py(y)}" stroke="${c}" stroke-width="1.5" opacity=".7"/><text x="${px(x)}" y="${py(y)+4}" font-size="13" fill="${c}" text-anchor="middle">★</text><text x="${px(x)+8}" y="${py(y)-6}" font-size="9" fill="${c}" font-family="IBM Plex Mono">${nm}</text>`});
+ s+=`<text x="${(L+W-R)/2}" y="${H-6}" font-size="9" fill="#aab2bd" text-anchor="middle" font-family="IBM Plex Sans KR">CO₂ (robust) → Human</text><text transform="translate(10 ${(T+H-B)/2}) rotate(-90)" font-size="9" fill="#aab2bd" text-anchor="middle" font-family="IBM Plex Sans KR">VOC (robust) → Matter</text>`;$(id).innerHTML=s}
+relscatter("#pooled",[["05","#4DD2FF",1.9,-.3],["03","#00E5B0",2.6,1.6],["02","#8B7CFF",-.4,1.5],["04","#FFB300",-.6,-.7],["07","#FF8A5C",1.1,-.4],["06","#C4FF4D",.2,.1]]);
+relscatter("#within",[["now","#4DD2FF",1.4,.2]]);
+document.querySelectorAll("#nav li").forEach(li=>li.onclick=()=>{document.querySelectorAll("#nav li").forEach(x=>x.classList.remove("on"));li.classList.add("on");document.querySelectorAll(".page").forEach(p=>p.classList.toggle("on",p.id===li.dataset.p));window.scrollTo(0,0)});
+</script></body></html>
