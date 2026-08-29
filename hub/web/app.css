@@ -149,7 +149,7 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .vp .c2.acc .v { color: var(--acc); }
 .vp .c2 .l { font-size: 9.5px; color: var(--dim); letter-spacing: 0.08em; }
 .vp .maprow { display: flex; gap: 14px; margin-top: 10px; }
-.vp .map { position: relative; flex: 0 0 40%; aspect-ratio: 4 / 3; background: var(--map-bg); border: 1px dashed var(--grid);
+.vp .map { position: relative; flex: 0 0 auto; height: 320px; width: auto; aspect-ratio: 4 / 3; background: var(--map-bg); border: 1px dashed var(--grid);
   border-radius: 8px; overflow: hidden;
   background-image: repeating-linear-gradient(0deg, transparent, transparent 23px, var(--map-line) 24px),
                     repeating-linear-gradient(90deg, transparent, transparent 23px, var(--map-line) 24px); }
@@ -161,7 +161,7 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .vp .tag { position: absolute; right: 8px; bottom: 6px; font-size: 9px; color: var(--foot); font-family: "IBM Plex Mono", monospace; }
 @keyframes vb { 0%, 100% { opacity: 1; } 50% { opacity: 0.18; } }
 .vp .side2 { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
-.vp .bars { display: flex; align-items: flex-end; gap: 2px; height: 96px; }
+.vp .bars { display: flex; align-items: flex-end; gap: 2px; height: 110px; }
 .vp .bars i { flex: 1; background: var(--bar); border-radius: 2px 2px 0 0; min-height: 2px; }
 .vp .bars i.now { background: var(--acc); }
 .vp .ft { font-size: 9.5px; color: var(--foot); margin-top: 8px; }
