@@ -126,3 +126,12 @@
 | 빈 상태 | 안내 화면 | `analysis` 없음/비었을 때 안내 + 나타날 섹션 목록 + dry-run 명령. 지금 보드가 이 상태 | — |
 | ruff E501 | 100자 | `pages/*.py`, `aq/plots.py`, `aq/analysis_view.py`는 E501 제외 | 한글 캡션(CJK 2폭) |
 | `components.html` 경고 | Phase 5에서 처리 | **미처리** — `st.iframe`은 URL 전용, `st.html`은 iframe 격리 없음 | 대체재 없음. Streamlit 제거 시점에 재검토 |
+
+## Phase 6 — 플랜 §10과 실제 구현의 차이
+| 항목 | 플랜 | 실제 | 사유 |
+|---|---|---|---|
+| 유닛 옵션 | oneshot · `TimeoutStartSec=300` · EnvironmentFile 불필요 | + `Nice=10`, `Persistent=true`, `After=multinode_aq_hub.service` | 대시보드 응답성 우선, 부팅 중 놓친 슬롯은 다음 부팅에 실행 |
+| 첫 채움 | 수동 1회 `start …daily` | daily + **hourly**도 수동 1회 | 페이지 2 B/E/F(hourly kind)가 06:05까지 비어 있지 않도록 |
+| 검증 방식 | `list-timers`·PYSQL·hub 로그 | + 보드 AppTest로 페이지 1·2 실데이터 렌더(예외 0) | 화면 확인을 기계적으로 |
+| 관찰 (모델) | — | `regime_now`에서 voc 94, co2 448인 노드가 `matter` — GMM 배정은 분면 임계가 아니라 군집 확률이라 앵커선 근처에선 이름과 사분면이 어긋날 수 있음. matter 중심(447,131)·human 중심(901,118) 모두 voc 앵커(120) 근처 | Phase 7 운영 검증에서 라벨 안정성 관찰 항목으로 |
+| 관찰 (예측) | — | CLASS_03 co2_pred 330(물리 하한 350 미만) | Phase 3 DRIFT의 "클리핑 없음" 재확인 → Phase 7에서 결정 |
