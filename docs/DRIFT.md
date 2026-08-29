@@ -58,3 +58,4 @@
 | deploy.sh import 검사 | `import aq, dashboard` | 동일 + `py_compile hub.py` | 보드 bare 모드에서 `import dashboard`가 동작함을 확인(경고만 출력) |
 | 픽스처 노드 ID | 익명화 | `env_01..08`, `vis_01..05` + `fixtures/nodes.json`(라벨 CLASS_xx 유지) | 환경↔비전 페어링을 라벨로 보존해야 (label, bucket) 조인 테스트 가능 |
 | `ssh q` 호출 | deny 패턴 `Bash(ssh q *sudo*)` | `~/.ssh/config`에 `BatchMode yes`를 넣어 Claude가 `ssh q '…'` 형태만 쓰도록 통일 | `ssh -o BatchMode=yes q …` 형태는 deny 패턴과 매치되지 않음 |
+| Claude Code 작업 디렉터리 | 저장소 루트 가정 (`.claude/settings.json`, `CLAUDE.md`) | Phase 0~1 세션은 상위 폴더 `c:\Users\phlox\PRJ`에서 실행됨 → 저장소의 `.claude/settings.json`(deny·hook)과 `CLAUDE.md`가 **로드되지 않음**. 2026-08-29 검증에서 `ssh q sudo true`가 차단되지 않은 원인 | 이후 세션은 반드시 `Arduino_MQTT_MultiNode_Demo/`를 작업 디렉터리로 시작한다. deny·hook 동작 확인은 그 세션에서 재실행 |
