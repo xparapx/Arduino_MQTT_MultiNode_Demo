@@ -146,9 +146,9 @@ def grade_color(key: str, v):
     return ("-", INK_DIM)
 
 # ---- Data loading ----
-@st.cache_data(ttl=5)
-def load_df(limit: int = ROW_LIMIT) -> pd.DataFrame:
-    """Recent rows from SQLite -> KST time. SEN55 stores values directly (no scaling)."""
+def _query_recent(limit: int) -> pd.DataFrame:
+    """Most recent `limit` readings rows -> KST time, oldest first. SEN55 stores
+    values directly (no scaling)."""
     if not os.path.isfile(DB):
         return pd.DataFrame()
     sql = ("SELECT datetime(ts,'+9 hours') AS recv_time, node, "
@@ -158,6 +158,17 @@ def load_df(limit: int = ROW_LIMIT) -> pd.DataFrame:
     with closing(sqlite3.connect(DB)) as con:
         df = pd.read_sql_query(sql, con, params=(limit,))
     return df.iloc[::-1].reset_index(drop=True) if not df.empty else df
+
+
+@st.cache_data(ttl=5)
+def load_df(limit: int = ROW_LIMIT) -> pd.DataFrame:
+    """Recent rows for the live sections (cached)."""
+    return _query_recent(limit)
+
+
+def query_all() -> pd.DataFrame:
+    """Every readings row. Uncached: only for on-demand export / reset backup."""
+    return _query_recent(10_000_000)
 
 
 @st.cache_data(ttl=300)               # stats cached for 5 min
@@ -946,35 +957,60 @@ st.dataframe(recent.style.format(fmt), use_container_width=True, hide_index=True
 
 _perf("sec4")
 
-# ---- Section 5: data export ----
+# ---- Section 5: data export (on demand) ----
+# Phase 1b: nothing is queried or serialised until asked. Each export has a
+# "Prepare" button that runs the query + to_csv once and parks the bytes in
+# st.session_state; the download button appears after that. Before, all four
+# CSVs (two of them the full table) were rebuilt on every 10 s refresh.
+EXPORT_ON_DEMAND = True
 header("5) Data export (CSV)", H_EXPORT)
 
+
+def _csv_bytes(d: pd.DataFrame) -> bytes:
+    return d.to_csv(index=False).encode("utf-8-sig")
+
+
+def export_slot(key: str, prepare_label: str, build, label_fn, file_fn, help=None,
+                empty_msg: str = None):
+    """One on-demand export. `build()` -> DataFrame runs only when the Prepare
+    button is pressed; the result (bytes + meta) stays in session_state so the
+    download button survives reruns without re-querying."""
+    slot = f"csv_{key}"
+    if st.button(prepare_label, key=f"prep_{key}"):
+        with st.spinner("Preparing CSV..."):
+            d = build()
+        meta = {"rows": len(d)}
+        if not d.empty:
+            meta.update({"rooms": d["room"].nunique() if "room" in d else None,
+                         "nodes": d["node"].nunique() if "node" in d else None,
+                         "last": str(d.iloc[-1, 0])[:10] if len(d.columns) else ""})
+        st.session_state[slot] = (_csv_bytes(d) if not d.empty else b"", meta)
+    if slot in st.session_state:
+        data, meta = st.session_state[slot]
+        if meta["rows"] == 0:
+            st.caption(empty_msg or "No rows.")
+        else:
+            st.download_button(label_fn(meta), data=data, file_name=file_fn(meta),
+                               mime="text/csv", key=f"dl_{key}", help=help)
+
+
 # (5-1) full download -- quick backup
-csv_all = load_df(limit=10_000_000)        # effectively all
-st.download_button(
-    "Download all data (CSV)",
-    data=csv_all.to_csv(index=False).encode("utf-8-sig"),
-    file_name=f"sensor_all_{df['recv_time'].max()[:10]}.csv",
-    mime="text/csv",
-)
+export_slot("all", "Prepare all-data CSV", query_all,
+            lambda m: "Download all data (CSV)",
+            lambda m: f"sensor_all_{m['last']}.csv")
 
 # (5-2) merged analysis download -- env x occupancy, join on (bucket, room)
 #        analysis-ready: one row = one 5-min bucket of one room, CO2 next to occ.
-mrg = load_merged_analysis()
-if not mrg.empty:
-    rooms = mrg["room"].nunique()
-    st.download_button(
-        f"Download merged env x occupancy CSV ({len(mrg):,} rows / {rooms} rooms)",
-        data=mrg.to_csv(index=False).encode("utf-8-sig"),
-        file_name=f"env_occ_merged_{mrg['t_kst'].max()[:10]}.csv",
-        mime="text/csv",
-        key="dl_merged",
-        help="재실 x CO2 상관 분석용. (버킷시각, 교실) 정확 조인, "
-             "occ 버킷 n>=25 품질 필터 적용. 상관은 Spearman 권장(포화형 계수 대비).",
-    )
-elif _occ_table_exists():
-    st.caption("Merged export: no matching (bucket, room) rows yet -- "
-               "needs both env and vision nodes publishing with NTP time.")
+if _occ_table_exists():
+    export_slot("merged", "Prepare merged env x occupancy CSV", load_merged_analysis,
+                lambda m: f"Download merged env x occupancy CSV ({m['rows']:,} rows / "
+                          f"{m['rooms']} rooms)",
+                lambda m: f"env_occ_merged_{m['last']}.csv",
+                help="재실 x CO2 상관 분석용. (버킷시각, 교실) 정확 조인, "
+                     "occ 버킷 n>=25 품질 필터 적용. 상관은 Spearman 권장(포화형 계수 대비).",
+                empty_msg="Merged export: no matching (bucket, room) rows yet -- "
+                          "needs both env and vision nodes publishing with NTP time.")
+
 
 # (5-2b) vision occupancy raw download -- full occupancy schema as stored
 #         (merged export drops cents/w and low-n rows; this keeps everything)
@@ -985,24 +1021,23 @@ def load_occ_all() -> pd.DataFrame:
            "node, occ AS occ_mean, occ_med, occ_max, occ_last, cents, w, n "
            "FROM occupancy ORDER BY id")
     with closing(sqlite3.connect(DB)) as con:
-        return pd.read_sql_query(sql, con)
+        d = pd.read_sql_query(sql, con)
+    if not d.empty:
+        d.insert(3, "room", d["node"].map(labels).fillna(""))
+    return d
 
-occ_all = load_occ_all()
-if not occ_all.empty:
-    occ_all.insert(3, "room", occ_all["node"].map(labels).fillna(""))
-    st.download_button(
-        f"Download vision occupancy CSV ({len(occ_all):,} rows / "
-        f"{occ_all['node'].nunique()} nodes)",
-        data=occ_all.to_csv(index=False).encode("utf-8-sig"),
-        file_name=f"occupancy_all_{str(occ_all['recv_time_kst'].max())[:10]}.csv",
-        mime="text/csv",
-        key="dl_occ_raw",
-        help="occupancy 테이블 원본 전체. cents=최대 인원 시점 centroid JSON(w 좌표계), "
-             "n=버킷 내 유효 샘플 수(정상 ~30, 낮으면 저품질 버킷). "
-             "병합 CSV와 달리 품질 필터 없이 전 행 포함 — 결측/장애 구간 분석에도 사용.",
-    )
 
-# (5-3) date-range download -- date picker + hour dropdown
+if _occ_table_exists():
+    export_slot("occ_raw", "Prepare vision occupancy CSV", load_occ_all,
+                lambda m: f"Download vision occupancy CSV ({m['rows']:,} rows / "
+                          f"{m['nodes']} nodes)",
+                lambda m: f"occupancy_all_{m['last']}.csv",
+                help="occupancy 테이블 원본 전체. cents=최대 인원 시점 centroid JSON(w 좌표계), "
+                     "n=버킷 내 유효 샘플 수(정상 ~30, 낮으면 저품질 버킷). "
+                     "병합 CSV와 달리 품질 필터 없이 전 행 포함 — 결측/장애 구간 분석에도 사용.",
+                empty_msg="No occupancy rows yet.")
+
+# (5-3) date-range download -- date picker + hour dropdown, queried on "Query range"
 st.markdown(f"<div style='color:{INK_DIM};margin:10px 0 4px;'>"
             "Export by date range (KST)</div>", unsafe_allow_html=True)
 
@@ -1024,20 +1059,11 @@ if lo and hi:
     if start_dt > end_dt:
         st.warning("Start is later than end. Check the range.")
     else:
-        rng = query_range(start_dt, end_dt)
-        n_rows = len(rng)
-        st.caption(f"Range: {start_dt:%Y-%m-%d %H:00} ~ {end_dt:%Y-%m-%d %H:00}"
-                   f"   -   {n_rows:,} rows")
-        st.download_button(
-            f"Download range CSV ({n_rows:,} rows)",
-            data=rng.to_csv(index=False).encode("utf-8-sig"),
-            file_name=f"sensor_{start_dt:%Y%m%d_%H}-{end_dt:%Y%m%d_%H}.csv",
-            mime="text/csv",
-            disabled=(n_rows == 0),
-            key="dl_range",
-        )
-        if n_rows == 0:
-            st.info("No data in the selected range.")
+        st.caption(f"Range: {start_dt:%Y-%m-%d %H:00} ~ {end_dt:%Y-%m-%d %H:00}")
+        export_slot("range", "Query range", lambda: query_range(start_dt, end_dt),
+                    lambda m: f"Download range CSV ({m['rows']:,} rows)",
+                    lambda m: f"sensor_{start_dt:%Y%m%d_%H}-{end_dt:%Y%m%d_%H}.csv",
+                    empty_msg="No data in the selected range.")
 else:
     st.caption("Range export becomes available once data accumulates.")
 
@@ -1065,7 +1091,7 @@ with st.expander("Clear all collected data (DANGER)", expanded=False):
                  disabled=(not confirm or total_rows == 0), key="reset_btn"):
         try:
             # 1) auto-backup: save full CSV next to the DB
-            backup_df = load_df(limit=10_000_000)
+            backup_df = query_all()
             stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_path = os.path.join(os.path.dirname(os.path.abspath(DB)) or ".",
                                        f"sensor_backup_{stamp}.csv")
