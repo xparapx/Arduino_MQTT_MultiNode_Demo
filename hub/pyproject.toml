@@ -41,6 +41,9 @@ select = ["E", "F", "I", "W", "B"]
 "pages/*.py" = ["E501"]
 "aq/plots.py" = ["E501"]
 "aq/analysis_view.py" = ["E501"]
+# API layer: long SQL strings and JSON-shape literals (Phase 8).
+"aq/webdata.py" = ["E501"]
+"webapp.py" = ["E501"]
 
 [tool.coverage.run]
 # aq/ui_common.py is the page-1 legacy code moved verbatim in Phase 5; it is

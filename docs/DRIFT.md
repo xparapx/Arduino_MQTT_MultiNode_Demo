@@ -144,3 +144,15 @@
 | E) 판정 보류 + 장치 ON | (미논의) | 행동 "판정 보류", 근거에 "공청기 ON · hold" 로 표시, 유지에 ON 시작 시각 | hold는 이전 상태를 유지하므로 장치가 켜진 채 보류될 수 있음(CLASS_03 실사례) |
 | G) 창 밖 교실 | "중단 표시" | `last_bucket`은 창이 아니라 **전체 이력**의 마지막 버킷(`db.last_occupancy_bucket`), 페이지가 `win_start`와 비교해 "· 중단" | 언제 멈췄는지가 "중단"보다 유용. occupancy 창 밖 조회는 analyst의 읽기 전용 쿼리(인덱스 `ix_occupancy_node_ts`) |
 | B) 라벨 겹침 | 오프셋 또는 호버 전용 | 이웃 라벨을 8개 슬롯에 분산(greedy), 호버 유지 | 라벨을 없애면 평면에서 교실을 못 찾음 |
+
+## Phase 8 — 캔버스·플랜 §12와 실제 구현의 차이
+| 항목 | 캔버스/플랜 | 실제 | 사유 |
+|---|---|---|---|
+| 차트 라이브러리 | (미정, Plotly.js 후보) | **직접 그린 SVG**(`web/charts.js`) + 자체 툴팁 | 캔버스와 1:1 재현, 3.6 MB 번들·CDN 의존 없음. 확대/축소·범례 토글 같은 Plotly 상호작용은 없음 |
+| B 평면 앵커 | 캔버스 "1000 ppm / 120" | `config/analyst.toml` 값 **700 ppm(1.75) / 120(1.2)** | 캔버스가 임의값을 썼음. 화면은 항상 config를 따름 |
+| B 표 8교실 | 캔버스 8행 | `rooms` = readings에 기록된 전 노드, hourly 판정 없는 노드는 "제외"·"판정 보류"(흐림) | 실서비스 hourly는 QC 통과 노드만 저장(5행) — 페이지 1 쪽 노드 목록으로 채움 |
+| E 카드 데이터 | 캔버스: 목업 시나리오 | 실제 hourly action 페이로드. 진단 = 레짐·체류, 판단 = 장치별 rule 문자열, 유지 = ON 시작·최소 동작 종료 | 캔버스 문구는 예시였음 |
+| 페이지 1 계산 | ui_common 재사용 | `aq/webdata.py`에 **복제**(METRICS·GAUGE_KEYS·NODE_PALETTE·box_stats), `tests/test_webapp.py::test_constants_match_ui_common`이 동기화 강제 | ui_common은 streamlit을 import — API 프로세스에 싣지 않기 위해 |
+| 노드 색 | 페이지 1 세션 내 배정(`NODE_COLOR`) | API가 라벨 숫자순으로 고정 배정해 두 페이지가 같은 색 | Streamlit에서는 페이지 2가 페이지 1을 거치지 않으면 색이 어긋났음 |
+| reset | (미언급) | `POST /api/reset {"confirm":"DELETE"}` — dashboard.py와 같은 CSV 백업 후 DELETE | 기능 동등. aq/ 밖(webapp.py)에 두어 CI 가드 유지 |
+| 폰트 | IBM Plex (Google Fonts) | 동일, 오프라인이면 system-ui 폴백 | 태블릿이 인터넷 없이 붙는 경우 |
