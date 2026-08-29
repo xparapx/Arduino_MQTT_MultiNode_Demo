@@ -52,9 +52,9 @@
       return `<div class="info">${why[(o || {}).reason] || "비전 데이터 없음"}</div>`;
     }
     const cross = o.cents.length ? o.cents.map((c, i) => `<div class="ch" style="left:${(c[0] / o.w * 100).toFixed(1)}%;top:${(c[1] / o.w * 100).toFixed(1)}%;animation-delay:${(i * 0.15).toFixed(2)}s"><b></b></div>`).join("") : '<div class="none">버킷 내 탐지 없음</div>';
+    const chips = `<div class="chips"><div class="c2 acc"><div class="v">${num(o.occ, 1)}</div><div class="l">5분 평균</div></div><div class="c2"><div class="v">${num(o.occ_med)}</div><div class="l">중앙값</div></div><div class="c2"><div class="v">${num(o.occ_max)}</div><div class="l">최대</div></div><div class="c2"><div class="v">${num(o.n)}</div><div class="l">샘플 n</div></div></div>`;
     return `<div class="vp"><div class="hd"><span>재실 탐지 — ${esc(o.label)} <span style="color:var(--dim)">(${esc(o.vision_node)})</span></span><span class="live" style="color:${o.stale ? "var(--red)" : "var(--green)"}">${o.stale ? `지연 · 마지막 ${esc(o.recv_time.slice(5, 16))}` : "LIVE"}</span></div>`
-      + `<div class="chips"><div class="c2 acc"><div class="v">${num(o.occ, 1)}</div><div class="l">5분 평균</div></div><div class="c2"><div class="v">${num(o.occ_med)}</div><div class="l">중앙값</div></div><div class="c2"><div class="v">${num(o.occ_max)}</div><div class="l">최대</div></div><div class="c2"><div class="v">${num(o.n)}</div><div class="l">샘플 n</div></div></div>`
-      + `<div class="maprow"><div class="map">${cross}<span class="tag">CAMERA VIEW 4:3 · coords /${o.w}</span></div><div class="side2"><div class="tt" style="margin-bottom:6px">최근 버킷 추이 (평균 인원)</div><div class="bars">${CH.occBars(o.hist)}</div><div class="ft">조준선 = 최대 인원(${num(o.occ_max)}) 시점 위치 (4:3 프레임 상대좌표) · 버킷 ${esc(o.recv_time)} KST<br>영상 비전송 · 좌표만 수집 (온디바이스 추론)</div></div></div></div>`;
+      + `<div class="maprow"><div class="map">${cross}<span class="tag">CAMERA VIEW 4:3 · coords /${o.w}</span></div><div class="side2">${chips}<div class="tt" style="margin-bottom:6px">최근 버킷 추이 (평균 인원)</div><div class="bars">${CH.occBars(o.hist)}</div><div class="ft">조준선 = 최대 인원(${num(o.occ_max)}) 시점 위치 (4:3 프레임 상대좌표) · 버킷 ${esc(o.recv_time)} KST<br>영상 비전송 · 좌표만 수집 (온디바이스 추론)</div></div></div></div>`;
   }
 
   // ---- section 5 + 6: export, reset ----------------------------------------------------------
