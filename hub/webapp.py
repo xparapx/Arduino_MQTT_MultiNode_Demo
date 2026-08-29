@@ -137,7 +137,7 @@ class Handler(BaseHTTPRequestHandler):
         ctype = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
         if ctype.startswith("text/") or ctype in ("application/javascript", "application/json"):
             ctype += "; charset=utf-8"
-        cache = "no-cache" if p.suffix == ".html" else "max-age=300"
+        cache = "no-cache"          # css / js change with every deploy; a page load re-validates
         self._send(200, p.read_bytes(), ctype, cache=cache)
 
     # ---- api ----------------------------------------------------------------------------
