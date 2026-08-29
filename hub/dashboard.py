@@ -52,6 +52,14 @@ STATS_DAYS = 28            # section 2 window (days); same as the model training
 BOX_MAX_OUTLIERS   = 300   # outlier dots sent per boxplot (evenly sampled by rank)
 SCATTER_MAX_POINTS = 1500  # past points sent per node regime scatter (evenly by time)
 DENSITY_BINS       = 24    # 2D density grid for the pooled regime scatter
+DB_TIMEOUT_S       = 5     # wait this long on a write lock instead of failing
+
+
+def _ro() -> sqlite3.Connection:
+    """Read-only connection (?mode=ro). The dashboard can never write readings
+    or occupancy by accident, and the busy timeout rides out hub.py inserts.
+    Section 6 (reset) keeps its own read-write connection."""
+    return sqlite3.connect(f"file:{DB}?mode=ro", uri=True, timeout=DB_TIMEOUT_S)
 
 # ---- [perf] server-side timing of one script run (Phase 1b). stderr -> journalctl.
 #      `journalctl -u multinode_aq_dashboard -f | grep perf` shows one line per section.
@@ -166,7 +174,7 @@ def _query_recent(limit: int) -> pd.DataFrame:
            "pm1p0, pm2p5, pm4p0, pm10p0, sen_temp, sen_hum, voc, nox, "
            "co2, scd_temp, scd_hum "
            "FROM readings ORDER BY id DESC LIMIT ?")
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         df = pd.read_sql_query(sql, con, params=(limit,))
     return df.iloc[::-1].reset_index(drop=True) if not df.empty else df
 
@@ -178,7 +186,7 @@ def data_version() -> "tuple[int, str]":
     5-min bucket, however many rows land inside it)."""
     if not os.path.isfile(DB):
         return 0, ""
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         row = con.execute("SELECT id, ts FROM readings "
                           "WHERE id = (SELECT MAX(id) FROM readings)").fetchone()
     if not row:
@@ -208,7 +216,7 @@ def load_all_for_stats(bucket: str) -> pd.DataFrame:
     sql = ("SELECT node, pm1p0, pm2p5, pm4p0, pm10p0, sen_temp, sen_hum, voc, nox, "
            "co2, scd_temp, scd_hum "
            "FROM readings WHERE ts >= datetime('now', ?)")
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         return pd.read_sql_query(sql, con, params=(f"-{STATS_DAYS} days",))
 
 
@@ -222,7 +230,7 @@ def query_range(start_kst: datetime, end_kst: datetime) -> pd.DataFrame:
            "pm1p0, pm2p5, pm4p0, pm10p0, sen_temp, sen_hum, voc, nox, "
            "co2, scd_temp, scd_hum "
            "FROM readings WHERE ts BETWEEN ? AND ? ORDER BY id")
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         return pd.read_sql_query(sql, con, params=(start_utc, end_utc))
 
 
@@ -233,7 +241,7 @@ def get_time_bounds():
         return None, None
     sql = ("SELECT MIN(datetime(ts,'+9 hours')), MAX(datetime(ts,'+9 hours')) "
            "FROM readings")
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         lo, hi = con.execute(sql).fetchone()
     if not lo:
         return None, None
@@ -269,7 +277,7 @@ VIS_GRID = "#2b3242"            # map grid line
 def _occ_table_exists() -> bool:
     if not os.path.isfile(DB):
         return False
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         r = con.execute("SELECT name FROM sqlite_master "
                         "WHERE type='table' AND name='occupancy'").fetchone()
     return bool(r)
@@ -284,7 +292,7 @@ def load_occ_latest() -> pd.DataFrame:
            "o.occ, o.occ_med, o.occ_max, o.occ_last, o.cents, o.w, o.n "
            "FROM occupancy o JOIN (SELECT node, MAX(id) AS mid FROM occupancy "
            "GROUP BY node) m ON o.id = m.mid")
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         return pd.read_sql_query(sql, con)
 
 
@@ -295,7 +303,7 @@ def load_occ_hist(node_id: str, limit: int = 24) -> pd.DataFrame:
         return pd.DataFrame()
     sql = ("SELECT datetime(ts,'+9 hours') AS recv_time, occ, occ_max, n "
            "FROM occupancy WHERE node=? ORDER BY id DESC LIMIT ?")
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         df = pd.read_sql_query(sql, con, params=(node_id, limit))
     return df.iloc[::-1].reset_index(drop=True)
 
@@ -321,7 +329,7 @@ def load_merged_analysis(min_n_env: int = 0, min_n_occ: int = 25) -> pd.DataFram
     if not _occ_table_exists():
         return pd.DataFrame()
     labels_ = load_node_labels()
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         env = pd.read_sql_query(
             "SELECT ts, node, co2, voc, scd_temp, scd_hum, pm2p5, pm10p0, n "
             "FROM readings", con)
@@ -1170,7 +1178,7 @@ def load_occ_all() -> pd.DataFrame:
     sql = ("SELECT datetime(ts,'+9 hours') AS recv_time_kst, ts AS ts_utc, "
            "node, occ AS occ_mean, occ_med, occ_max, occ_last, cents, w, n "
            "FROM occupancy ORDER BY id")
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         d = pd.read_sql_query(sql, con)
     if not d.empty:
         d.insert(3, "room", d["node"].map(labels).fillna(""))
@@ -1253,7 +1261,7 @@ with st.expander("Clear all collected data (DANGER)", expanded=False):
         "automatically before deletion."
     )
     try:
-        with closing(sqlite3.connect(DB)) as con:
+        with closing(_ro()) as con:
             total_rows = con.execute("SELECT COUNT(*) FROM readings").fetchone()[0]
     except Exception:
         total_rows = 0
@@ -1272,7 +1280,7 @@ with st.expander("Clear all collected data (DANGER)", expanded=False):
             backup_df.to_csv(backup_path, index=False, encoding="utf-8-sig")
 
             # 2) clear table (hub.py untouched; it keeps writing new rows)
-            with closing(sqlite3.connect(DB)) as con:
+            with closing(sqlite3.connect(DB, timeout=DB_TIMEOUT_S)) as con:
                 con.execute("DELETE FROM readings")
                 con.commit()
             # VACUUM is optional (reclaims file size). Skip silently if the
