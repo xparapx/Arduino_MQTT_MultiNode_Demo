@@ -24,7 +24,7 @@
 | 수집 스크립트 | `hub.py`(로컬) 또는 `hub_cloud.py`(클라우드) 택일 | `hub.py` 하나이며 클라우드(HiveMQ) 버전 |
 | 대시보드 테마 | `.streamlit/config.toml` 다크 테마 | 파일 없음. CSS/plotly 템플릿을 dashboard.py에 내장 |
 | 의존성 | paho-mqtt pandas plotly streamlit streamlit-autorefresh | + numpy, scikit-learn |
-| DB journal | (플랜 §9.2에서 WAL 확인 예정) | `delete` 모드 |
+| DB journal | (플랜 §9.2에서 WAL 확인 예정) | `delete` 모드 → **2026-08-29 Phase 1b에서 `wal`로 전환**(사용자 승인, `PRAGMA journal_mode=WAL` 1회, 영구) |
 | ts 형식 | 5분 버킷 정각 정렬 | 노드가 `t`를 보내는 2노드만 정각 버킷, 나머지 6노드는 수신 시각(초 단위) — 분석 시 5분 버킷 리샘플 필요 |
 | sqlite3 CLI | 플랜 검증 명령이 `sqlite3` 사용 | 미설치 → python `sqlite3` 모듈로 대체 |
 | uv | `uv` 명령 | 비로그인 셸 PATH 밖 (`~/.local/bin/uv`) |
