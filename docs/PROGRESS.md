@@ -77,10 +77,18 @@ Phase 6 후 화면 검토에서 합의한 항목. Phase 번호 없음(태그 없
 - 보드(머지 전, `git archive origin/feat/dashboard-polish` → `/tmp/aq_polish`, DB는 backup API 스냅샷, 작업 트리 무변경): 새 analyst daily **5.5 s / 80행**(프로세스 wall 13.9 s), `occ_co2.by_room` 5교실 — CLASS_01 08-28 21:55 · CLASS_03 08-23 23:30 · CLASS_02/05/08 창 이전(중단). 페이지 2 AppTest 예외 0, `page2 0.80 s`(Phase 6 0.91 s), 표 6·메트릭 5; 페이지 1 예외 0. 사이드바 "환경 노드 6 / 8 활성 · 비전 노드 1 / 5 (24h 내 수신)"
 - 실 hourly(06:05 UTC) E 표: 조치 없음 4 · 판정 보류 2(CLASS_03 공청기 14:43부터 ON 유지, CLASS_06)
 
-## Phase 8 — 웹 프런트엔드 (경로 C) · 브랜치 `feat/phase-8-web-frontend` (2026-08-29, 진행 중)
+## Phase 8 — 웹 프런트엔드 (경로 C) · `v0.8-phase8` (PR #14, 배포 2026-08-29 07:43 UTC)
 사용자 결정: C) 정적 HTML/JS + 보드 JSON API, 두 페이지 동시. 디자인 정본 = 캔버스 `multinode_aq 대시보드`(https://claude.ai/code/artifact/7fac2d40-6b82-4657-8098-9a059540a375).
 - `webapp.py`(stdlib HTTP, 8502) · `aq/webdata.py`(읽기 전용, 버전 메모이즈) · `aq/derive.py`(plots.py 순수 로직 분리) · `web/`(HTML 2 · CSS · JS 4, 외부 라이브러리 없음) · `systemd/multinode_aq_web.service` · deploy.sh 재시작 매핑
 - 픽스처(analyst hourly+daily 후) API 크기: status 0.4 KB · live 7.3 KB · stats 14.2 KB · series 7.2 KB · analysis 79.6 KB(gzip 전) · warm 캐시 ≤ 1 ms(PC)
 - pytest **121 passed**(신규 `tests/test_webapp.py` 9건: 상수 동기화, 빈 DB, live/stats/series/status/analysis 번들, HTTP 엔드포인트, gzip, CSV 내보내기·reset 가드). e2e가 정적 경로 탈출 결함(`hub/web` 접두사 비교)을 잡아 수정.
 - 로컬 미리보기(픽스처) 사용자 피드백 반영: A) QC 표를 노드당 1행 + 최근 7일 통과/탈락 점 띠로 축소 · 재실 탐지 지도 높이 320px 고정(4:3), 통계 4칸을 우측 열 상단으로 · 정적 파일 `no-cache`(배포 즉시 반영). 브랜치 fetch → `/tmp/aq_web` 보드 미리보기(:8503, 읽기 전용)도 사용자가 실행.
-- 완료 기준 §12.2 판정과 보드 측정은 배포 후 기록.
+- 보드(머지 후, `deploy.sh --apply` → db7260a, 사용자가 유닛 설치·enable): `multinode_aq_hub/dashboard/web` 모두 active. API cold: status 0.20 s · live 0.28 s · **stats 1.16 s**(28일 스캔, 5분 버킷당 1회) · series 0.10 s · analysis 0.09 s; **warm: live 7 ms · stats 9 ms · analysis 16 ms · status 0.13 s**(readings COUNT(*) 전체 스캔). 크기: status 0.4 KB · live 7.5 KB · series 7.1 KB(→ 60 s 폴링분 ≈ 15 KB) · analysis 69.7 KB(gzip 6.6 KB). 웹 프로세스 RSS 216 MB. 저널 오류 0. Streamlit 8501 병행 유지.
+
+§12.2 완료 기준
+- [x] 페이지 1·2 API만으로 렌더, Streamlit과 내용 동등 + 캔버스 디자인 반영 — 로컬(픽스처)·보드(:8503 실데이터) 미리보기 사용자 확인, 피드백 3건 반영
+- [x] 60 s 폴링분 ≈ 15 KB < 50 KB · analysis 70 KB < 200 KB · warm 캐시 ≤ 16 ms(보드, status만 0.13 s — COUNT(*) 캐시는 후속)
+- [x] readings/occupancy `mode=ro`(reset 제외) · CI 가드 · e2e 9건
+- [x] 보드 유닛 active, 두 페이지 200, 사용자 화면 확인 2026-08-29
+
+미결: Streamlit 교체 시점 [ASK] · 호스팅은 Tailscale `serve`(테일넷) 우선, **Funnel은 `--public` 모드(reset 차단·export 제한·토큰) 이후로 보류**(사용자 결정 2026-08-29) · `/api/status`의 COUNT(*) 캐시.
