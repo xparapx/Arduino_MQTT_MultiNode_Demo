@@ -16,6 +16,7 @@ __all__ = [
     "rules",
     "governance",
     "forecast",
+    "occ_co2",
     "summary",
     "plots",
     "ui_common",

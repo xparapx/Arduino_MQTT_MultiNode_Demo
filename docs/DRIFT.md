@@ -84,3 +84,17 @@
 | 기간 경계 | (형식만) | 기간은 **빈틈·겹침 없이 연속**해야 함(`validate_calendar`), 첫 기간만 `start=null`, 마지막만 `end=null` | 경계일 refit·재실 판정이 날짜 하나도 빠뜨리지 않도록 |
 | §6.4 grep 기준 | 수동 grep | CI 단계 `aq/ must never alter or delete collector data`로 강제 | 지시가 아니라 메커니즘으로(Phase 1 원칙) |
 | `analyst.toml` 키 | §2 상수 목록 | `[schedule]`(Phase 6 타이머 문자열), `[qc.range].pm_max_exclusive/pm_column`, `[governance].weekly_day/weekly_time_utc/models_dir/current_link` 추가 | §2·§10의 문자열 상수도 코드 밖으로 |
+
+## Phase 3 — 플랜 §7과 실제 구현의 차이
+| 항목 | 플랜 | 실제 | 사유 |
+|---|---|---|---|
+| QC 유효율 분모 | "노드×일 CO₂ 유효율" (분모 미명시) | **그날 실제 수신한 행** 기준. 행이 0개인 (노드, 일)은 `no rows`로 탈락 | 기대치(288행/일) 기준이면 반나절 다운 노드가 유효 데이터까지 버리게 됨. 다운 노드는 `no rows`로 잡힘 |
+| "일"의 기준 | (미명시) | **KST 날짜**(`[time].tz_offset_hours = 9`) | 학교 일과·학사 일정이 KST이므로 게이트도 같은 날짜 기준 |
+| 분석 창 | (미명시) | `[run]` 신설: hourly 24 h, daily 7 d, forecast 최소 48 버킷, trail 12, band 슬롯 60 min | §2에 없던 상수 → 코드 대신 config에. 값은 Claude 제안 [ASK-lite] |
+| 모델 없을 때 | (Phase 4에서 v1) | `models/current`가 없으면 **ad-hoc GMM**(28일, `model_ver="adhoc"`)을 매 실행마다 학습 | Phase 3 검증이 dry-run만이라 모델 파일 없이 돌아야 함. 보드: ad-hoc 경로 hourly 20 s·daily 24 s·fit 27 s(28일 48k행 × n_init 5), **모델 로드 경로 hourly 0.9 s·daily 5.2 s**. §7의 hourly < 15 s는 모델 로드 경로 기준 |
+| ad-hoc 창 축소 시도 | — | hourly만 7일 창으로 줄이면 픽스처에서 두 중심이 같은 분면(`mixed`) → `AnchorError`. **28일 유지** | 28일 학습 창이 분면 분리에 실제로 필요함을 확인 |
+| 전이 Δt 판정 | 원 ts 기준 5 ± 2 min | **버킷 기준**(floor 후 dt는 5의 배수 → 사실상 dt == 5). `transition_dt_tolerance`는 config에 유지 | 모든 분석이 버킷 위에서 돌아 원 ts 차이는 의미 없음 |
+| `plot_check.py` 출력 | PNG | **HTML**(plotly `write_html`) | PNG는 kaleido가 필요하고 aarch64 휠 부재로 보드 `uv sync`가 깨질 위험 |
+| 슬라이드 정성 비교 [ASK] | `실제분석사례_교실공기질`와 비교 | **미수행** — 슬라이드 파일이 저장소에 없음 | 사용자가 파일 위치를 주면 수행. 매뉴얼 "확장 과제" 절의 집 테스트 결과(4군집, 지속확률 0.86~0.97)와는 정합: 픽스처 전이행렬 대각 0.96~0.99 |
+| 예측 모델 | "Pipeline 동일, 타깃 shift −6" | `StandardScaler → Ridge` 다중출력, feature = 현재값·lag 1~3·1차 차분, 5분 격자 재색인(보간 없음) | 최소 구성. 값 범위 클리핑 없음(픽스처에서 co2_pred 264 등 물리 하한 아래 예측 관측) → Phase 7 운영 검증에서 재검토 |
+| 보드 측정 | 배포 후 `/usr/bin/time -v` | 머지 전 `/tmp` 사본으로 in-process 측정(`resource.getrusage`) | `/usr/bin/time` 부재 가능, 배포 전 검증 |

@@ -3,6 +3,7 @@
 # Changing a value here is a design change: it needs the [ASK] in the plan.
 
 [time]
+tz_offset_hours = 9         # DB stores UTC; 'day' for QC gates and calendars is KST
 bucket_minutes = 5            # all analysis starts with a 5-min floor of ts (aq.db.bucket_5min)
 smooth_window = 9             # rolling mode over 9 buckets = 45 min, center=True, broken at gaps
 transition_dt_minutes = 5     # consecutive pairs must be 5 min apart ...
@@ -63,6 +64,13 @@ min_occ_n = 25                # occupancy buckets with n < 25 samples are droppe
 
 [summary]
 max_lines = 5
+
+[run]                         # analysis windows per mode (ending at --as-of)
+hourly_window_hours = 24      # regime_now / action / forecast look back this far
+daily_window_days = 7         # band / transition / occ_co2 / per-day QC
+forecast_min_rows = 48        # fewer contiguous buckets than this -> no forecast (4 h)
+trail_buckets = 12            # regime_now.trail keeps the last N (bucket, regime) pairs
+band_slot_minutes = 60        # band: mode of the smoothed regime per slot
 
 [schedule]                    # Phase 6 systemd timers (UTC, oneshot)
 hourly = "*:05"
