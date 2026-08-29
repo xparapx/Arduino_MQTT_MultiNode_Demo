@@ -1,7 +1,7 @@
 """multinode_aq web front end (Phase 8): JSON API + static pages, standard
 library only.
 
-    .venv/bin/python webapp.py --port 8502            # board (systemd unit)
+    .venv/bin/python webapp.py --port 8501            # board (systemd unit, took over the old Streamlit port)
     uv run python webapp.py --db fixtures/sample.db   # PC, fixture data
 
 Routes
@@ -234,7 +234,7 @@ def serve_in_thread(data, host: str = "127.0.0.1", port: int = 0):
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--host", default="0.0.0.0")
-    ap.add_argument("--port", type=int, default=8502)
+    ap.add_argument("--port", type=int, default=8501)
     ap.add_argument("--db", default=str(HUB / "sensor_data.db"))
     ap.add_argument("--nodes", default=str(HUB / "nodes.json"))
     ap.add_argument("--models-dir", dest="models_dir", default=str(HUB / "models"))

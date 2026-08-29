@@ -91,4 +91,4 @@ Phase 6 후 화면 검토에서 합의한 항목. Phase 번호 없음(태그 없
 - [x] readings/occupancy `mode=ro`(reset 제외) · CI 가드 · e2e 9건
 - [x] 보드 유닛 active, 두 페이지 200, 사용자 화면 확인 2026-08-29
 
-미결: Streamlit 교체 시점 [ASK] · 호스팅은 Tailscale `serve`(테일넷) 우선, **Funnel은 `--public` 모드(reset 차단·export 제한·토큰) 이후로 보류**(사용자 결정 2026-08-29) · `/api/status`의 COUNT(*) 캐시.
+결정 2026-08-29: **Streamlit(`multinode_aq_dashboard`) 정지**, 웹 서비스가 8501 인수(유닛 `--port 8501`). 코드 제거는 Phase 7 뒤 정리 PR. 미결:  · 호스팅은 Tailscale `serve`(테일넷) 우선, **Funnel은 `--public` 모드(reset 차단·export 제한·토큰) 이후로 보류**(사용자 결정 2026-08-29) · `/api/status`의 COUNT(*) 캐시.
