@@ -55,3 +55,11 @@ DB: `ix_readings_node_ts`, `ix_occupancy_node_ts` 생성(2.36 s), hub `locked` 0
 - `aq/ui_common.py`로 80개 정의 바이트 그대로 이동(probe 동일) → 페이지 1: 레이더 2×4 폴라 서브플롯 1 figure, ② boxplot+막대, ③ 비전 전폭, 사이드바 상태 → `pages/2_diagnosis.py` A~I(`analysis`만 읽음, CI 가드) + 빈 상태 안내 · analyst daily에 `explore` kind
 - 106 passed, 95%. 페이지 1 warm(PC) 0.004/0.007/0.011 s·131 KB (1b 기준선 이하). **보드 서비스 저널(재시작 후)**: sec1 0.08~0.10 s · sec2 0.10 s · sec3+4 0.20 s · 전체 재실행 0.51 s, 오류 0.
 - 사용자 확인 2026-08-29: 화면·페이지 전환 OK(레이아웃 손질은 추후). 미결 [ASK]: 밴드 7일 → 28일 확장 여부.
+
+## Phase 6 — 스케줄링·배포 · `v0.7-phase6` (PR #11, 설치 2026-08-29 05:43 UTC)
+- 유닛 6개(`multinode_aq_analyst_{hourly,daily,weekly}.{service,timer}`), `systemd-analyze verify` 통과, 사용자가 설치·enable.
+- `systemctl list-timers`: daily 06:00 · hourly *:05 · weekly Sun 06:30 UTC 예약.
+- 수동 1회: daily **5.4 s / 80행**, hourly **0.7 s / 29행**, 둘 다 `Result=success`. `analysis` kind 9종(action 12 · band 7 · explore 1 · forecast 5 · occ_co2 1 · qc 70 · regime_now 5 · summary 1 · transition 7), `actuator_state` 12행.
+- 실행 직후 readings 새 행(05:43:36) · journal wal · hub `locked`/error 0 · hub/dashboard active.
+- 보드 AppTest: 페이지 2 예외 0(메트릭 5·표 6, I 절은 weekly 후), fragment 0.91 s; 페이지 1 예외 0.
+- 첫 요약: "Regimes now: matter 3, clean 2 · ON: CLASS_03 purifier · QC hold: CLASS_06 · Forecast alert: CLASS_03 VOC 206 · Highest CO2: CLASS_04 529 ppm". 재실×CO₂ ρ=0.52 (n=1,171, CLASS_01·03).
