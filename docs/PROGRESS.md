@@ -35,3 +35,23 @@ INVENTORY/DRIFT 작성, 보드 코드 저장소 동기화, D-1 레이아웃(A) �
 
 [ASK] 결정: 28일 창 채택 · 태블릿 체감 측정은 LED 인디케이터 부착·학생 수행 이후로 연기 · **WAL 전환 승인·적용**(2026-08-29 04:24 UTC, `delete → wal`, hub 무정지, ro 연결도 `wal` 확인, 전환 후 첫 새 행 04:25:22, hub `locked`/error 0) · 레이더 8개 → 폴라 서브플롯 1 figure (a)는 Phase 5.
 DB: `ix_readings_node_ts`, `ix_occupancy_node_ts` 생성(2.36 s), hub `locked` 0.
+
+## Phase 2 — 데이터 계약 · `v0.3-phase2` (PR #6)
+- `aq.db.ensure_schema()`(analysis / actuator_state), `aq.schemas`(kind 9종 + `explore`는 Phase 5), `config/analyst.toml`(§2 상수 전부), `calendar.json`(실제 학사 일정: 방학 7/17~8/10, 개학 8/11, 월~목 08:40~16:30, 금 ~15:30, 점심 12:30~13:30)
+- 51 passed · CI에 `aq/` ALTER/DROP/DELETE 가드 추가. §6.4 3건 통과.
+
+## Phase 3 — analyst.py 코어 · `v0.4-phase3` (PR #8)
+- db 로더(5분 floor·버킷당 마지막 행) · qc(범위→NaN, KST 일 95% 게이트, `no rows`) · regime(고정 스케일 GMM 4, 분면 앵커링, 갭 단절 평활, 전이·체류) · rules(히스테리시스·10분) · forecast(shift −6 실측 타깃, 단일 Pipeline) · occ_co2(정확 조인, n≥25) · summary(≤5줄) · `analyst.py run|fit|show`, `scripts/plot_check.py`
+- 90 passed, `aq` 커버리지 94%. 픽스처 dry-run: `gap_pairs>0`, QC 탈락 노드, 레짐 4종, GMM 4중심 4분면.
+- 보드(모델 로드 경로): hourly 0.9 s · daily 5.2 s · RSS 224 MB (ad-hoc 경로 hourly 20 s → Phase 4로 해소). 7일 창 학습은 앵커링 거부 → 28일 창 필요 확인.
+- [ASK] 미수행: 슬라이드 `실제분석사례_교실공기질` 정성 비교(파일 없음).
+
+## Phase 4 — 모델 거버넌스 · `v0.5-phase4` (PR #9)
+- `aq.governance`: 버전 저장소(덮어쓰기 거부), `current` 심링크/포인터, `compare`(4분면 ∧ (로그우도 +2% ∨ 중심 이동 ≥0.25) ∨ 경계일 강제) → keep/promote/reject, `promote`/`rollback`; `analyst.py` weekly·`fit`·`model list|promote|rollback`
+- **v1**: 보드 실데이터 28일(8/1~8/29, 48,259행) — clean 538/71 · matter 447/131 · human 901/118 · mixed 1831/244. `models/gmm_v1.joblib`+메타 커밋, `models/current` = git 심링크 객체(보드에서 진짜 심링크로 체크아웃 확인)
+- 101 passed, 95%. 보드 hourly(모델 로드) 0.8 s.
+
+## Phase 5 — 대시보드 2페이지 · `v0.6-phase5` (PR #10)
+- `aq/ui_common.py`로 80개 정의 바이트 그대로 이동(probe 동일) → 페이지 1: 레이더 2×4 폴라 서브플롯 1 figure, ② boxplot+막대, ③ 비전 전폭, 사이드바 상태 → `pages/2_diagnosis.py` A~I(`analysis`만 읽음, CI 가드) + 빈 상태 안내 · analyst daily에 `explore` kind
+- 106 passed, 95%. 페이지 1 warm(PC) 0.004/0.007/0.011 s·131 KB (1b 기준선 이하). **보드 서비스 저널(재시작 후)**: sec1 0.08~0.10 s · sec2 0.10 s · sec3+4 0.20 s · 전체 재실행 0.51 s, 오류 0.
+- 사용자 확인 2026-08-29: 화면·페이지 전환 OK(레이아웃 손질은 추후). 미결 [ASK]: 밴드 7일 → 28일 확장 여부.

@@ -1,0 +1,11 @@
+[Unit]
+Description=Timer: analyst weekly (Sun *-*-* 06:30:00 UTC)
+
+[Timer]
+OnCalendar=Sun *-*-* 06:30:00
+# Run a missed slot at the next boot instead of skipping it.
+Persistent=true
+Unit=multinode_aq_analyst_weekly.service
+
+[Install]
+WantedBy=timers.target
