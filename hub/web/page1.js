@@ -126,9 +126,11 @@
   }
   async function loadBounds() { state.bounds = await getJSON("/api/bounds"); renderExport(); }
 
-  AQ.initTheme(); AQ.initTip(); AQ.initSidebar();
+  AQ.initTheme(); AQ.initTip();
+  // sections 5 (export) and 6 (reset) exist only on the admin instance; the public
+  // instance (--public) answers 403 for both, so they are not rendered at all
+  AQ.initSidebar((s) => { if (!s.public) loadBounds().catch((e) => console.warn(e)); });
   AQ.onTheme(() => { renderLive(); renderStats(); renderSeries(); });
   poll(loadLive, 60000);
   poll(loadStats, 300000);
-  loadBounds().catch((e) => console.warn(e));
 })();

@@ -28,7 +28,7 @@ while IFS= read -r f; do
     dashboard.py|nodes.json|pyproject.toml|uv.lock|aq/*|pages/*|.streamlit/*|systemd/multinode_aq_dashboard.service) need_dash=1 ;;
   esac
   case "$f" in
-    webapp.py|nodes.json|pyproject.toml|uv.lock|aq/*|web/*|systemd/multinode_aq_web.service) need_web=1 ;;
+    webapp.py|nodes.json|pyproject.toml|uv.lock|aq/*|web/*|systemd/multinode_aq_web*.service) need_web=1 ;;
   esac
 done <<< "$CHANGED"
 
@@ -44,6 +44,7 @@ restart=()
 [ $need_hub  = 1 ] && restart+=(multinode_aq_hub)
 [ $need_dash = 1 ] && restart+=(multinode_aq_dashboard)
 [ $need_web  = 1 ] && systemctl list-unit-files multinode_aq_web.service >/dev/null 2>&1 && restart+=(multinode_aq_web)
+[ $need_web  = 1 ] && systemctl list-unit-files multinode_aq_web_public.service >/dev/null 2>&1 && restart+=(multinode_aq_web_public)
 echo "restart  : ${restart[*]:-none}"
 
 if [ "${1:-}" != "--apply" ]; then

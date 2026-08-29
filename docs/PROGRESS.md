@@ -91,4 +91,5 @@ Phase 6 후 화면 검토에서 합의한 항목. Phase 번호 없음(태그 없
 - [x] readings/occupancy `mode=ro`(reset 제외) · CI 가드 · e2e 9건
 - [x] 보드 유닛 active, 두 페이지 200, 사용자 화면 확인 2026-08-29
 
+후속 PR(2026-08-29): 행동 문구 색 칩(PR #16) · **공개 인스턴스** — `webapp.py --public`은 `/api/export`·`/api/reset`을 403으로 막고 `/api/status.public=true`로 페이지가 5·6절을 렌더하지 않음. 유닛 `multinode_aq_web_public.service`(8502, `--public`)를 8501(관리용) 옆에 추가, Tailscale Funnel은 **8502만** 공개(사용자 결정: 토큰 방식 대신 인스턴스 분리). e2e 1건 추가(10 passed).
 결정 2026-08-29: **Streamlit(`multinode_aq_dashboard`) 정지**, 웹 서비스가 8501 인수(유닛 `--port 8501`). 코드 제거는 Phase 7 뒤 정리 PR. 미결:  · 호스팅은 Tailscale `serve`(테일넷) 우선, **Funnel은 `--public` 모드(reset 차단·export 제한·토큰) 이후로 보류**(사용자 결정 2026-08-29) · `/api/status`의 COUNT(*) 캐시.

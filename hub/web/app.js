@@ -107,10 +107,19 @@ const AQ = (() => {
     set("#st-daily", `${s.daily_kst || "—"} · ${s.weekly_kst || "—"}`);
     set("#st-model", s.model || "없음");
   }
-  function initSidebar() {
-    poll(async () => renderSidebar(await getJSON("/api/status")), 60000);
+  const mode = { public: false };
+  function initSidebar(onFirst) {
+    let first = true;
+    poll(async () => {
+      const s = await getJSON("/api/status");
+      mode.public = !!s.public;
+      renderSidebar(s);
+      const foot = $(".foot");
+      if (foot && s.public && !foot.dataset.pub) { foot.dataset.pub = "1"; foot.insertAdjacentHTML("afterbegin", "public · 모니터링 전용<br>"); }
+      if (first) { first = false; if (onFirst) onFirst(s); }
+    }, 60000);
   }
 
   return { $, esc, css, num, dash, theme, setTheme, initTheme, onTheme, getJSON, poll, initTip, toast, sec, dot,
-           regime, chip, actionChip, regimeColor, REGIME_KO, table, initSidebar };
+           regime, chip, actionChip, regimeColor, REGIME_KO, table, initSidebar, mode };
 })();
