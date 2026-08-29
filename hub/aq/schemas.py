@@ -82,6 +82,16 @@ class Summary(TypedDict):
     lines: list            # <= summary.max_lines template sentences
 
 
+class Explore(TypedDict):
+    """Phase 5 page 2 H: server aggregates for the exploratory views that left
+    page 1 -- Spearman correlation of the 28-day window and the RobustScaling
+    (median / IQR) regime density, pooled and per node. Display only."""
+    vars: list             # variable names of the correlation matrix
+    corr: dict             # var -> var -> Spearman rho
+    pooled: dict           # {co2_med, co2_iqr, voc_med, voc_iqr, amax, bins, hist[[...]]}
+    nodes: dict            # node -> same keys as pooled (within-node scaling)
+
+
 KINDS: dict[str, type] = {
     "qc": QC,
     "regime_now": RegimeNow,
@@ -92,6 +102,7 @@ KINDS: dict[str, type] = {
     "occ_co2": OccCO2,
     "model_event": ModelEvent,
     "summary": Summary,
+    "explore": Explore,
 }
 
 # json.loads gives these Python types; int is accepted where float is declared,
