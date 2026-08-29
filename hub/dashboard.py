@@ -45,6 +45,10 @@ NODES_PATH = "nodes.json"
 ROW_LIMIT  = 5000          # recent rows to show
 REFRESH_MS = 10_000        # auto-refresh every 10s
 MAX_COLS   = 4             # max grid columns (2 rows x 4 = 8 nodes)
+STATS_DAYS = 28            # section 2 window (days); same as the model training window
+BOX_MAX_OUTLIERS   = 300   # outlier dots sent per boxplot (evenly sampled by rank)
+SCATTER_MAX_POINTS = 1500  # past points sent per node regime scatter (evenly by time)
+DENSITY_BINS       = 24    # 2D density grid for the pooled regime scatter
 
 # ---- [perf] server-side timing of one script run (Phase 1b). stderr -> journalctl.
 #      `journalctl -u multinode_aq_dashboard -f | grep perf` shows one line per section.
@@ -198,9 +202,9 @@ def load_all_for_stats(bucket: str) -> pd.DataFrame:
         return pd.DataFrame()
     sql = ("SELECT node, pm1p0, pm2p5, pm4p0, pm10p0, sen_temp, sen_hum, voc, nox, "
            "co2, scd_temp, scd_hum "
-           "FROM readings")
+           "FROM readings WHERE ts >= datetime('now', ?)")
     with closing(sqlite3.connect(DB)) as con:
-        return pd.read_sql_query(sql, con)
+        return pd.read_sql_query(sql, con, params=(f"-{STATS_DAYS} days",))
 
 
 def query_range(start_kst: datetime, end_kst: datetime) -> pd.DataFrame:
@@ -524,19 +528,49 @@ def node_card(node_id: str, vals: dict, labels: dict):
                         use_container_width=True, key=f"radar_{node_id}")
 
 
+def box_stats(s: pd.Series) -> "dict | None":
+    """Tukey box statistics of one series, computed here so the browser receives
+    five numbers + a bounded outlier sample instead of the whole column."""
+    s = s.dropna()
+    if s.empty:
+        return None
+    q1, med, q3 = (float(v) for v in s.quantile([0.25, 0.5, 0.75]))
+    lo_f, hi_f = q1 - 1.5 * (q3 - q1), q3 + 1.5 * (q3 - q1)
+    inside = s[(s >= lo_f) & (s <= hi_f)]
+    out = s[(s < lo_f) | (s > hi_f)].sort_values()
+    if len(out) > BOX_MAX_OUTLIERS:           # keep extremes, thin the middle
+        out = out.iloc[np.linspace(0, len(out) - 1, BOX_MAX_OUTLIERS).astype(int)]
+    return dict(q1=q1, median=med, q3=q3,
+                lowerfence=float(inside.min()) if len(inside) else q1,
+                upperfence=float(inside.max()) if len(inside) else q3,
+                mean=float(s.mean()), n=int(len(s)), outliers=out.to_numpy())
+
+
 def make_boxplots(dfa: pd.DataFrame) -> go.Figure:
-    """Per-variable boxplots (PM1.0/PM4.0 excluded). VOC last, with emphasis."""
+    """Per-variable boxplots (PM1.0/PM4.0 excluded). VOC last, with emphasis.
+    Boxes are drawn from box_stats() (precomputed), outliers as a thin scatter."""
     keys = STATS_KEYS
     fig = make_subplots(rows=1, cols=len(keys),
                         subplot_titles=[METRICS[k][0] for k in keys])
     for i, key in enumerate(keys, start=1):
         _, unit, color, _, _ = METRICS[key]
         is_target = key in TARGET_KEYS
-        fig.add_trace(go.Box(y=dfa[key], name=METRICS[key][0],
-                             marker_color=color, boxpoints="outliers",
-                             line={"color": color},
+        name = METRICS[key][0]
+        bs = box_stats(dfa[key])
+        if bs is None:
+            continue
+        fig.add_trace(go.Box(x=[name], name=name,
+                             q1=[bs["q1"]], median=[bs["median"]], q3=[bs["q3"]],
+                             lowerfence=[bs["lowerfence"]], upperfence=[bs["upperfence"]],
+                             mean=[bs["mean"]],
+                             marker_color=color, line={"color": color},
                              fillcolor=(emph_line(key) if is_target else "rgba(255,255,255,0.05)"),
                              showlegend=False), row=1, col=i)
+        if len(bs["outliers"]):
+            fig.add_trace(go.Scatter(x=[name] * len(bs["outliers"]), y=bs["outliers"],
+                                     mode="markers", showlegend=False, hoverinfo="skip",
+                                     marker=dict(color=color, size=3, opacity=0.6)),
+                          row=1, col=i)
         fig.update_yaxes(title_text=unit, row=1, col=i,
                          title_font={"size": 10, "color": INK_DIM},
                          gridcolor=GRID, tickfont={"color": INK_DIM})
@@ -621,6 +655,19 @@ def make_target_by_node(dfa: pd.DataFrame, labels: dict, key: str) -> go.Figure:
 
 
 
+def density_heatmap(zx: pd.Series, zy: pd.Series, amax: float, bins: int,
+                    colorscale) -> go.Heatmap:
+    """2D density of robust-scaled points, aggregated on the server with
+    np.histogram2d (bins x bins cells) instead of shipping every point to the
+    browser as go.Histogram2d did. Values are clipped into the range first so
+    off-scale points pile up in the edge cells, as before."""
+    H, xe, ye = np.histogram2d(zx.clip(-amax, amax), zy.clip(-amax, amax),
+                               bins=bins, range=[[-amax, amax], [-amax, amax]])
+    return go.Heatmap(z=H.T, x=(xe[:-1] + xe[1:]) / 2, y=(ye[:-1] + ye[1:]) / 2,
+                      colorscale=colorscale, showscale=False, zsmooth="best",
+                      hoverinfo="skip")
+
+
 def make_regime_base(dfa: pd.DataFrame, labels: dict):
     """CO2-VOC RELATIVE regime scatter (RobustScaling), cacheable part: density
     background + quadrant labels + axes. Returns (fig, meta); meta carries the
@@ -664,13 +711,11 @@ def make_regime_base(dfa: pd.DataFrame, labels: dict):
     amax = min(max(amax, 1.5), 3.0)       # 1.5~3.0 (max 3 grid at dtick=1)
 
     fig = go.Figure()
-    # density background (clipped to range so out-of-range points don't distort)
-    fig.add_trace(go.Histogram2d(
-        x=zco2.clip(-amax, amax), y=zvoc.clip(-amax, amax),
-        nbinsx=24, nbinsy=24,
+    # density background (server-aggregated; clipped so out-of-range points don't distort)
+    fig.add_trace(density_heatmap(
+        zco2, zvoc, amax, DENSITY_BINS,
         colorscale=[[0.0, "rgba(0,0,0,0)"], [0.15, "rgba(120,170,255,0.10)"],
                     [0.5, "rgba(120,170,255,0.28)"], [1.0, "rgba(90,140,255,0.55)"]],
-        showscale=False, zsmooth="best", hoverinfo="skip",
     ))
     # quadrant labels with inequality notation (Human vs Matter)
     #  x+ = CO2 high (human factor) ; y+ = VOC high (matter factor)
@@ -794,14 +839,17 @@ def make_node_regime_base(dfa: pd.DataFrame, node_id: str, labels: dict):
     amax = float(max(prange(zco2), prange(zvoc)))
     amax = min(max((amax * 1.15) if amax > 0 else 1.0, 1.5), 3.0)
 
-    # density backdrop (this node only)
-    fig.add_trace(go.Histogram2d(
-        x=zco2.clip(-amax, amax), y=zvoc.clip(-amax, amax), nbinsx=20, nbinsy=20,
+    # density backdrop (this node only, server-aggregated)
+    fig.add_trace(density_heatmap(
+        zco2, zvoc, amax, 20,
         colorscale=[[0.0, "rgba(0,0,0,0)"], [0.2, "rgba(120,170,255,0.12)"],
                     [0.6, "rgba(120,170,255,0.30)"], [1.0, "rgba(90,140,255,0.55)"]],
-        showscale=False, zsmooth="best", hoverinfo="skip",
     ))
-    # past points
+    # past points: at most SCATTER_MAX_POINTS, evenly spaced in time (rows are
+    # id-ordered) so the cloud keeps its shape while the payload stays bounded
+    if len(zco2) > SCATTER_MAX_POINTS:
+        idx = np.linspace(0, len(zco2) - 1, SCATTER_MAX_POINTS).astype(int)
+        zco2, zvoc = zco2.iloc[idx], zvoc.iloc[idx]
     fig.add_trace(go.Scatter(
         x=zco2.clip(-amax, amax), y=zvoc.clip(-amax, amax), mode="markers",
         marker=dict(size=5, color=node_color(node_id),
@@ -1005,6 +1053,7 @@ _perf("sec1")
 
 # ---- Section 2: overall stats (5-min) ----
 header("2) Overall stats (5-min)", H_STATS)
+st.caption(f"Window: last {STATS_DAYS} days. Rebuilt once per 5-min bucket.")
 figs = stats_figures(bucket)
 if figs:
     # row 1: boxplot | correlation  (1:1)
