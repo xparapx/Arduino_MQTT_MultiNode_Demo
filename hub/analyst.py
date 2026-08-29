@@ -203,8 +203,9 @@ def run_daily(conn, cfg: dict, labels_map: dict, as_of: datetime, model_pack) ->
         rows.append(row("transition", regime.transitions(sm, g["bucket"], cfg), node, start,
                         as_of, ver, run_at))
     occ = db.load_occupancy(conn, fmt(start), fmt(as_of))
-    rows.append(row("occ_co2", occ_co2.spearman_by_room(clean, occ, labels_map, cfg), "all",
-                    start, as_of, None, run_at))
+    rows.append(row("occ_co2", occ_co2.spearman_by_room(clean, occ, labels_map, cfg,
+                                                        db.last_occupancy_bucket(conn)),
+                    "all", start, as_of, None, run_at))
     # page 2 H: correlation + RobustScaling densities, aggregated here, drawn there
     rows.append(row("explore", explore.payload(clean, cfg), "all", start, as_of, None, run_at))
     return rows

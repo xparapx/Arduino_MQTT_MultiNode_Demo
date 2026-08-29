@@ -100,8 +100,10 @@ def diagnosis() -> None:
     aid, _ = av.analysis_version()
     regime_now = av.by_scope(av.latest_rows(aid, "regime_now"))
     actions: dict[str, dict] = {}
-    for r in av.latest_rows(aid, "action"):
+    action_rows = av.latest_rows(aid, "action")
+    for r in action_rows:
         actions.setdefault(r["scope"], {})[r["payload"]["device"]] = r["payload"]
+    action_run_at = action_rows[0]["run_at"] if action_rows else None
     forecasts = av.by_scope(av.latest_rows(aid, "forecast"))
     qc_hourly = av.by_scope(av.latest_rows(aid, "qc"))
     bands = av.by_scope(av.latest_rows(aid, "band"))
@@ -117,8 +119,8 @@ def diagnosis() -> None:
 
     if summary:
         with st.container(border=True):
-            st.markdown("**이번 시간 핵심 요약**  \n" + "  \n".join(
-                f"• {ln}" for ln in summary[0]["payload"]["lines"]))
+            st.markdown(f"**최근 hourly 판정 요약 — {av.kst(summary[0]['run_at'], '%H:%M')} KST**  \n"
+                        + "  \n".join(f"• {ln}" for ln in summary[0]["payload"]["lines"]))
             st.caption(f"hourly {av.kst(summary[0]['run_at'])} KST")
 
     # ---- A
@@ -190,9 +192,10 @@ def diagnosis() -> None:
     r = CFG["rules"]
     st.caption(f"hourly · 환풍기 ON CO₂>{r['fan']['on_co2']:g} / OFF <{r['fan']['off_co2']:g} · "
                f"공청기 ON VOC>{r['purifier']['on_voc']:g} / OFF <{r['purifier']['off_voc']:g} · "
-               f"최소 동작 {r['min_run_minutes']}분 · QC 탈락 노드는 hold")
+               f"최소 동작 {r['min_run_minutes']}분 · 행동 = 환기 필요(환풍기 ON) / 공기청정 필요(공청기 ON) / "
+               "조치 없음 / 판정 보류(QC 탈락) · (유지) = 히스테리시스·최소 동작으로 유지 중")
     if actions:
-        st.dataframe(plots.actions_table(actions, LABELS), width="stretch", hide_index=True)
+        st.dataframe(plots.actions_table(actions, LABELS, action_run_at), width="stretch", hide_index=True)
     else:
         st.info("hourly 판정 없음")
 
@@ -208,13 +211,13 @@ def diagnosis() -> None:
     # ---- G
     header("G) 재실 × CO₂ — 비전 노드 조인", H_OVERVIEW)
     st.caption(f"daily · (교실, 5분 버킷) 정확 조인 · occ n ≥ {CFG['occ_co2']['min_occ_n']} · "
-               "ρ는 포화형 관계라 Spearman · 기울기는 참고값")
+               "ρ는 포화형 관계라 Spearman · 기울기는 참고값 · 중단 = 마지막 비전 버킷이 분석 창 이전")
     if occ_rows:
         p = occ_rows[0]["payload"]
         g1, g2 = st.columns([1, 2])
         g1.metric("pooled Spearman ρ", "—" if p["spearman_rho"] != p["spearman_rho"] else f"{p['spearman_rho']:.2f}",
                   f"n = {p['n']:,}")
-        odf = plots.occ_table(p, LABELS)
+        odf = plots.occ_table(p, LABELS, occ_rows[0]["win_start"])
         if len(odf):
             g2.dataframe(odf, width="stretch", hide_index=True)
         else:
