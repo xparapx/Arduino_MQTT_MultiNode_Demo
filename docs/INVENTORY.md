@@ -15,6 +15,12 @@
 | 리소스 | RAM 3667 MB (avail ~2.2 GB), swap 1833 MB, `/home/arduino` 18G 중 2.0G 사용, nproc = 4 |
 
 ## 2. 작업 디렉터리 `~/multinode_aq` (README의 `multinode_sensor_demo`와 불일치)
+
+> **D-1 적용 후 (2026-08-29 02:50 UTC)**: `~/multinode_aq`는 저장소 루트(main 추적)이고 런타임 디렉터리는 `~/multinode_aq/hub/`다.
+> `hub/.venv`(uv sync --frozen로 재생성), `hub/sensor_data.db`, `hub/secrets.env`(0600)는 untracked·gitignore.
+> 평면 시절 파일(`hub.py dashboard.py nodes.json pyproject.toml uv.lock .python-version *.bak *.save`, 옛 `.venv`→`venv_old`, uv 기본 `.gitignore.uv`)은 `~/multinode_aq/_phase0_backup/`에 보관(gitignore).
+> 두 유닛은 `WorkingDirectory=/home/arduino/multinode_aq/hub`, hub 유닛은 `EnvironmentFile=…/hub/secrets.env`. 아래는 전환 **이전** 실물 기록.
+
 ```
 dashboard.py (51,439 B, Jul 27)   hub.py (4,830 B, Jul 9)   nodes.json (Aug 8)
 pyproject.toml  uv.lock  .python-version  .gitignore(uv 기본)  .venv/  sensor_data.db (15 MB)
