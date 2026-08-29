@@ -1,0 +1,44 @@
+name: ci
+
+# push runs on every branch so a failing guard is visible before a PR is opened;
+# pull_request runs the same job against the merge ref.
+on:
+  pull_request:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hub
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Sync (frozen lock, dev group)
+        run: uv sync --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Tests
+        run: uv run pytest -q
+
+      - name: Dashboard pages must not read raw tables
+        run: '! grep -rn "FROM readings\|FROM occupancy" pages/ 2>/dev/null'
+
+      - name: hub.py must not change vs main
+        run: |
+          git fetch -q origin main
+          if ! git diff --quiet origin/main...HEAD -- hub.py; then
+            echo "::error file=hub/hub.py::hub.py changed - the collector is out of scope"
+            git diff --stat origin/main...HEAD -- hub.py
+            exit 1
+          fi
+
+      - name: Secret scan
+        run: bash scripts/secret_scan.sh

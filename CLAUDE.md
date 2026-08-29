@@ -1,12 +1,12 @@
 # multinode_aq — Claude Code entry point
 
-Read `plan/CLAUDE_CODE_PLAN.md` (v2) first. It defines the phases, verification
+Read `docs/plan/CLAUDE_CODE_PLAN.md` (v2) first. It defines the phases, verification
 commands, completion criteria and the invariants in section 2. Board facts live in
 `docs/INVENTORY.md`; documented-vs-actual gaps in `docs/DRIFT.md` — both are authoritative
 over README/manual.
 
 Reference material:
-- `plan/dashboard_mockup.html` — target layout, v2. Page 1 mirrors the current
+- `docs/plan/dashboard_mockup_v2.html` — target layout, v2. Page 1 mirrors the current
   `hub/dashboard.py` (radar cards, stats, time series + vision crosshair, records,
   on-demand CSV export, reset). Page 2 = diagnosis A–I. Phase 1b optimizes page 1
   in place; Phase 5 splits into `pages/`.

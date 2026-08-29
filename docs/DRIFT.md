@@ -47,3 +47,14 @@
 | 플랜 위치 | CLAUDE.md·플랜 §4.1: `plan/CLAUDE_CODE_PLAN.md`, `plan/dashboard_mockup.html` | 실제 파일은 `docs/plan/CLAUDE_CODE_PLAN.md`, `docs/plan/dashboard_mockup_v2.html` (2026-08-29 이동) |
 | 저장소 `.gitignore` `*.db` | (기존 규칙) | `fixtures/sample.db`(Phase 1)를 커밋하려면 예외 규칙 `!fixtures/sample.db` 필요 |
 | 저장소 히스토리 | 비밀값 없음 | `docs/manual.html` 2826·3205행(펌웨어 예제)에 실제 HiveMQ 클러스터 **호스트명**이 main 히스토리에 있음(계정·비밀번호는 없음). 처리 시점 [ASK] |
+
+## Phase 1 — 플랜 §4와 실제 구현의 차이
+| 항목 | 플랜 | 실제 | 사유 |
+|---|---|---|---|
+| CI 트리거 | PR마다 | PR + **모든 브랜치 push** | `gh` CLI가 없어 PR을 Claude Code가 열 수 없음 → push만으로 hub.py 가드 실패를 확인 가능하게 함. hub.py 가드는 `origin/main...HEAD` 비교라 main push에서는 자동 통과 |
+| `.claude/settings.json` | Claude Code가 작성 | **사용자가 작성** | 자동 모드 분류기가 권한 파일 쓰기(직접·`update-config` 스킬 모두)를 차단. 내용은 PR 본문에 첨부 |
+| 비밀값 스캔 범위 | (명시 없음) | `hub/` 하위만 (`hub/scripts/secret_scan.sh`) | `docs/manual.html`의 기존 호스트명 때문에 docs/를 포함하면 모든 PR이 실패. docs는 Phase 7 문서 작업에서 정리 |
+| ruff 범위 | `ruff check hub/` | 동일하되 `hub.py dashboard.py hub_cloud.py en/` 제외(pyproject `extend-exclude`) | 보드 코드는 바이트 동일 유지 원칙(§0.2), 구버전 참고 파일은 정리 시점 [ASK] |
+| deploy.sh import 검사 | `import aq, dashboard` | 동일 + `py_compile hub.py` | 보드 bare 모드에서 `import dashboard`가 동작함을 확인(경고만 출력) |
+| 픽스처 노드 ID | 익명화 | `env_01..08`, `vis_01..05` + `fixtures/nodes.json`(라벨 CLASS_xx 유지) | 환경↔비전 페어링을 라벨로 보존해야 (label, bucket) 조인 테스트 가능 |
+| `ssh q` 호출 | deny 패턴 `Bash(ssh q *sudo*)` | `~/.ssh/config`에 `BatchMode yes`를 넣어 Claude가 `ssh q '…'` 형태만 쓰도록 통일 | `ssh -o BatchMode=yes q …` 형태는 deny 패턴과 매치되지 않음 |
