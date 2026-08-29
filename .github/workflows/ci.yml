@@ -31,6 +31,9 @@ jobs:
       - name: Dashboard pages must not read raw tables
         run: '! grep -rn "FROM readings\|FROM occupancy" pages/ 2>/dev/null'
 
+      - name: aq/ must never alter or delete collector data
+        run: '! grep -rnE "ALTER TABLE|DROP TABLE|DELETE FROM readings|DELETE FROM occupancy" aq/'
+
       - name: hub.py must not change vs main
         run: |
           git fetch -q origin main
