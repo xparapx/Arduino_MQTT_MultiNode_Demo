@@ -4,8 +4,8 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=/home/arduino/multinode_sensor_demo/.venv/bin/python /home/arduino/multinode_sensor_demo/hub.py
-WorkingDirectory=/home/arduino/multinode_sensor_demo
+ExecStart=/home/arduino/multinode_aq/.venv/bin/python /home/arduino/multinode_aq/hub.py
+WorkingDirectory=/home/arduino/multinode_aq
 Restart=always
 RestartSec=5
 User=arduino

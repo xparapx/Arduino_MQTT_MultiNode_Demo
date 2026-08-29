@@ -1,0 +1,14 @@
+[Unit]
+Description=Sensor Dashboard (Streamlit)
+After=network-online.target multinode_aq.service
+Wants=network-online.target
+
+[Service]
+ExecStart=/home/arduino/multinode_aq/.venv/bin/streamlit run /home/arduino/multinode_aq/dashboard.py --server.address 0.0.0.0 --server.port 8501 --server.headless true
+WorkingDirectory=/home/arduino/multinode_aq
+Restart=always
+RestartSec=5
+User=arduino
+
+[Install]
+WantedBy=multi-user.target

@@ -1,5 +1,18 @@
 {
-  "node_F04050": "1학년 3반",
-  "node_A12C34": "1학년 4반",
-  "node_B78E91": "2학년 1반"
+  "node_D0C12C": "CLASS_01",
+  "node_4C22A7": "CLASS_02",
+  "node_5040F0": "CLASS_03",
+  "node_8C8B35": "CLASS_04",
+  "node_E84DF0": "CLASS_05",
+  "node_E04537": "CLASS_06",
+  "node_3093F0": "CLASS_07",
+  "node_B80DC8": "CLASS_08",
+  "node_44F2FB": "CLASS_01",
+  "node_E29568": "CLASS_02",
+  "node_E647F1": "CLASS_03",
+  "node_E56551": "CLASS_04",
+  "node_E1B3AA": "CLASS_05",
+  "node_E09CBE": "CLASS_06",
+  "node_DF59EF": "CLASS_07",
+  "node_2A8454": "CLASS_08"
 }

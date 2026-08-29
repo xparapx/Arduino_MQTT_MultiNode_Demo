@@ -15,7 +15,8 @@ Multinode Environmental Sensing Monitor (display only)  -- native/systemd track,
 [Screen sections]
   1) node card grid (auto layout) -- 4 sensors as 2x2 half gauges
   2) overall stats (5-min cache) -- per-variable boxplots | correlation heatmap
-  3) time series -- pick a node -> 4 variables in a row
+  3) time series -- pick a node -> 6 variables in a row
+     + per-node regime | vision occupancy crosshair map (2-col)
   4) recent 5 rows
   5) data export -- full CSV / date-range CSV
 """
@@ -32,6 +33,7 @@ from plotly.subplots import make_subplots
 #   native/systemd only -> use the normal streamlit package
 #   (no App Lab Brick import -> portable to any Linux/PC)
 import streamlit as st
+import streamlit.components.v1 as components
 from streamlit_autorefresh import st_autorefresh
 
 # ---- Config ----
@@ -64,7 +66,8 @@ H_EXPORT   = PASTEL["purple"]
 # ---- Node identity colors (vivid; deliberately contrasted with the pastel
 #      per-variable METRICS colors: high-saturation hues not used by the
 #      6 displayed variables). Shared by radar + regime scatters. ----
-NODE_PALETTE = ["#FF5CA8", "#8B7CFF", "#00E5B0", "#FFB300", "#4DD2FF", "#C4FF4D"]
+NODE_PALETTE = ["#FF5CA8", "#8B7CFF", "#00E5B0", "#FFB300",
+                "#4DD2FF", "#C4FF4D", "#FF8A5C", "#EAEAEA"]  # 8 nodes
 NODE_COLOR: dict = {}          # filled once nodes are known (label-number order)
 
 def node_color(node_id: str) -> str:
@@ -201,6 +204,227 @@ def load_node_labels() -> dict:
 
 def label_of(node_id: str, labels: dict) -> str:
     return labels.get(node_id, node_id)
+
+
+# ========================================================
+#  [VISION] FOMO occupancy node (Nicla) -- `occupancy` table
+#  - source : hub.py stores topic multinode_aq/+/occ
+#  - pairing: env node <-> vision node share the SAME label in nodes.json
+#             (16 flat pairs: two node IDs -> one CLASS_xx label)
+#  - policy : occ* columns = analysis (SQL/join) ; cents JSON = UI only
+# ========================================================
+VIS_ACC  = "#FFB300"            # crosshair / occupancy accent (vivid amber)
+VIS_GRID = "#2b3242"            # map grid line
+
+def _occ_table_exists() -> bool:
+    if not os.path.isfile(DB):
+        return False
+    with closing(sqlite3.connect(DB)) as con:
+        r = con.execute("SELECT name FROM sqlite_master "
+                        "WHERE type='table' AND name='occupancy'").fetchone()
+    return bool(r)
+
+
+@st.cache_data(ttl=5)
+def load_occ_latest() -> pd.DataFrame:
+    """Last bucket per vision node (+9h KST time)."""
+    if not _occ_table_exists():
+        return pd.DataFrame()
+    sql = ("SELECT o.node, datetime(o.ts,'+9 hours') AS recv_time, "
+           "o.occ, o.occ_med, o.occ_max, o.occ_last, o.cents, o.w, o.n "
+           "FROM occupancy o JOIN (SELECT node, MAX(id) AS mid FROM occupancy "
+           "GROUP BY node) m ON o.id = m.mid")
+    with closing(sqlite3.connect(DB)) as con:
+        return pd.read_sql_query(sql, con)
+
+
+@st.cache_data(ttl=5)
+def load_occ_hist(node_id: str, limit: int = 24) -> pd.DataFrame:
+    """Recent buckets for the mini bar strip (oldest -> newest)."""
+    if not _occ_table_exists():
+        return pd.DataFrame()
+    sql = ("SELECT datetime(ts,'+9 hours') AS recv_time, occ, occ_max, n "
+           "FROM occupancy WHERE node=? ORDER BY id DESC LIMIT ?")
+    with closing(sqlite3.connect(DB)) as con:
+        df = pd.read_sql_query(sql, con, params=(node_id, limit))
+    return df.iloc[::-1].reset_index(drop=True)
+
+
+def vision_node_for(env_node: str, labels: dict, occ_nodes) -> "str | None":
+    """Find the vision node sharing this env node's label (nodes.json pairing)."""
+    lbl = label_of(env_node, labels)
+    for vn in occ_nodes:
+        if label_of(vn, labels) == lbl:
+            return vn
+    return None
+
+
+@st.cache_data(ttl=60)
+def load_merged_analysis(min_n_env: int = 0, min_n_occ: int = 25) -> pd.DataFrame:
+    """Analysis-ready dataframe: env(readings) x vision(occupancy) merged on
+    (bucket ts, room label). Exact join -- both sides publish on the same
+    NTP-aligned bucket grid, so no resample/asof needed. Rows whose occ bucket
+    has too few samples (n < min_n_occ) are dropped as low-quality.
+    Columns: t_kst, room, co2, voc, scd_temp, scd_hum, pm2p5, pm10p0,
+             occ_mean, occ_med, occ_max, occ_n
+    """
+    if not _occ_table_exists():
+        return pd.DataFrame()
+    labels_ = load_node_labels()
+    with closing(sqlite3.connect(DB)) as con:
+        env = pd.read_sql_query(
+            "SELECT ts, node, co2, voc, scd_temp, scd_hum, pm2p5, pm10p0, n "
+            "FROM readings", con)
+        occ = pd.read_sql_query(
+            "SELECT ts, node, occ AS occ_mean, occ_med, occ_max, n AS occ_n "
+            "FROM occupancy WHERE n >= ?", con, params=(min_n_occ,))
+    if env.empty or occ.empty:
+        return pd.DataFrame()
+    env["room"] = env["node"].map(labels_)
+    occ["room"] = occ["node"].map(labels_)
+    env = env.dropna(subset=["room"])
+    occ = occ.dropna(subset=["room"])
+    m = pd.merge(env.drop(columns=["node"]),
+                 occ[["ts", "room", "occ_mean", "occ_med", "occ_max", "occ_n"]],
+                 on=["ts", "room"], how="inner")
+    if m.empty:
+        return m
+    m["t_kst"] = (pd.to_datetime(m["ts"]) + pd.Timedelta(hours=9)
+                  ).dt.strftime("%Y-%m-%d %H:%M:%S")
+    cols = ["t_kst", "room", "co2", "voc", "scd_temp", "scd_hum",
+            "pm2p5", "pm10p0", "occ_mean", "occ_med", "occ_max", "occ_n"]
+    return m[cols].sort_values(["room", "t_kst"]).reset_index(drop=True)
+
+
+# crosshair map CSS (plain string; kept out of f-string to avoid brace escapes)
+_VIS_CSS = """
+<style>
+  .vp{font-family:'Pretendard','Malgun Gothic',system-ui,sans-serif;
+      background:__PANEL__;border-radius:12px;padding:12px 14px;color:__INK__;}
+  .vp .hd{display:flex;justify-content:space-between;align-items:center;}
+  .vp .hd b{font-size:13px;}
+  .vp .fresh{font-size:10px;padding:2px 9px;border-radius:20px;
+             border:1px solid #3a414e;color:#8de5a1;}
+  .vp .fresh.stale{color:#ff9f9b;}
+  .vp .chips{display:flex;gap:8px;margin:8px 0 10px;width:clamp(288px,50%,373px);}
+  .vp .chip{background:#1a1f29;border:1px solid #333b49;border-radius:8px;
+            padding:4px 12px;text-align:center;flex:1;min-width:0;}
+  .vp .chip .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .vp .chip.acc .v{color:__ACC__;}
+  .vp .chip .l{font-size:9.5px;color:#aab2bd;letter-spacing:.08em;}
+  .vp .maprow{display:flex;gap:12px;align-items:stretch;}
+  .vp .map{position:relative;flex:0 0 clamp(288px,50%,373px);aspect-ratio:4/3;height:auto;background:#161a22;
+           border:1px dashed #3a414e;border-radius:8px;overflow:hidden;
+           background-image:
+             repeating-linear-gradient(0deg,transparent,transparent 23px,__GRID__ 24px),
+             repeating-linear-gradient(90deg,transparent,transparent 23px,__GRID__ 24px);}
+  .vp .map .tag{position:absolute;left:7px;bottom:5px;font-size:9px;color:#4a5568;}
+  .vp .map .none{position:absolute;inset:0;display:flex;align-items:center;
+                 justify-content:center;font-size:11px;color:#5f6f7e;}
+  .vp .ch{position:absolute;width:38px;height:38px;
+          transform:translate(-50%,-50%);
+          animation:vblink 1.15s ease-in-out infinite;}
+  .vp .ch::before{content:'';position:absolute;left:50%;top:-4px;bottom:-4px;
+                  width:2px;background:__ACC__;transform:translateX(-50%);}
+  .vp .ch::after{content:'';position:absolute;top:50%;left:-4px;right:-4px;
+                 height:2px;background:__ACC__;transform:translateY(-50%);}
+  .vp .ch b{position:absolute;inset:9px;border:2px solid __ACC__;
+            border-radius:50%;}
+  .vp .ch i{position:absolute;left:50%;top:50%;width:4px;height:4px;
+            background:__ACC__;border-radius:50%;
+            transform:translate(-50%,-50%);}
+  @keyframes vblink{0%,100%{opacity:1;}50%{opacity:.18;}}
+  .vp .side{flex:1;display:flex;flex-direction:column;justify-content:flex-end;}
+  .vp .side .cap{font-size:10px;color:#aab2bd;margin-bottom:6px;}
+  .vp .bars{display:flex;align-items:flex-end;gap:2px;height:74px;}
+  .vp .bars i{flex:1;background:#3d4c60;border-radius:2px 2px 0 0;min-height:2px;}
+  .vp .bars i.now{background:__ACC__;}
+  .vp .ft{font-size:9.5px;color:#5f6f7e;margin-top:8px;}
+</style>
+"""
+
+
+def render_vision_panel(env_node: str, labels: dict):
+    """Section-3 right column: blinking-crosshair occupancy map for the vision
+    node paired (same label) with the selected env node."""
+    lbl = label_of(env_node, labels)
+    occ_latest = load_occ_latest()
+    if occ_latest.empty:
+        st.info("비전(재실) 데이터가 아직 없습니다 — occ 노드 발행과 "
+                "hub.py의 occ 구독(occupancy 테이블)을 확인하세요.")
+        return
+    vn = vision_node_for(env_node, labels, occ_latest["node"].tolist())
+    if vn is None:
+        st.info(f"'{lbl}' 교실에 매핑된 비전 노드가 없습니다. "
+                "nodes.json에서 비전 노드 ID를 같은 라벨로 등록하세요.")
+        return
+
+    row = occ_latest[occ_latest["node"] == vn].iloc[0]
+    try:
+        cents = json.loads(row["cents"] or "[]")
+    except Exception:
+        cents = []
+    w = int(row["w"]) if row["w"] else 96
+    hist = load_occ_hist(vn)
+
+    # freshness: bucket older than ~12 min -> stale badge
+    stale = True
+    try:
+        age = datetime.now() - datetime.fromisoformat(str(row["recv_time"]))
+        stale = age > timedelta(minutes=12)
+    except Exception:
+        pass
+    fresh_cls = "fresh stale" if stale else "fresh"
+    fresh_txt = "지연" if stale else "LIVE"
+
+    # crosshairs (staggered blink for visual rhythm)
+    ch = ""
+    for i, c in enumerate(cents):
+        try:
+            x = float(c[0]) / w * 100.0
+            y = float(c[1]) / w * 100.0
+        except Exception:
+            continue
+        ch += (f"<div class='ch' style='left:{x:.1f}%;top:{y:.1f}%;"
+               f"animation-delay:{i*0.15:.2f}s'><b></b><i></i></div>")
+    if not ch:
+        ch = "<div class='none'>버킷 내 탐지 없음</div>"
+
+    # history mini bars (scaled by occ_max of the window)
+    bars = ""
+    if not hist.empty:
+        top = max(float(hist["occ_max"].max() or 0), 1.0)
+        vals = hist["occ"].fillna(0).tolist()
+        for j, v in enumerate(vals):
+            hpc = max(3, int(float(v) / top * 100))
+            cls = " class='now'" if j == len(vals) - 1 else ""
+            bars += f"<i{cls} style='height:{hpc}%'></i>"
+
+    css = (_VIS_CSS.replace("__PANEL__", PANEL_BG).replace("__INK__", INK)
+                   .replace("__ACC__", VIS_ACC).replace("__GRID__", VIS_GRID))
+    occ_v  = f"{float(row['occ']):.1f}" if row["occ"] is not None else "-"
+    body = f"""
+    <div class="vp">
+      <div class="hd"><b>재실 탐지 — {lbl} <span style="color:#7c8b9c">
+        ({vn})</span></b><span class="{fresh_cls}">{fresh_txt}</span></div>
+      <div class="chips">
+        <div class="chip acc"><div class="v">{occ_v}</div><div class="l">5분 평균</div></div>
+        <div class="chip"><div class="v">{row['occ_med'] if row['occ_med'] is not None else '-'}</div><div class="l">중앙값</div></div>
+        <div class="chip"><div class="v">{row['occ_max'] if row['occ_max'] is not None else '-'}</div><div class="l">최대</div></div>
+        <div class="chip"><div class="v">{row['n'] if row['n'] is not None else '-'}</div><div class="l">샘플 n</div></div>
+      </div>
+      <div class="maprow">
+        <div class="map">{ch}<span class="tag">CAMERA VIEW 4:3 &middot; coords /{w}</span></div>
+        <div class="side">
+          <div class="cap">최근 버킷 추이 (평균 인원)</div>
+          <div class="bars">{bars}</div>
+          <div class="ft">조준선 = 최대 인원({row['occ_max']}) 시점 위치 (4:3 프레임 상대좌표) &middot;
+            버킷 {row['recv_time']} KST<br>영상 비전송 &middot; 좌표만 수집 (온디바이스 추론)</div>
+        </div>
+      </div>
+    </div>"""
+    components.html(css + body, height=436)
+
 
 
 # ---- Normalize / charts ----
@@ -361,6 +585,8 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) ->
     flexible regime-switching detection. NOTE: normalization removes ABSOLUTE level
     (e.g. 500 vs 900ppm both map near 0); absolute level is shown by the CO2 barplot.
     Density gradation: denser quadrant = deeper tint. Foundation for future GMM.
+    v2: past-point scatter removed (readability) -> density bg + current vectors only,
+    enlarged current markers + class label annotated at each arrow tip.
     Quadrant split at median(=0): low-low=Clean / lowCO2-highVOC=Matter>Human /
     highCO2-lowVOC=Human>Matter / high-high=Human~=Matter."""
     d = dfa[["co2", "voc", "node"]].dropna()
@@ -408,17 +634,9 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) ->
     ))
 
     # node colors: shared vivid identity palette (see NODE_PALETTE)
-    node_list = sorted(d["node"].unique())
-    # past points: small & faint (distribution backdrop). Clip to range edges.
-    for i, nd in enumerate(node_list):
-        m = d["node"] == nd
-        fig.add_trace(go.Scatter(
-            x=zco2[m].clip(-amax, amax), y=zvoc[m].clip(-amax, amax), mode="markers",
-            name=label_of(nd, labels), legendgroup=nd,
-            marker=dict(size=5, color=node_color(nd),
-                        line=dict(width=0.3, color="rgba(0,0,0,0.3)"), opacity=0.35),
-        ))
-    # current position: vector from origin + emphasized marker (per node)
+    node_list = sorted(d["node"].unique(), key=lambda n: labels.get(n, n))
+    # 과거 개별 산점은 제거 — 분포 맥락은 밀도 배경(Histogram2d)만 유지 (가독성)
+    # current position: vector from origin + enlarged marker + class label (per node)
     if latest:
         for i, nd in enumerate(node_list):
             cur = latest.get(nd)
@@ -434,20 +652,34 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) ->
             # vector: origin -> current (arrow)
             fig.add_annotation(x=cx, y=cy, ax=0, ay=0,
                                xref="x", yref="y", axref="x", ayref="y",
-                               showarrow=True, arrowhead=2, arrowsize=1.2,
-                               arrowwidth=2, arrowcolor=col, opacity=0.9)
-            # emphasized current marker (modest size). Diamond if clipped (out of range).
+                               showarrow=True, arrowhead=2, arrowsize=1.0,
+                               arrowwidth=2, arrowcolor=col, opacity=0.95)
+            # enlarged current marker. Diamond if clipped (out of range).
             fig.add_trace(go.Scatter(
                 x=[cx], y=[cy], mode="markers",
                 name=f"{label_of(nd, labels)} (now)", legendgroup=nd,
                 showlegend=False,
-                marker=dict(size=11, color=col,
+                marker=dict(size=16, color=col,
                             symbol=("diamond-open" if outside else "star"),
-                            line=dict(width=1.2, color=INK)),
+                            line=dict(width=1.6, color=INK)),
                 hovertemplate=(f"{label_of(nd, labels)} now<br>CO2 r=%{{x:.2f}}"
                                f"<br>VOC r=%{{y:.2f}}"
                                f"{' (범위밖)' if outside else ''}<extra></extra>"),
             ))
+            # class label at the arrow tip (offset outward along the vector)
+            norm = (cx * cx + cy * cy) ** 0.5
+            ux, uy = ((cx / norm, cy / norm) if norm > 1e-6 else (1.0, 0.0))
+            off = amax * 0.07
+            lx = max(-amax * 0.98, min(amax * 0.98, cx + ux * off))
+            ly = max(-amax * 0.98, min(amax * 0.98, cy + uy * off))
+            fig.add_annotation(x=lx, y=ly, text=label_of(nd, labels),
+                               showarrow=False,
+                               xanchor=("left" if ux >= 0 else "right"),
+                               yanchor=("bottom" if uy >= 0 else "top"),
+                               font={"size": 9, "color": col},
+                               bgcolor="rgba(0,0,0,0.45)",
+                               bordercolor=col, borderwidth=1, borderpad=1,
+                               opacity=0.95)
     # quadrant labels with inequality notation (Human vs Matter)
     #  x+ = CO2 high (human factor) ; y+ = VOC high (matter factor)
     qlabels = [( amax*0.6,  amax*0.6, "Human \u2248 Matter"),   # high-high (both)
@@ -459,8 +691,6 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) ->
                            font={"size": 11, "color": INK})
     fig.update_layout(
         height=440, margin=dict(l=10, r=10, t=36, b=40),
-        title=dict(text="CO\u2082-VOC \uc0c1\ub300 \ub808\uc9d0 (RobustScaling)  \u2014  \u2605 \ud604\uc7ac(\uc6d0\uc810\u2192\ubca1\ud130), \u25c7=\ubc94\uc704\ubc16, \ud750\ub9b0 \uc810=\uacfc\uac70",
-                   x=0.5, xanchor="center", font=dict(size=12, color=INK)),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font={"color": INK},
         xaxis=dict(title="CO\u2082 (robust)  \u2192 Human factor", gridcolor=GRID, dtick=1,
@@ -471,7 +701,7 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) ->
                    tickfont={"color": INK_DIM}, range=[-amax, amax],
                    zeroline=True, zerolinecolor=INK, zerolinewidth=2,
                    showline=True, linecolor=INK_DIM, mirror=True),
-        legend=dict(font={"size": 10, "color": INK_DIM}, orientation="h",
+        legend=dict(font={"size": 12, "color": INK_DIM}, orientation="h",
                     yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
     return fig
@@ -616,8 +846,8 @@ st.markdown(f"<h1 style='color:{INK};margin-bottom:2px;'>"
 
 df = load_df()
 if df.empty:
-    st.info("No data yet. Check that the hub (hub_cloud.py for HiveMQ, "
-            "or hub.py for local mosquitto) is running, and that nodes "
+    st.info("No data yet. Check that the hub (hub.py) is running "
+            "and that nodes "
             "are publishing. First data appears at the next publish "
             "interval (e.g. every 5 min).")
     st.stop()
@@ -683,12 +913,16 @@ sel = st.selectbox("Select node", nodes,
                    format_func=lambda n: label_of(n, labels), key="ts_node")
 dfn = df[df["node"] == sel].tail(60)
 st.plotly_chart(make_timeseries(dfn), use_container_width=True, key="ts")
-# per-node regime scatter (within-node RobustScaling = this room's own baseline)
-st.plotly_chart(make_node_regime_scatter(dfa, sel, labels, latest),
-                use_container_width=True, key="node_regime")
-st.caption("위 산점도는 선택한 노드의 '자기 기준'(노드별 RobustScaling)입니다. "
-           "전체 비교는 Section 2의 pooled 산점도를 보세요. "
-           "(자기 기준 = 그 교실 평소 대비 지금 상태)")
+# per-node regime scatter | vision occupancy crosshair map  (2 columns)
+r3a, r3b = st.columns(2)
+r3a.plotly_chart(make_node_regime_scatter(dfa, sel, labels, latest),
+                 use_container_width=True, key="node_regime")
+with r3b:
+    render_vision_panel(sel, labels)
+st.caption("좌: 선택 노드의 '자기 기준'(노드별 RobustScaling) — 전체 비교는 Section 2의 "
+           "pooled 산점도. 우: 같은 교실(라벨) 비전 노드의 재실 탐지 — 깜빡이는 조준선은 "
+           "최근 버킷 '최대 인원 시점'의 위치(c), 수치는 5분 버킷 통계(평균/중앙값/최대). "
+           "영상은 전송·저장되지 않습니다(좌표만 수집).")
 
 # ---- Section 4: recent rows ----
 header("4) Recent records", H_TS)
@@ -709,7 +943,51 @@ st.download_button(
     mime="text/csv",
 )
 
-# (5-2) date-range download -- date picker + hour dropdown
+# (5-2) merged analysis download -- env x occupancy, join on (bucket, room)
+#        analysis-ready: one row = one 5-min bucket of one room, CO2 next to occ.
+mrg = load_merged_analysis()
+if not mrg.empty:
+    rooms = mrg["room"].nunique()
+    st.download_button(
+        f"Download merged env x occupancy CSV ({len(mrg):,} rows / {rooms} rooms)",
+        data=mrg.to_csv(index=False).encode("utf-8-sig"),
+        file_name=f"env_occ_merged_{mrg['t_kst'].max()[:10]}.csv",
+        mime="text/csv",
+        key="dl_merged",
+        help="재실 x CO2 상관 분석용. (버킷시각, 교실) 정확 조인, "
+             "occ 버킷 n>=25 품질 필터 적용. 상관은 Spearman 권장(포화형 계수 대비).",
+    )
+elif _occ_table_exists():
+    st.caption("Merged export: no matching (bucket, room) rows yet -- "
+               "needs both env and vision nodes publishing with NTP time.")
+
+# (5-2b) vision occupancy raw download -- full occupancy schema as stored
+#         (merged export drops cents/w and low-n rows; this keeps everything)
+def load_occ_all() -> pd.DataFrame:
+    if not _occ_table_exists():
+        return pd.DataFrame()
+    sql = ("SELECT datetime(ts,'+9 hours') AS recv_time_kst, ts AS ts_utc, "
+           "node, occ AS occ_mean, occ_med, occ_max, occ_last, cents, w, n "
+           "FROM occupancy ORDER BY id")
+    with closing(sqlite3.connect(DB)) as con:
+        return pd.read_sql_query(sql, con)
+
+occ_all = load_occ_all()
+if not occ_all.empty:
+    occ_all.insert(3, "room", occ_all["node"].map(labels).fillna(""))
+    st.download_button(
+        f"Download vision occupancy CSV ({len(occ_all):,} rows / "
+        f"{occ_all['node'].nunique()} nodes)",
+        data=occ_all.to_csv(index=False).encode("utf-8-sig"),
+        file_name=f"occupancy_all_{str(occ_all['recv_time_kst'].max())[:10]}.csv",
+        mime="text/csv",
+        key="dl_occ_raw",
+        help="occupancy 테이블 원본 전체. cents=최대 인원 시점 centroid JSON(w 좌표계), "
+             "n=버킷 내 유효 샘플 수(정상 ~30, 낮으면 저품질 버킷). "
+             "병합 CSV와 달리 품질 필터 없이 전 행 포함 — 결측/장애 구간 분석에도 사용.",
+    )
+
+# (5-3) date-range download -- date picker + hour dropdown
 st.markdown(f"<div style='color:{INK_DIM};margin:10px 0 4px;'>"
             "Export by date range (KST)</div>", unsafe_allow_html=True)
 
