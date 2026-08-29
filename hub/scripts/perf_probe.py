@@ -75,6 +75,16 @@ def main() -> int:
     d = type("NS", (), ns)  # attribute access over the script namespace
     labels = d.load_node_labels()
 
+    # 1b) fragments (Phase 1b): in bare mode st.fragment skips the body, so call
+    #     the wrapped functions directly -- once cold, once warm. The warm run is
+    #     the cost of a refresh cycle without new data (the 5.4 criterion).
+    frags = [n for n in ("section_live_status", "section_stats", "section_node_detail",
+                         "section_export") if n in ns]
+    for name in frags:
+        fn = getattr(ns[name], "__wrapped__", ns[name])
+        T(f"{name} (cold)", fn)
+        T(f"{name} (warm cycle)", fn)
+
     # 2) loaders, uncached. New API (Phase 1b): data_version() -> (max_id, bucket)
     new_api = hasattr(d, "data_version")
     if new_api:

@@ -18,7 +18,10 @@ Multinode Environmental Sensing Monitor (display only)  -- native/systemd track,
   3) time series -- pick a node -> 6 variables in a row
      + per-node regime | vision occupancy crosshair map (2-col)
   4) recent 5 rows
-  5) data export -- full CSV / date-range CSV
+  5) data export -- full CSV / date-range CSV (built on demand)
+  6) data reset (backup + clear)
+Refresh (Phase 1b): sections are st.fragment blocks -- 1/3/4 every 60 s,
+2 every 5 min, 5 only on its buttons. No full-page autorefresh.
 """
 import json, os, re, sqlite3, sys
 from contextlib import closing
@@ -35,7 +38,6 @@ from plotly.subplots import make_subplots
 #   (no App Lab Brick import -> portable to any Linux/PC)
 import streamlit as st
 import streamlit.components.v1 as components
-from streamlit_autorefresh import st_autorefresh
 
 from aq.db import bucket_5min
 
@@ -43,7 +45,8 @@ from aq.db import bucket_5min
 DB         = "sensor_data.db"
 NODES_PATH = "nodes.json"
 ROW_LIMIT  = 5000          # recent rows to show
-REFRESH_MS = 10_000        # auto-refresh every 10s
+REFRESH_LIVE  = "60s"      # sections 1, 3, 4 (st.fragment run_every) -- data lands every 5 min
+REFRESH_STATS = "5m"       # section 2 (28-day statistics)
 MAX_COLS   = 4             # max grid columns (2 rows x 4 = 8 nodes)
 STATS_DAYS = 28            # section 2 window (days); same as the model training window
 BOX_MAX_OUTLIERS   = 300   # outlier dots sent per boxplot (evenly sampled by rank)
@@ -53,8 +56,10 @@ DENSITY_BINS       = 24    # 2D density grid for the pooled regime scatter
 # ---- [perf] server-side timing of one script run (Phase 1b). stderr -> journalctl.
 #      `journalctl -u multinode_aq_dashboard -f | grep perf` shows one line per section.
 _t0 = perf_counter()
-def _perf(tag: str) -> None:
-    print(f"[perf] {tag} {perf_counter() - _t0:.2f}s", file=sys.stderr, flush=True)
+def _perf(tag: str, t0: float = None) -> None:
+    """One line per fragment run (t0 = fragment start) or per full script run."""
+    print(f"[perf] {tag} {perf_counter() - (_t0 if t0 is None else t0):.2f}s",
+          file=sys.stderr, flush=True)
 
 # ---- Theme colors (seaborn pastel + dark) ----
 BG        = "#1a1d24"      # charcoal background
@@ -987,7 +992,6 @@ def timeseries_figure(node_id: str, stamp: str, _dfn: pd.DataFrame) -> go.Figure
 #  Screen
 # ========================================================
 st.set_page_config(page_title="Sensing Monitor", page_icon="*", layout="wide")
-st_autorefresh(interval=REFRESH_MS, key="auto")
 
 # extra dark-theme CSS (works with config.toml; also alone)
 st.markdown(f"""
@@ -1026,12 +1030,17 @@ def _node_sort_key(node_id: str):
     return (1, 0, lbl.lower())
 
 
-nodes = sorted(df["node"].dropna().unique(), key=_node_sort_key)
-NODE_COLOR.update({n: NODE_PALETTE[i % len(NODE_PALETTE)] for i, n in enumerate(nodes)})
-latest = {n: df[df["node"] == n].iloc[-1].to_dict() for n in nodes}
-
-st.caption(f"{len(nodes)} nodes: {', '.join(label_of(n, labels) for n in nodes)}"
-           f"   |   {len(df):,} rows  -  last seen {df['recv_time'].max()} (KST)")
+def snapshot():
+    """What the live sections need: (max_id, bucket, df, nodes, latest).
+    Called at the start of every fragment run; everything behind it is cached
+    on data_version(), so a run without new rows costs two PK lookups."""
+    max_id, bucket = data_version()
+    df = load_df(max_id)
+    nodes = sorted(df["node"].dropna().unique(), key=_node_sort_key)
+    for i, n in enumerate(nodes):                       # colours stay stable per session
+        NODE_COLOR.setdefault(n, NODE_PALETTE[i % len(NODE_PALETTE)])
+    latest = {n: df[df["node"] == n].iloc[-1].to_dict() for n in nodes}
+    return max_id, bucket, df, nodes, latest
 
 
 def header(text, color):
@@ -1039,67 +1048,83 @@ def header(text, color):
                 unsafe_allow_html=True)
 
 
-# ---- Section 1: node card grid ----
-header("1) Live status by node", H_OVERVIEW)
-ncols = min(len(nodes), MAX_COLS)
-for i in range(0, len(nodes), ncols):
-    row_nodes = nodes[i:i + ncols]
-    cols = st.columns(ncols)
-    for col, node in zip(cols, row_nodes):
-        with col:
-            node_card(node, latest[node], labels)
+# Phase 1b: each section is a st.fragment with its own timer, so a refresh
+# re-runs only that block (no full-page rerun, no flicker on node selection).
+# Section 5 has no timer -- its buttons rerun just that fragment. Section 6
+# (reset) stays a plain block: its button triggers a full rerun, which is fine.
 
-_perf("sec1")
+# ---- Section 1: node card grid ----
+@st.fragment(run_every=REFRESH_LIVE)
+def section_live_status():
+    t = perf_counter()
+    _, _, df, nodes, latest = snapshot()
+    st.caption(f"{len(nodes)} nodes: {', '.join(label_of(n, labels) for n in nodes)}"
+               f"   |   {len(df):,} rows  -  last seen {df['recv_time'].max()} (KST)")
+    header("1) Live status by node", H_OVERVIEW)
+    ncols = min(len(nodes), MAX_COLS)
+    for i in range(0, len(nodes), ncols):
+        row_nodes = nodes[i:i + ncols]
+        cols = st.columns(ncols)
+        for col, node in zip(cols, row_nodes):
+            with col:
+                node_card(node, latest[node], labels)
+    _perf("sec1", t)
+
 
 # ---- Section 2: overall stats (5-min) ----
-header("2) Overall stats (5-min)", H_STATS)
-st.caption(f"Window: last {STATS_DAYS} days. Rebuilt once per 5-min bucket.")
-figs = stats_figures(bucket)
-if figs:
-    # row 1: boxplot | correlation  (1:1)
-    r1c1, r1c2 = st.columns(2)
-    r1c1.plotly_chart(figs["box"], use_container_width=True, key="box")
-    r1c2.plotly_chart(figs["corr"], use_container_width=True, key="corr")
-    # row 2: CO2+VOC by node (stacked, left) | CO2-VOC regime scatter (right)  (1:2)
-    r2c1, r2c2 = st.columns([1, 2])
-    with r2c1:
-        st.plotly_chart(figs["co2_bar"], use_container_width=True, key="co2_bar")
-        st.plotly_chart(figs["voc_bar"], use_container_width=True, key="voc_bar")
-    # live markers (★) go on top of the cached base every refresh
-    r2c2.plotly_chart(overlay_current(figs["regime"], figs["regime_meta"], latest, labels),
-                      use_container_width=True, key="regime")
+@st.fragment(run_every=REFRESH_STATS)
+def section_stats():
+    t = perf_counter()
+    _, bucket, _, _, latest = snapshot()
+    header("2) Overall stats (5-min)", H_STATS)
+    st.caption(f"Window: last {STATS_DAYS} days. Rebuilt once per 5-min bucket.")
+    figs = stats_figures(bucket)
+    if figs:
+        # row 1: boxplot | correlation  (1:1)
+        r1c1, r1c2 = st.columns(2)
+        r1c1.plotly_chart(figs["box"], use_container_width=True, key="box")
+        r1c2.plotly_chart(figs["corr"], use_container_width=True, key="corr")
+        # row 2: CO2+VOC by node (stacked, left) | CO2-VOC regime scatter (right)  (1:2)
+        r2c1, r2c2 = st.columns([1, 2])
+        with r2c1:
+            st.plotly_chart(figs["co2_bar"], use_container_width=True, key="co2_bar")
+            st.plotly_chart(figs["voc_bar"], use_container_width=True, key="voc_bar")
+        # live markers (★) go on top of the cached base every refresh
+        r2c2.plotly_chart(overlay_current(figs["regime"], figs["regime_meta"], latest, labels),
+                          use_container_width=True, key="regime")
+    _perf("sec2", t)
 
-_perf("sec2")
 
-# ---- Section 3: time series + per-node regime ----
-header("3) Time series by node", H_TS)
-sel = st.selectbox("Select node", nodes,
-                   format_func=lambda n: label_of(n, labels), key="ts_node")
-dfn = df[df["node"] == sel].tail(60)
-st.plotly_chart(timeseries_figure(sel, str(latest[sel].get("recv_time")), dfn),
-                use_container_width=True, key="ts")
-# per-node regime scatter | vision occupancy crosshair map  (2 columns)
-r3a, r3b = st.columns(2)
-base, meta = node_regime_figure(bucket, sel)
-r3a.plotly_chart(overlay_node_current(base, meta, latest.get(sel)),
-                 use_container_width=True, key="node_regime")
-with r3b:
-    render_vision_panel(sel, labels)
-st.caption("좌: 선택 노드의 '자기 기준'(노드별 RobustScaling) — 전체 비교는 Section 2의 "
-           "pooled 산점도. 우: 같은 교실(라벨) 비전 노드의 재실 탐지 — 깜빡이는 조준선은 "
-           "최근 버킷 '최대 인원 시점'의 위치(c), 수치는 5분 버킷 통계(평균/중앙값/최대). "
-           "영상은 전송·저장되지 않습니다(좌표만 수집).")
+# ---- Section 3: time series + per-node regime ; Section 4: recent rows ----
+@st.fragment(run_every=REFRESH_LIVE)
+def section_node_detail():
+    t = perf_counter()
+    _, bucket, df, nodes, latest = snapshot()
+    header("3) Time series by node", H_TS)
+    sel = st.selectbox("Select node", nodes,
+                       format_func=lambda n: label_of(n, labels), key="ts_node")
+    dfn = df[df["node"] == sel].tail(60)
+    st.plotly_chart(timeseries_figure(sel, str(latest[sel].get("recv_time")), dfn),
+                    use_container_width=True, key="ts")
+    # per-node regime scatter | vision occupancy crosshair map  (2 columns)
+    r3a, r3b = st.columns(2)
+    base, meta = node_regime_figure(bucket, sel)
+    r3a.plotly_chart(overlay_node_current(base, meta, latest.get(sel)),
+                     use_container_width=True, key="node_regime")
+    with r3b:
+        render_vision_panel(sel, labels)
+    st.caption("좌: 선택 노드의 '자기 기준'(노드별 RobustScaling) — 전체 비교는 Section 2의 "
+               "pooled 산점도. 우: 같은 교실(라벨) 비전 노드의 재실 탐지 — 깜빡이는 조준선은 "
+               "최근 버킷 '최대 인원 시점'의 위치(c), 수치는 5분 버킷 통계(평균/중앙값/최대). "
+               "영상은 전송·저장되지 않습니다(좌표만 수집).")
 
-_perf("sec3")
+    header("4) Recent records", H_TS)
+    recent = df[df["node"] == sel][["recv_time"] + SENSOR_KEYS].tail(5).iloc[::-1]
+    fmt = {k: ("{:.0f}" if k in ("voc", "nox", "co2") else "{:.1f}")
+           for k in SENSOR_KEYS}
+    st.dataframe(recent.style.format(fmt), use_container_width=True, hide_index=True)
+    _perf("sec3+4", t)
 
-# ---- Section 4: recent rows ----
-header("4) Recent records", H_TS)
-recent = df[df["node"] == sel][["recv_time"] + SENSOR_KEYS].tail(5).iloc[::-1]
-fmt = {k: ("{:.0f}" if k in ("voc", "nox", "co2") else "{:.1f}")
-       for k in SENSOR_KEYS}
-st.dataframe(recent.style.format(fmt), use_container_width=True, hide_index=True)
-
-_perf("sec4")
 
 # ---- Section 5: data export (on demand) ----
 # Phase 1b: nothing is queried or serialised until asked. Each export has a
@@ -1107,7 +1132,6 @@ _perf("sec4")
 # st.session_state; the download button appears after that. Before, all four
 # CSVs (two of them the full table) were rebuilt on every 10 s refresh.
 EXPORT_ON_DEMAND = True
-header("5) Data export (CSV)", H_EXPORT)
 
 
 def _csv_bytes(d: pd.DataFrame) -> bytes:
@@ -1138,27 +1162,9 @@ def export_slot(key: str, prepare_label: str, build, label_fn, file_fn, help=Non
                                mime="text/csv", key=f"dl_{key}", help=help)
 
 
-# (5-1) full download -- quick backup
-export_slot("all", "Prepare all-data CSV", query_all,
-            lambda m: "Download all data (CSV)",
-            lambda m: f"sensor_all_{m['last']}.csv")
-
-# (5-2) merged analysis download -- env x occupancy, join on (bucket, room)
-#        analysis-ready: one row = one 5-min bucket of one room, CO2 next to occ.
-if _occ_table_exists():
-    export_slot("merged", "Prepare merged env x occupancy CSV", load_merged_analysis,
-                lambda m: f"Download merged env x occupancy CSV ({m['rows']:,} rows / "
-                          f"{m['rooms']} rooms)",
-                lambda m: f"env_occ_merged_{m['last']}.csv",
-                help="재실 x CO2 상관 분석용. (버킷시각, 교실) 정확 조인, "
-                     "occ 버킷 n>=25 품질 필터 적용. 상관은 Spearman 권장(포화형 계수 대비).",
-                empty_msg="Merged export: no matching (bucket, room) rows yet -- "
-                          "needs both env and vision nodes publishing with NTP time.")
-
-
-# (5-2b) vision occupancy raw download -- full occupancy schema as stored
-#         (merged export drops cents/w and low-n rows; this keeps everything)
 def load_occ_all() -> pd.DataFrame:
+    """(5-2b) vision occupancy raw -- full occupancy schema as stored (the merged
+    export drops cents/w and low-n rows; this keeps everything)."""
     if not _occ_table_exists():
         return pd.DataFrame()
     sql = ("SELECT datetime(ts,'+9 hours') AS recv_time_kst, ts AS ts_utc, "
@@ -1171,48 +1177,72 @@ def load_occ_all() -> pd.DataFrame:
     return d
 
 
-if _occ_table_exists():
-    export_slot("occ_raw", "Prepare vision occupancy CSV", load_occ_all,
-                lambda m: f"Download vision occupancy CSV ({m['rows']:,} rows / "
-                          f"{m['nodes']} nodes)",
-                lambda m: f"occupancy_all_{m['last']}.csv",
-                help="occupancy 테이블 원본 전체. cents=최대 인원 시점 centroid JSON(w 좌표계), "
-                     "n=버킷 내 유효 샘플 수(정상 ~30, 낮으면 저품질 버킷). "
-                     "병합 CSV와 달리 품질 필터 없이 전 행 포함 — 결측/장애 구간 분석에도 사용.",
-                empty_msg="No occupancy rows yet.")
+@st.fragment
+def section_export():
+    t = perf_counter()
+    header("5) Data export (CSV)", H_EXPORT)
 
-# (5-3) date-range download -- date picker + hour dropdown, queried on "Query range"
-st.markdown(f"<div style='color:{INK_DIM};margin:10px 0 4px;'>"
-            "Export by date range (KST)</div>", unsafe_allow_html=True)
+    # (5-1) full download -- quick backup
+    export_slot("all", "Prepare all-data CSV", query_all,
+                lambda m: "Download all data (CSV)",
+                lambda m: f"sensor_all_{m['last']}.csv")
 
-lo, hi = get_time_bounds()
-if lo and hi:
-    d1, d2, d3, d4 = st.columns(4)
-    start_d = d1.date_input("Start date", value=lo.date(),
-                            min_value=lo.date(), max_value=hi.date(), key="sd")
-    start_h = d2.selectbox("Start hour", list(range(24)), index=0,
-                           format_func=lambda h: f"{h:02d}:00", key="sh")
-    end_d   = d3.date_input("End date", value=hi.date(),
-                            min_value=lo.date(), max_value=hi.date(), key="ed")
-    end_h   = d4.selectbox("End hour", list(range(24)), index=23,
-                           format_func=lambda h: f"{h:02d}:00", key="eh")
+    # (5-2) merged analysis download -- env x occupancy, join on (bucket, room)
+    #        analysis-ready: one row = one 5-min bucket of one room, CO2 next to occ.
+    if _occ_table_exists():
+        export_slot("merged", "Prepare merged env x occupancy CSV", load_merged_analysis,
+                    lambda m: f"Download merged env x occupancy CSV ({m['rows']:,} rows / "
+                              f"{m['rooms']} rooms)",
+                    lambda m: f"env_occ_merged_{m['last']}.csv",
+                    help="재실 x CO2 상관 분석용. (버킷시각, 교실) 정확 조인, "
+                         "occ 버킷 n>=25 품질 필터 적용. 상관은 Spearman 권장(포화형 계수 대비).",
+                    empty_msg="Merged export: no matching (bucket, room) rows yet -- "
+                              "needs both env and vision nodes publishing with NTP time.")
+        # (5-2b) vision occupancy raw
+        export_slot("occ_raw", "Prepare vision occupancy CSV", load_occ_all,
+                    lambda m: f"Download vision occupancy CSV ({m['rows']:,} rows / "
+                              f"{m['nodes']} nodes)",
+                    lambda m: f"occupancy_all_{m['last']}.csv",
+                    help="occupancy 테이블 원본 전체. cents=최대 인원 시점 centroid JSON(w 좌표계), "
+                         "n=버킷 내 유효 샘플 수(정상 ~30, 낮으면 저품질 버킷). "
+                         "병합 CSV와 달리 품질 필터 없이 전 행 포함 — 결측/장애 구간 분석에도 사용.",
+                    empty_msg="No occupancy rows yet.")
 
-    start_dt = datetime.combine(start_d, time(start_h, 0, 0))
-    end_dt   = datetime.combine(end_d,   time(end_h, 59, 59))
+    # (5-3) date-range download -- date picker + hour dropdown, queried on "Query range"
+    st.markdown(f"<div style='color:{INK_DIM};margin:10px 0 4px;'>"
+                "Export by date range (KST)</div>", unsafe_allow_html=True)
+    lo, hi = get_time_bounds()
+    if lo and hi:
+        d1, d2, d3, d4 = st.columns(4)
+        start_d = d1.date_input("Start date", value=lo.date(),
+                                min_value=lo.date(), max_value=hi.date(), key="sd")
+        start_h = d2.selectbox("Start hour", list(range(24)), index=0,
+                               format_func=lambda h: f"{h:02d}:00", key="sh")
+        end_d   = d3.date_input("End date", value=hi.date(),
+                                min_value=lo.date(), max_value=hi.date(), key="ed")
+        end_h   = d4.selectbox("End hour", list(range(24)), index=23,
+                               format_func=lambda h: f"{h:02d}:00", key="eh")
 
-    if start_dt > end_dt:
-        st.warning("Start is later than end. Check the range.")
+        start_dt = datetime.combine(start_d, time(start_h, 0, 0))
+        end_dt   = datetime.combine(end_d,   time(end_h, 59, 59))
+
+        if start_dt > end_dt:
+            st.warning("Start is later than end. Check the range.")
+        else:
+            st.caption(f"Range: {start_dt:%Y-%m-%d %H:00} ~ {end_dt:%Y-%m-%d %H:00}")
+            export_slot("range", "Query range", lambda: query_range(start_dt, end_dt),
+                        lambda m: f"Download range CSV ({m['rows']:,} rows)",
+                        lambda m: f"sensor_{start_dt:%Y%m%d_%H}-{end_dt:%Y%m%d_%H}.csv",
+                        empty_msg="No data in the selected range.")
     else:
-        st.caption(f"Range: {start_dt:%Y-%m-%d %H:00} ~ {end_dt:%Y-%m-%d %H:00}")
-        export_slot("range", "Query range", lambda: query_range(start_dt, end_dt),
-                    lambda m: f"Download range CSV ({m['rows']:,} rows)",
-                    lambda m: f"sensor_{start_dt:%Y%m%d_%H}-{end_dt:%Y%m%d_%H}.csv",
-                    empty_msg="No data in the selected range.")
-else:
-    st.caption("Range export becomes available once data accumulates.")
+        st.caption("Range export becomes available once data accumulates.")
+    _perf("sec5", t)
 
 
-_perf("sec5")
+section_live_status()
+section_stats()
+section_node_detail()
+section_export()
 
 # ---- Section 6: data reset (clear table, with auto-backup) ----
 header("6) Data reset", H_EXPORT)
@@ -1267,4 +1297,4 @@ with st.expander("Clear all collected data (DANGER)", expanded=False):
         except Exception as e:
             st.error(f"Reset failed: {e}")
 
-_perf("sec6 total")
+_perf("full run")
