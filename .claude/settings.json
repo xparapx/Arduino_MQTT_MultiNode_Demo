@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/precommit_tests.py"
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/precommit_tests.py\""
           }
         ]
       }

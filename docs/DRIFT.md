@@ -59,3 +59,6 @@
 | 픽스처 노드 ID | 익명화 | `env_01..08`, `vis_01..05` + `fixtures/nodes.json`(라벨 CLASS_xx 유지) | 환경↔비전 페어링을 라벨로 보존해야 (label, bucket) 조인 테스트 가능 |
 | `ssh q` 호출 | deny 패턴 `Bash(ssh q *sudo*)` | `~/.ssh/config`에 `BatchMode yes`를 넣어 Claude가 `ssh q '…'` 형태만 쓰도록 통일 | `ssh -o BatchMode=yes q …` 형태는 deny 패턴과 매치되지 않음 |
 | Claude Code 작업 디렉터리 | 저장소 루트 가정 (`.claude/settings.json`, `CLAUDE.md`) | Phase 0~1 세션은 상위 폴더 `c:\Users\phlox\PRJ`에서 실행됨 → 저장소의 `.claude/settings.json`(deny·hook)과 `CLAUDE.md`가 **로드되지 않음**. 2026-08-29 검증에서 `ssh q sudo true`가 차단되지 않은 원인 | 이후 세션은 반드시 `Arduino_MQTT_MultiNode_Demo/`를 작업 디렉터리로 시작한다. deny·hook 동작 확인은 그 세션에서 재실행 |
+| PreToolUse 훅 명령 | `python .claude/hooks/precommit_tests.py`(상대경로) | `python "$CLAUDE_PROJECT_DIR/.claude/hooks/precommit_tests.py"` | Bash 도구의 셸 cwd는 호출 간에 유지되므로 `cd hub` 뒤에는 상대경로가 깨져 **모든 Bash 호출이 훅 오류로 차단**됐다(2026-08-29 검증 중 발견). 절대경로 환경변수로 교체. 훅 스크립트 자체는 `__file__` 기준이라 변경 없음 |
+| deny 동작 확인 | Phase 1 완료 기준 §4.4-2 | 저장소 루트에서 시작한 세션(2026-08-29)에서 `ssh q sudo true` → `Permission to use Bash with command ssh q sudo true has been denied.` | 확인 완료. 위 행(상위 폴더 세션)의 미차단 원인이 작업 디렉터리였음을 재확인 |
+| PR 개설 | Claude Code가 `gh pr create` | **사용자가 compare URL로 개설**(PR 본문은 Claude가 작성해 전달) | `gh` 미설치, `GH_TOKEN`/`GITHUB_TOKEN` 없음. `gh pr checks` 대신 GitHub REST API(`/actions/runs`) 무인증 조회로 CI 결과 확인 |
