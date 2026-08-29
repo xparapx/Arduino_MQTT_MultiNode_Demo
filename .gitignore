@@ -32,3 +32,16 @@ Thumbs.db
 
 # ===== 로그 =====
 *.log
+
+# ===== Phase 0: board runtime artifacts / secrets =====
+sensor_data.db
+*.db-journal
+*.db-wal
+*.db-shm
+models/*.joblib
+backup_*.csv
+hub/secrets.env
+secrets.env
+*.bak
+*.save
+_phase0_backup/

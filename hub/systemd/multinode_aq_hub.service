@@ -1,0 +1,15 @@
+[Unit]
+Description=Sensor Hub (MQTT to SQLite)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/home/arduino/multinode_aq/hub/secrets.env
+ExecStart=/home/arduino/multinode_aq/hub/.venv/bin/python /home/arduino/multinode_aq/hub/hub.py
+WorkingDirectory=/home/arduino/multinode_aq/hub
+Restart=always
+RestartSec=5
+User=arduino
+
+[Install]
+WantedBy=multi-user.target
