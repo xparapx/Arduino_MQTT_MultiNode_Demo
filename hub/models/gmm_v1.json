@@ -1,0 +1,75 @@
+{
+ "n_components": 4,
+ "covariance_type": "full",
+ "random_state": 0,
+ "anchors_scaled": [
+  1.75,
+  1.2
+ ],
+ "components": [
+  {
+   "component": 0,
+   "regime": "clean",
+   "mu_scaled": [
+    1.346,
+    0.7134
+   ],
+   "mu_raw": [
+    538.4,
+    71.3
+   ],
+   "weight": 0.3905
+  },
+  {
+   "component": 1,
+   "regime": "mixed",
+   "mu_scaled": [
+    4.5765,
+    2.4434
+   ],
+   "mu_raw": [
+    1830.6,
+    244.3
+   ],
+   "weight": 0.1462
+  },
+  {
+   "component": 2,
+   "regime": "human",
+   "mu_scaled": [
+    2.2535,
+    1.1762
+   ],
+   "mu_raw": [
+    901.4,
+    117.6
+   ],
+   "weight": 0.2156
+  },
+  {
+   "component": 3,
+   "regime": "matter",
+   "mu_scaled": [
+    1.1166,
+    1.3121
+   ],
+   "mu_raw": [
+    446.6,
+    131.2
+   ],
+   "weight": 0.2477
+  }
+ ],
+ "converged": true,
+ "window_days": 28,
+ "win_start": "2026-08-01 05:06:08",
+ "win_end": "2026-08-29 05:06:08",
+ "rows": 48259,
+ "labels": {
+  "0": "clean",
+  "1": "mixed",
+  "2": "human",
+  "3": "matter"
+ },
+ "version": "gmm_v1"
+}

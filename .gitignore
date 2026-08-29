@@ -39,6 +39,8 @@ sensor_data.db
 *.db-wal
 *.db-shm
 models/*.joblib
+# Phase 4: the initial promoted model is the one joblib we commit (a few KB)
+!hub/models/gmm_v1.joblib
 backup_*.csv
 hub/secrets.env
 secrets.env

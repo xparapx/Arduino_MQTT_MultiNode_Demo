@@ -11,7 +11,10 @@ that would be stored is printed as JSON on stdout. Logs go to stderr.
 
 hourly : per node -> qc (today), regime_now, action (fan / purifier), forecast; summary
 daily  : per node -> qc (each day), band, transition; occ_co2 over the window
-weekly : candidate GMM fit on the training window -> model_event (governance in Phase 4)
+weekly : candidate GMM fit on the training window, stored as gmm_vN, compared with
+         models/current (log-likelihood on the last 7 days, centroid shift, calendar
+         boundary) -> promote / keep / reject -> model_event
+model  : list | promote --to gmm_vN | rollback --to gmm_vN
 """
 
 from __future__ import annotations
@@ -27,7 +30,18 @@ import pandas as pd
 HUB = Path(__file__).resolve().parent
 sys.path.insert(0, str(HUB))
 
-from aq import config, db, forecast, occ_co2, qc, regime, rules, schemas, summary  # noqa: E402
+from aq import (  # noqa: E402
+    config,
+    db,
+    forecast,
+    governance,
+    occ_co2,
+    qc,
+    regime,
+    rules,
+    schemas,
+    summary,
+)
 
 TS_FMT = "%Y-%m-%d %H:%M:%S"
 ADHOC = "adhoc"
@@ -48,17 +62,12 @@ def load_labels(path: Path) -> dict:
 # ---- model ------------------------------------------------------------------------
 
 def load_current_model(cfg: dict, models_dir: Path):
-    """(model, labels, version) from models/current, or None if absent (Phase 4)."""
-    link = models_dir / cfg["governance"]["current_link"]
-    if not link.exists():
+    """(model, labels, version) from models/current, or None if there is none."""
+    cur = governance.load_current(models_dir, cfg["governance"]["current_link"])
+    if cur is None:
         return None
-    import joblib
-
-    target = link.resolve()
-    model = joblib.load(target)
-    meta = json.loads(target.with_suffix(".json").read_text(encoding="utf-8"))
-    labels = {int(k): v for k, v in meta["labels"].items()}
-    return model, labels, meta.get("version", target.stem)
+    model, labels, meta = cur
+    return model, labels, meta["version"]
 
 
 def fit_candidate(conn, cfg: dict, as_of: datetime, window_days: int):
@@ -198,20 +207,51 @@ def run_daily(conn, cfg: dict, labels_map: dict, as_of: datetime, model_pack) ->
     return rows
 
 
-def run_weekly(conn, cfg: dict, as_of: datetime, models_dir: Path) -> list[dict]:
+def boundary_in_last_week(cal: dict | None, as_of: datetime, cfg: dict) -> bool:
+    """A calendar period boundary inside (as_of - 7 d, as_of] forces a refit."""
+    if not cal:
+        return False
+    off = timedelta(hours=cfg["time"]["tz_offset_hours"])
+    today = (as_of + off).date()
+    return any(0 <= (today - d).days < 7 for d in config.boundary_dates(cal))
+
+
+def run_weekly(conn, cfg: dict, as_of: datetime, models_dir: Path, cal: dict | None,
+               dry_run: bool) -> list[dict]:
+    """Fit a candidate on the training window, store it as the next gmm_vN
+    (never overwriting), compare with models/current on the last
+    eval_window_days and promote when the plan's criteria (or a calendar
+    boundary) say so. With dry_run nothing is written: the decision is computed
+    and reported, the candidate is not stored."""
     run_at = fmt(as_of)
     window = cfg["governance"]["train_window_days"]
     start = as_of - timedelta(days=window)
+    link = cfg["governance"]["current_link"]
+    current = governance.load_current(models_dir, link)
+    cur_ver = governance.resolve_current(models_dir, link)
     try:
-        _model, _labels, meta, n = fit_candidate(conn, cfg, as_of, window)
-        payload = {"candidate_ver": "candidate", "decision": "stored",
-                   "centroid_shift": 0.0, "loglik_delta": 0.0,
-                   "reason": f"Phase 3: candidate fitted on {n} rows; promotion is Phase 4",
-                   "meta": meta}
+        model, labels, meta, n = fit_candidate(conn, cfg, as_of, window)
+        candidate = (model, labels, meta)
     except regime.AnchorError as e:
-        payload = {"candidate_ver": "candidate", "decision": "reject", "centroid_shift": 0.0,
-                   "loglik_delta": 0.0, "reason": f"anchor: {e}"}
-    return [row("model_event", payload, "all", start, as_of, None, run_at)]
+        candidate = None
+        log(f"candidate rejected: {e}")
+    eval_start = as_of - timedelta(days=cfg["governance"]["eval_window_days"])
+    masked, gate = prepare(conn, cfg, eval_start, as_of)
+    recent = qc.apply_gate(masked, gate, cfg)
+    decision = governance.compare(current, candidate, recent, cfg,
+                                  forced=boundary_in_last_week(cal, as_of, cfg))
+    name = governance.next_version(models_dir) if candidate else "none"
+    if candidate and not dry_run:
+        name = governance.save_version(candidate[0], candidate[2], models_dir)
+        if decision["decision"] == "promote":
+            governance.set_current(models_dir, name, link)
+    payload = {"candidate_ver": name, "current_before": cur_ver,
+               "current_after": (name if decision["decision"] == "promote" else cur_ver),
+               "stored": bool(candidate and not dry_run), **decision}
+    if candidate:
+        payload["meta"] = candidate[2]
+    log(f"weekly: candidate {name}: {decision['decision']} -- {decision['reason']}")
+    return [row("model_event", payload, "all", start, as_of, cur_ver, run_at)]
 
 
 # ---- CLI --------------------------------------------------------------------------
@@ -224,11 +264,12 @@ def cmd_run(a) -> int:
     cfg = config.load(a.config)
     labels_map = load_labels(Path(a.nodes))
     as_of = parse_as_of(a.as_of)
-    models_dir = HUB / cfg["governance"]["models_dir"]
+    models_dir = Path(a.models_dir) if a.models_dir else HUB / cfg["governance"]["models_dir"]
     ro = db.connect_ro(a.db)
     t0 = datetime.now()
     if a.mode == "weekly":
-        rows = run_weekly(ro, cfg, as_of, models_dir)
+        cal = config.load_calendar(a.calendar) if Path(a.calendar).is_file() else None
+        rows = run_weekly(ro, cfg, as_of, models_dir, cal, a.dry_run)
     else:
         pack = get_model(ro, cfg, as_of, models_dir, cfg["governance"]["train_window_days"])
         if a.mode == "hourly":
@@ -267,21 +308,55 @@ def cmd_fit(a) -> int:
         return 2
     finally:
         ro.close()
-    ro = None
-    meta["version"] = "candidate"
+    models_dir = Path(a.models_dir) if a.models_dir else HUB / cfg["governance"]["models_dir"]
+    meta["version"] = governance.next_version(models_dir)
     if a.dry_run:
         json.dump(meta, sys.stdout, ensure_ascii=False, indent=1)
         print()
         return 0
-    import joblib
+    name = governance.save_version(model, meta, models_dir)
+    if a.promote or governance.resolve_current(models_dir) is None:
+        governance.set_current(models_dir, name, cfg["governance"]["current_link"])
+        log(f"{name} saved ({n} rows) and promoted -> models/current")
+    else:
+        log(f"{name} saved ({n} rows); current stays "
+            f"{governance.resolve_current(models_dir)}. Use 'model promote --to {name}'.")
+    return 0
 
-    models_dir = HUB / cfg["governance"]["models_dir"]
-    models_dir.mkdir(exist_ok=True)
-    stamp = as_of.strftime("%Y%m%d_%H%M")
-    path = models_dir / f"gmm_candidate_{stamp}.joblib"
-    joblib.dump(model, path)
-    path.with_suffix(".json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
-    log(f"candidate saved: {path} ({n} rows). Promotion is Phase 4.")
+
+def cmd_model(a) -> int:
+    cfg = config.load(a.config)
+    models_dir = Path(a.models_dir) if a.models_dir else HUB / cfg["governance"]["models_dir"]
+    link = cfg["governance"]["current_link"]
+    if a.action == "list":
+        cur = governance.resolve_current(models_dir, link)
+        out = []
+        for v in governance.list_versions(models_dir):
+            meta = json.loads((models_dir / f"{v}.json").read_text(encoding="utf-8"))
+            out.append({"version": v, "current": v == cur, "rows": meta.get("rows"),
+                        "window": [meta.get("win_start"), meta.get("win_end")],
+                        "centroids": {c["regime"]: c["mu_raw"] for c in meta["components"]}})
+        json.dump({"current": cur, "versions": out}, sys.stdout, ensure_ascii=False, indent=1)
+        print()
+        return 0
+    if not a.to:
+        log("--to gmm_vN is required")
+        return 2
+    try:
+        event = (governance.promote if a.action == "promote" else governance.rollback)(
+            models_dir, a.to, cfg)
+    except governance.GovernanceError as e:
+        log(str(e))
+        return 2
+    if not a.dry_run:
+        rw = db.connect_rw(a.db)
+        db.ensure_schema(rw)
+        now = fmt(parse_as_of(a.as_of))
+        db.write_analysis(rw, [{"run_at": now, "kind": "model_event", "scope": "all",
+                                "win_start": None, "win_end": None,
+                                "model_ver": a.to, "payload": event}])
+        rw.close()
+    log(event["reason"])
     return 0
 
 
@@ -315,13 +390,22 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument("--nodes", default=str(HUB / "nodes.json"))
     common.add_argument("--as-of", dest="as_of", default=None, help="UTC 'YYYY-MM-DD HH:MM:SS'")
     common.add_argument("--dry-run", dest="dry_run", action="store_true")
+    common.add_argument("--calendar", default=str(config.DEFAULT_CALENDAR))
+    common.add_argument("--models-dir", dest="models_dir", default=None,
+                        help="model store (default hub/models)")
     sub = p.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run", parents=[common])
     r.add_argument("--mode", choices=["hourly", "daily", "weekly"], required=True)
     r.set_defaults(fn=cmd_run)
     f = sub.add_parser("fit", parents=[common])
     f.add_argument("--window", type=int, default=28)
+    f.add_argument("--promote", action="store_true",
+                   help="point models/current at the new version (automatic for the first one)")
     f.set_defaults(fn=cmd_fit)
+    mo = sub.add_parser("model", parents=[common])
+    mo.add_argument("action", choices=["list", "promote", "rollback"])
+    mo.add_argument("--to", default=None, help="gmm_vN")
+    mo.set_defaults(fn=cmd_model)
     s = sub.add_parser("show", parents=[common])
     s.add_argument("--kind", required=True, choices=sorted(schemas.KINDS))
     s.add_argument("--limit", type=int, default=20)
