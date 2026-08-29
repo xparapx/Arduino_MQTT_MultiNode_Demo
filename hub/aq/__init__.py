@@ -10,6 +10,7 @@ Rules (see docs/plan/CLAUDE_CODE_PLAN.md section 2):
 __all__ = [
     "config",
     "db",
+    "schemas",
     "qc",
     "regime",
     "rules",

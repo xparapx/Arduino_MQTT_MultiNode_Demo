@@ -76,3 +76,11 @@
 | `components.html` | (없음) | `st.components.v1.html` 2026-06-01 이후 제거 예고(1.58에선 경고). `st.iframe`은 URL 전용, `st.html`은 iframe 격리 없음 → **Phase 5**에서 처리 | 시각 동일 기준 유지 |
 | dashboard 유닛 `After=` | 1b에서 수정 | Phase 0 D-1에서 이미 `multinode_aq_hub.service`로 수정됨 | — |
 | 태블릿 체감 기록 [ASK] | 1b | **연기** — 행동 지침용 LED 인디케이터 부착·학생 수행 후 | 사용자 결정 2026-08-29 |
+
+## Phase 2 — 플랜 §6과 실제 구현의 차이
+| 항목 | 플랜 | 실제 | 사유 |
+|---|---|---|---|
+| `calendar.json` 형식 | `periods` + `school_hours{start,end,days}` | + `school_hours.overrides{"4":{…}}`(금요일 08:40~15:30), `lunch{12:30~13:30}`, `timezone` | 실제 학사 일정(2026-08-29 사용자 제공): 방학 7/17~8/10, 개학 8/11, 월~목 08:40~16:30, 금 ~15:30, 점심 12:30~13:30. 요일별 예외·점심을 담을 자리가 없었음 |
+| 기간 경계 | (형식만) | 기간은 **빈틈·겹침 없이 연속**해야 함(`validate_calendar`), 첫 기간만 `start=null`, 마지막만 `end=null` | 경계일 refit·재실 판정이 날짜 하나도 빠뜨리지 않도록 |
+| §6.4 grep 기준 | 수동 grep | CI 단계 `aq/ must never alter or delete collector data`로 강제 | 지시가 아니라 메커니즘으로(Phase 1 원칙) |
+| `analyst.toml` 키 | §2 상수 목록 | `[schedule]`(Phase 6 타이머 문자열), `[qc.range].pm_max_exclusive/pm_column`, `[governance].weekly_day/weekly_time_utc/models_dir/current_link` 추가 | §2·§10의 문자열 상수도 코드 밖으로 |

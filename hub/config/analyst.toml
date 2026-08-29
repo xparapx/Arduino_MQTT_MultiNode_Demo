@@ -1,0 +1,71 @@
+# analyst.toml -- every constant of docs/plan/CLAUDE_CODE_PLAN.md section 2.
+# Code reads these through aq.config.load(); no magic numbers in aq/ or analyst.py.
+# Changing a value here is a design change: it needs the [ASK] in the plan.
+
+[time]
+bucket_minutes = 5            # all analysis starts with a 5-min floor of ts (aq.db.bucket_5min)
+smooth_window = 9             # rolling mode over 9 buckets = 45 min, center=True, broken at gaps
+transition_dt_minutes = 5     # consecutive pairs must be 5 min apart ...
+transition_dt_tolerance = 2   # ... +/- 2 min, otherwise the pair is dropped and counted in gap_pairs
+
+[qc]
+daily_valid_pct_min = 95.0    # node x day CO2 validity below this -> that node/day excluded (rows kept)
+
+[qc.range]                    # outside -> NaN, no interpolation. Bounds are [min, max] inclusive,
+co2 = [350, 5000]             # except pm where max is exclusive (pm >= 0 and pm < 1000).
+temp = [-10, 50]
+hum = [0, 100]
+voc = [1, 500]
+pm = [0, 1000]
+pm_max_exclusive = true
+pm_column = "pm2p5"           # the four PM columns are collinear: analysis uses PM2.5 only
+
+[regime]
+co2_scale = 400               # input axes: co2/400, voc/100 -- fixed, never data-dependent
+voc_scale = 100
+n_components = 4
+covariance_type = "full"
+random_state = 0
+n_init = 5
+labels = ["clean", "matter", "human", "mixed"]
+anchor_co2_ppm = 700          # quadrant anchor: co2 700 ppm -> 1.75 on the scaled axis
+anchor_voc_index = 120        #                  voc 120     -> 1.2
+
+[rules]
+min_run_minutes = 10          # minimum on/off dwell (hysteresis), state kept in actuator_state
+
+[rules.fan]
+on_regimes = ["human", "mixed"]
+on_co2 = 1000                 # ON when regime in on_regimes and co2 > on_co2
+off_co2 = 700                 # OFF when co2 < off_co2
+
+[rules.purifier]
+on_regimes = ["matter", "mixed"]
+on_voc = 200
+off_voc = 120
+
+[governance]
+train_window_days = 28        # weekly candidate fit on the last 28 days -- stored only
+eval_window_days = 7          # promotion compares the last 7 days
+loglik_gain_min = 0.02        # promote if mean log-likelihood improves by >= 2 % ...
+centroid_shift_min = 0.25     # ... OR max L2 centroid shift >= 0.25 (and all 4 quadrants distinct)
+weekly_day = 6                # Sunday (Monday = 0)
+weekly_time_utc = "06:30"
+models_dir = "models"
+current_link = "current"      # models/current -> gmm_vN.joblib; versions are never overwritten
+
+[forecast]
+horizon_minutes = 30
+target_shift_buckets = 6      # target = observation 6 buckets (30 min) ahead
+
+[occ_co2]
+min_occ_n = 25                # occupancy buckets with n < 25 samples are dropped before the join
+
+[summary]
+max_lines = 5
+
+[schedule]                    # Phase 6 systemd timers (UTC, oneshot)
+hourly = "*:05"
+daily = "06:00"
+weekly = "Sun 06:30"
+timeout_start_sec = 300

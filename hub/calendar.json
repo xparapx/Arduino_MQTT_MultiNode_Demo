@@ -1,0 +1,16 @@
+{
+  "_comment": "School calendar (KST). Period boundaries force a model refit; school_hours/lunch gate analysis windows. Edit here, never in code.",
+  "timezone": "Asia/Seoul",
+  "periods": [
+    {"name": "term",     "start": null,         "end": "2026-07-16"},
+    {"name": "vacation", "start": "2026-07-17", "end": "2026-08-10"},
+    {"name": "term",     "start": "2026-08-11", "end": null}
+  ],
+  "school_hours": {
+    "start": "08:40",
+    "end": "16:30",
+    "days": [0, 1, 2, 3, 4],
+    "overrides": {"4": {"start": "08:40", "end": "15:30"}}
+  },
+  "lunch": {"start": "12:30", "end": "13:30"}
+}

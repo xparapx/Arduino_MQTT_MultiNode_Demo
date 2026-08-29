@@ -5,6 +5,7 @@
 - ``ensure_indexes``: (node, ts) indexes on readings / occupancy. DDL, but not a
   schema change; safe while hub.py keeps inserting (short write lock).
 - ``bucket_5min`` : the single place where the 5-minute floor rule lives.
+- ``ensure_schema``: analysis / actuator_state tables (Phase 2). Only creates.
 
 Phase 3 adds load_readings / load_occupancy / write here.
 """
@@ -61,6 +62,34 @@ def ensure_indexes(conn: sqlite3.Connection) -> list[str]:
             created.append(name)
     conn.commit()
     return created
+
+
+# ---- analysis tables (plan section 6.1). Only analyst.py writes them. -----------
+# DDL only creates. The collector tables are never altered, dropped or emptied
+# from this package; CI greps hub/aq for those statements.
+ANALYSIS_DDL = """
+CREATE TABLE IF NOT EXISTS analysis (
+  id INTEGER PRIMARY KEY, run_at TEXT NOT NULL, kind TEXT NOT NULL, scope TEXT,
+  win_start TEXT, win_end TEXT, model_ver TEXT, payload TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS ix_analysis_kind_run ON analysis(kind, run_at);
+CREATE TABLE IF NOT EXISTS actuator_state (
+  node TEXT, device TEXT, state INTEGER, since TEXT, PRIMARY KEY(node, device));
+"""
+ANALYSIS_TABLES = ("analysis", "actuator_state")
+
+
+def existing_tables(conn: sqlite3.Connection) -> set[str]:
+    rows = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+    return {r[0] for r in rows}
+
+
+def ensure_schema(conn: sqlite3.Connection) -> list[str]:
+    """Create analysis / actuator_state (+ index) if missing. Idempotent; safe to
+    run on every analyst start and on an empty DB. Returns the tables created."""
+    before = existing_tables(conn)
+    conn.executescript(ANALYSIS_DDL)
+    conn.commit()
+    return [t for t in ANALYSIS_TABLES if t not in before]
 
 
 def bucket_5min(ts: str | datetime) -> str:
