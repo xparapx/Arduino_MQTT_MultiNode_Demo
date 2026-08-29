@@ -538,7 +538,7 @@ def node_card(node_id: str, vals: dict, labels: dict):
         # one radar per node (6 vars normalized by gauge range); rebuilt only
         # when this node has a newer row (cache key = its recv_time)
         st.plotly_chart(radar_figure(node_id, str(vals.get("recv_time")), vals),
-                        use_container_width=True, key=f"radar_{node_id}")
+                        width="stretch", key=f"radar_{node_id}")
 
 
 def box_stats(s: pd.Series) -> "dict | None":
@@ -1090,16 +1090,16 @@ def section_stats():
     if figs:
         # row 1: boxplot | correlation  (1:1)
         r1c1, r1c2 = st.columns(2)
-        r1c1.plotly_chart(figs["box"], use_container_width=True, key="box")
-        r1c2.plotly_chart(figs["corr"], use_container_width=True, key="corr")
+        r1c1.plotly_chart(figs["box"], width="stretch", key="box")
+        r1c2.plotly_chart(figs["corr"], width="stretch", key="corr")
         # row 2: CO2+VOC by node (stacked, left) | CO2-VOC regime scatter (right)  (1:2)
         r2c1, r2c2 = st.columns([1, 2])
         with r2c1:
-            st.plotly_chart(figs["co2_bar"], use_container_width=True, key="co2_bar")
-            st.plotly_chart(figs["voc_bar"], use_container_width=True, key="voc_bar")
+            st.plotly_chart(figs["co2_bar"], width="stretch", key="co2_bar")
+            st.plotly_chart(figs["voc_bar"], width="stretch", key="voc_bar")
         # live markers (★) go on top of the cached base every refresh
         r2c2.plotly_chart(overlay_current(figs["regime"], figs["regime_meta"], latest, labels),
-                          use_container_width=True, key="regime")
+                          width="stretch", key="regime")
     _perf("sec2", t)
 
 
@@ -1113,12 +1113,12 @@ def section_node_detail():
                        format_func=lambda n: label_of(n, labels), key="ts_node")
     dfn = df[df["node"] == sel].tail(60)
     st.plotly_chart(timeseries_figure(sel, str(latest[sel].get("recv_time")), dfn),
-                    use_container_width=True, key="ts")
+                    width="stretch", key="ts")
     # per-node regime scatter | vision occupancy crosshair map  (2 columns)
     r3a, r3b = st.columns(2)
     base, meta = node_regime_figure(bucket, sel)
     r3a.plotly_chart(overlay_node_current(base, meta, latest.get(sel)),
-                     use_container_width=True, key="node_regime")
+                     width="stretch", key="node_regime")
     with r3b:
         render_vision_panel(sel, labels)
     st.caption("좌: 선택 노드의 '자기 기준'(노드별 RobustScaling) — 전체 비교는 Section 2의 "
@@ -1130,7 +1130,7 @@ def section_node_detail():
     recent = df[df["node"] == sel][["recv_time"] + SENSOR_KEYS].tail(5).iloc[::-1]
     fmt = {k: ("{:.0f}" if k in ("voc", "nox", "co2") else "{:.1f}")
            for k in SENSOR_KEYS}
-    st.dataframe(recent.style.format(fmt), use_container_width=True, hide_index=True)
+    st.dataframe(recent.style.format(fmt), width="stretch", hide_index=True)
     _perf("sec3+4", t)
 
 
