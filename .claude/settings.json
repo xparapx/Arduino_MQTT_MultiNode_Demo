@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run pytest*)",
+      "Bash(ssh q git *)",
+      "Bash(ssh q systemctl is-active*)",
+      "Bash(ssh q journalctl*)"
+    ],
+    "deny": [
+      "Bash(ssh q *sudo*)",
+      "Bash(ssh q *systemctl restart*)",
+      "Bash(ssh q *rm -rf*)",
+      "Bash(git push --force*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/precommit_tests.py"
+          }
+        ]
+      }
+    ]
+  }
+}
