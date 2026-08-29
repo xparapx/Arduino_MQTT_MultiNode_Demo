@@ -18,11 +18,15 @@ Multinode Environmental Sensing Monitor (display only)  -- native/systemd track,
   3) time series -- pick a node -> 6 variables in a row
      + per-node regime | vision occupancy crosshair map (2-col)
   4) recent 5 rows
-  5) data export -- full CSV / date-range CSV
+  5) data export -- full CSV / date-range CSV (built on demand)
+  6) data reset (backup + clear)
+Refresh (Phase 1b): sections are st.fragment blocks -- 1/3/4 every 60 s,
+2 every 5 min, 5 only on its buttons. No full-page autorefresh.
 """
-import json, os, re, sqlite3
+import json, os, re, sqlite3, sys
 from contextlib import closing
 from datetime import datetime, date, time, timedelta
+from time import perf_counter
 
 import numpy as np
 import pandas as pd
@@ -34,14 +38,36 @@ from plotly.subplots import make_subplots
 #   (no App Lab Brick import -> portable to any Linux/PC)
 import streamlit as st
 import streamlit.components.v1 as components
-from streamlit_autorefresh import st_autorefresh
+
+from aq.db import bucket_5min
 
 # ---- Config ----
 DB         = "sensor_data.db"
 NODES_PATH = "nodes.json"
 ROW_LIMIT  = 5000          # recent rows to show
-REFRESH_MS = 10_000        # auto-refresh every 10s
+REFRESH_LIVE  = "60s"      # sections 1, 3, 4 (st.fragment run_every) -- data lands every 5 min
+REFRESH_STATS = "5m"       # section 2 (28-day statistics)
 MAX_COLS   = 4             # max grid columns (2 rows x 4 = 8 nodes)
+STATS_DAYS = 28            # section 2 window (days); same as the model training window
+BOX_MAX_OUTLIERS   = 300   # outlier dots sent per boxplot (evenly sampled by rank)
+SCATTER_MAX_POINTS = 1500  # past points sent per node regime scatter (evenly by time)
+DENSITY_BINS       = 24    # 2D density grid for the pooled regime scatter
+DB_TIMEOUT_S       = 5     # wait this long on a write lock instead of failing
+
+
+def _ro() -> sqlite3.Connection:
+    """Read-only connection (?mode=ro). The dashboard can never write readings
+    or occupancy by accident, and the busy timeout rides out hub.py inserts.
+    Section 6 (reset) keeps its own read-write connection."""
+    return sqlite3.connect(f"file:{DB}?mode=ro", uri=True, timeout=DB_TIMEOUT_S)
+
+# ---- [perf] server-side timing of one script run (Phase 1b). stderr -> journalctl.
+#      `journalctl -u multinode_aq_dashboard -f | grep perf` shows one line per section.
+_t0 = perf_counter()
+def _perf(tag: str, t0: float = None) -> None:
+    """One line per fragment run (t0 = fragment start) or per full script run."""
+    print(f"[perf] {tag} {perf_counter() - (_t0 if t0 is None else t0):.2f}s",
+          file=sys.stderr, flush=True)
 
 # ---- Theme colors (seaborn pastel + dark) ----
 BG        = "#1a1d24"      # charcoal background
@@ -139,29 +165,59 @@ def grade_color(key: str, v):
     return ("-", INK_DIM)
 
 # ---- Data loading ----
-@st.cache_data(ttl=5)
-def load_df(limit: int = ROW_LIMIT) -> pd.DataFrame:
-    """Recent rows from SQLite -> KST time. SEN55 stores values directly (no scaling)."""
+def _query_recent(limit: int) -> pd.DataFrame:
+    """Most recent `limit` readings rows -> KST time, oldest first. SEN55 stores
+    values directly (no scaling)."""
     if not os.path.isfile(DB):
         return pd.DataFrame()
     sql = ("SELECT datetime(ts,'+9 hours') AS recv_time, node, "
            "pm1p0, pm2p5, pm4p0, pm10p0, sen_temp, sen_hum, voc, nox, "
            "co2, scd_temp, scd_hum "
            "FROM readings ORDER BY id DESC LIMIT ?")
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         df = pd.read_sql_query(sql, con, params=(limit,))
     return df.iloc[::-1].reset_index(drop=True) if not df.empty else df
 
 
-@st.cache_data(ttl=300)               # stats cached for 5 min
-def load_all_for_stats() -> pd.DataFrame:
+def data_version() -> "tuple[int, str]":
+    """Cache key for everything on screen: (MAX(id), 5-min bucket of the newest
+    row). Two PK lookups, ~1 ms. max_id keys the live figures (they rebuild only
+    when a row arrived); the bucket keys the 28-day statistics (one rebuild per
+    5-min bucket, however many rows land inside it)."""
+    if not os.path.isfile(DB):
+        return 0, ""
+    with closing(_ro()) as con:
+        row = con.execute("SELECT id, ts FROM readings "
+                          "WHERE id = (SELECT MAX(id) FROM readings)").fetchone()
+    if not row:
+        return 0, ""
+    try:
+        return int(row[0]), bucket_5min(row[1])
+    except ValueError:                      # unexpected ts format: fall back to raw
+        return int(row[0]), str(row[1])
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_df(max_id: int, limit: int = ROW_LIMIT) -> pd.DataFrame:
+    """Recent rows for the live sections. Re-queried only when max_id moved."""
+    return _query_recent(limit)
+
+
+def query_all() -> pd.DataFrame:
+    """Every readings row. Uncached: only for on-demand export / reset backup."""
+    return _query_recent(10_000_000)
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_all_for_stats(bucket: str) -> pd.DataFrame:
+    """Rows for section 2 / node regime. Keyed on the newest 5-min bucket."""
     if not os.path.isfile(DB):
         return pd.DataFrame()
     sql = ("SELECT node, pm1p0, pm2p5, pm4p0, pm10p0, sen_temp, sen_hum, voc, nox, "
            "co2, scd_temp, scd_hum "
-           "FROM readings")
-    with closing(sqlite3.connect(DB)) as con:
-        return pd.read_sql_query(sql, con)
+           "FROM readings WHERE ts >= datetime('now', ?)")
+    with closing(_ro()) as con:
+        return pd.read_sql_query(sql, con, params=(f"-{STATS_DAYS} days",))
 
 
 def query_range(start_kst: datetime, end_kst: datetime) -> pd.DataFrame:
@@ -174,17 +230,18 @@ def query_range(start_kst: datetime, end_kst: datetime) -> pd.DataFrame:
            "pm1p0, pm2p5, pm4p0, pm10p0, sen_temp, sen_hum, voc, nox, "
            "co2, scd_temp, scd_hum "
            "FROM readings WHERE ts BETWEEN ? AND ? ORDER BY id")
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         return pd.read_sql_query(sql, con, params=(start_utc, end_utc))
 
 
+@st.cache_data(ttl=300, show_spinner=False)
 def get_time_bounds():
-    """Min/max time in DB (KST) -- defaults for the range picker."""
+    """Min/max time in DB (KST) -- defaults for the range picker. Full scan, so cached."""
     if not os.path.isfile(DB):
         return None, None
     sql = ("SELECT MIN(datetime(ts,'+9 hours')), MAX(datetime(ts,'+9 hours')) "
            "FROM readings")
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         lo, hi = con.execute(sql).fetchone()
     if not lo:
         return None, None
@@ -216,16 +273,17 @@ def label_of(node_id: str, labels: dict) -> str:
 VIS_ACC  = "#FFB300"            # crosshair / occupancy accent (vivid amber)
 VIS_GRID = "#2b3242"            # map grid line
 
+@st.cache_data(ttl=300, show_spinner=False)
 def _occ_table_exists() -> bool:
     if not os.path.isfile(DB):
         return False
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         r = con.execute("SELECT name FROM sqlite_master "
                         "WHERE type='table' AND name='occupancy'").fetchone()
     return bool(r)
 
 
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=60, show_spinner=False)
 def load_occ_latest() -> pd.DataFrame:
     """Last bucket per vision node (+9h KST time)."""
     if not _occ_table_exists():
@@ -234,18 +292,18 @@ def load_occ_latest() -> pd.DataFrame:
            "o.occ, o.occ_med, o.occ_max, o.occ_last, o.cents, o.w, o.n "
            "FROM occupancy o JOIN (SELECT node, MAX(id) AS mid FROM occupancy "
            "GROUP BY node) m ON o.id = m.mid")
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         return pd.read_sql_query(sql, con)
 
 
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=60, show_spinner=False)
 def load_occ_hist(node_id: str, limit: int = 24) -> pd.DataFrame:
     """Recent buckets for the mini bar strip (oldest -> newest)."""
     if not _occ_table_exists():
         return pd.DataFrame()
     sql = ("SELECT datetime(ts,'+9 hours') AS recv_time, occ, occ_max, n "
            "FROM occupancy WHERE node=? ORDER BY id DESC LIMIT ?")
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         df = pd.read_sql_query(sql, con, params=(node_id, limit))
     return df.iloc[::-1].reset_index(drop=True)
 
@@ -271,7 +329,7 @@ def load_merged_analysis(min_n_env: int = 0, min_n_occ: int = 25) -> pd.DataFram
     if not _occ_table_exists():
         return pd.DataFrame()
     labels_ = load_node_labels()
-    with closing(sqlite3.connect(DB)) as con:
+    with closing(_ro()) as con:
         env = pd.read_sql_query(
             "SELECT ts, node, co2, voc, scd_temp, scd_hum, pm2p5, pm10p0, n "
             "FROM readings", con)
@@ -477,24 +535,55 @@ def node_card(node_id: str, vals: dict, labels: dict):
             f"<div style='text-align:center;font-weight:700;color:{INK};"
             f"font-size:14px;margin-bottom:2px;'>{label_of(node_id, labels)}</div>",
             unsafe_allow_html=True)
-        # one radar per node (6 vars normalized by gauge range)
-        st.plotly_chart(make_node_radar(vals, node_id),
-                        use_container_width=True, key=f"radar_{node_id}")
+        # one radar per node (6 vars normalized by gauge range); rebuilt only
+        # when this node has a newer row (cache key = its recv_time)
+        st.plotly_chart(radar_figure(node_id, str(vals.get("recv_time")), vals),
+                        width="stretch", key=f"radar_{node_id}")
+
+
+def box_stats(s: pd.Series) -> "dict | None":
+    """Tukey box statistics of one series, computed here so the browser receives
+    five numbers + a bounded outlier sample instead of the whole column."""
+    s = s.dropna()
+    if s.empty:
+        return None
+    q1, med, q3 = (float(v) for v in s.quantile([0.25, 0.5, 0.75]))
+    lo_f, hi_f = q1 - 1.5 * (q3 - q1), q3 + 1.5 * (q3 - q1)
+    inside = s[(s >= lo_f) & (s <= hi_f)]
+    out = s[(s < lo_f) | (s > hi_f)].sort_values()
+    if len(out) > BOX_MAX_OUTLIERS:           # keep extremes, thin the middle
+        out = out.iloc[np.linspace(0, len(out) - 1, BOX_MAX_OUTLIERS).astype(int)]
+    return dict(q1=q1, median=med, q3=q3,
+                lowerfence=float(inside.min()) if len(inside) else q1,
+                upperfence=float(inside.max()) if len(inside) else q3,
+                mean=float(s.mean()), n=int(len(s)), outliers=out.to_numpy())
 
 
 def make_boxplots(dfa: pd.DataFrame) -> go.Figure:
-    """Per-variable boxplots (PM1.0/PM4.0 excluded). VOC last, with emphasis."""
+    """Per-variable boxplots (PM1.0/PM4.0 excluded). VOC last, with emphasis.
+    Boxes are drawn from box_stats() (precomputed), outliers as a thin scatter."""
     keys = STATS_KEYS
     fig = make_subplots(rows=1, cols=len(keys),
                         subplot_titles=[METRICS[k][0] for k in keys])
     for i, key in enumerate(keys, start=1):
         _, unit, color, _, _ = METRICS[key]
         is_target = key in TARGET_KEYS
-        fig.add_trace(go.Box(y=dfa[key], name=METRICS[key][0],
-                             marker_color=color, boxpoints="outliers",
-                             line={"color": color},
+        name = METRICS[key][0]
+        bs = box_stats(dfa[key])
+        if bs is None:
+            continue
+        fig.add_trace(go.Box(x=[name], name=name,
+                             q1=[bs["q1"]], median=[bs["median"]], q3=[bs["q3"]],
+                             lowerfence=[bs["lowerfence"]], upperfence=[bs["upperfence"]],
+                             mean=[bs["mean"]],
+                             marker_color=color, line={"color": color},
                              fillcolor=(emph_line(key) if is_target else "rgba(255,255,255,0.05)"),
                              showlegend=False), row=1, col=i)
+        if len(bs["outliers"]):
+            fig.add_trace(go.Scatter(x=[name] * len(bs["outliers"]), y=bs["outliers"],
+                                     mode="markers", showlegend=False, hoverinfo="skip",
+                                     marker=dict(color=color, size=3, opacity=0.6)),
+                          row=1, col=i)
         fig.update_yaxes(title_text=unit, row=1, col=i,
                          title_font={"size": 10, "color": INK_DIM},
                          gridcolor=GRID, tickfont={"color": INK_DIM})
@@ -578,8 +667,26 @@ def make_target_by_node(dfa: pd.DataFrame, labels: dict, key: str) -> go.Figure:
     return fig
 
 
-def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) -> go.Figure:
-    """CO2-VOC RELATIVE regime scatter (RobustScaling). Each point = one reading.
+
+def density_heatmap(zx: pd.Series, zy: pd.Series, amax: float, bins: int,
+                    colorscale) -> go.Heatmap:
+    """2D density of robust-scaled points, aggregated on the server with
+    np.histogram2d (bins x bins cells) instead of shipping every point to the
+    browser as go.Histogram2d did. Values are clipped into the range first so
+    off-scale points pile up in the edge cells, as before."""
+    H, xe, ye = np.histogram2d(zx.clip(-amax, amax), zy.clip(-amax, amax),
+                               bins=bins, range=[[-amax, amax], [-amax, amax]])
+    return go.Heatmap(z=H.T, x=(xe[:-1] + xe[1:]) / 2, y=(ye[:-1] + ye[1:]) / 2,
+                      colorscale=colorscale, showscale=False, zsmooth="best",
+                      hoverinfo="skip")
+
+
+def make_regime_base(dfa: pd.DataFrame, labels: dict):
+    """CO2-VOC RELATIVE regime scatter (RobustScaling), cacheable part: density
+    background + quadrant labels + axes. Returns (fig, meta); meta carries the
+    scaling (median/IQR per axis), the range and the node list so that
+    overlay_current() can place the live markers on the same axes later
+    without touching dfa again.
     RobustScaling: (v - median) / IQR  -> robust to outliers & skew, stable origin.
     Purpose = RELATIVE regime (where a point sits within the distribution), good for
     flexible regime-switching detection. NOTE: normalization removes ABSOLUTE level
@@ -596,7 +703,7 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) ->
                            x=0.5, y=0.5, showarrow=False, font={"color": INK_DIM})
         fig.update_layout(height=420, paper_bgcolor="rgba(0,0,0,0)",
                           plot_bgcolor="rgba(0,0,0,0)", font={"color": INK})
-        return fig
+        return fig, None
 
     # RobustScaling: (v - median) / IQR per axis (robust to outliers/skew)
     def robust(s):
@@ -604,14 +711,9 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) ->
         iqr = s.quantile(0.75) - s.quantile(0.25)
         return (s - med) / iqr if iqr and iqr > 0 else (s - med) * 0.0
     zco2 = robust(d["co2"]); zvoc = robust(d["voc"])
-
-    # 2D density (histogram) as background -> denser quadrant = deeper tint
-    fig = go.Figure()
-    # (density trace added after range is known, so clipping is consistent)
-    # normalization params (reuse for mapping current values to same robust-space)
+    # normalization params (reused by overlay_current for the live values)
     co2_med = d["co2"].median(); co2_iqr = d["co2"].quantile(0.75) - d["co2"].quantile(0.25)
     voc_med = d["voc"].median(); voc_iqr = d["voc"].quantile(0.75) - d["voc"].quantile(0.25)
-    def rc(v, med, iqr): return (v - med) / iqr if iqr and iqr > 0 else 0.0
 
     # axis range from PERCENTILES (not max) so a single outlier can't blow up scale
     def prange(s):
@@ -621,65 +723,13 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) ->
     amax = (amax * 1.15) if amax > 0 else 1.0
     amax = min(max(amax, 1.5), 3.0)       # 1.5~3.0 (max 3 grid at dtick=1)
 
-    def clip(v):                          # clamp into [-amax, amax] for display
-        return max(-amax, min(amax, v))
-
-    # density background (clipped to range so out-of-range points don't distort)
-    fig.add_trace(go.Histogram2d(
-        x=zco2.clip(-amax, amax), y=zvoc.clip(-amax, amax),
-        nbinsx=24, nbinsy=24,
+    fig = go.Figure()
+    # density background (server-aggregated; clipped so out-of-range points don't distort)
+    fig.add_trace(density_heatmap(
+        zco2, zvoc, amax, DENSITY_BINS,
         colorscale=[[0.0, "rgba(0,0,0,0)"], [0.15, "rgba(120,170,255,0.10)"],
                     [0.5, "rgba(120,170,255,0.28)"], [1.0, "rgba(90,140,255,0.55)"]],
-        showscale=False, zsmooth="best", hoverinfo="skip",
     ))
-
-    # node colors: shared vivid identity palette (see NODE_PALETTE)
-    node_list = sorted(d["node"].unique(), key=lambda n: labels.get(n, n))
-    # 과거 개별 산점은 제거 — 분포 맥락은 밀도 배경(Histogram2d)만 유지 (가독성)
-    # current position: vector from origin + enlarged marker + class label (per node)
-    if latest:
-        for i, nd in enumerate(node_list):
-            cur = latest.get(nd)
-            if not cur:
-                continue
-            cv, vv = cur.get("co2"), cur.get("voc")
-            if cv is None or vv is None or pd.isna(cv) or pd.isna(vv):
-                continue
-            rx, ry = rc(cv, co2_med, co2_iqr), rc(vv, voc_med, voc_iqr)
-            cx, cy = clip(rx), clip(ry)          # clip into view; flag if outside
-            outside = (cx != rx) or (cy != ry)
-            col = node_color(nd)
-            # vector: origin -> current (arrow)
-            fig.add_annotation(x=cx, y=cy, ax=0, ay=0,
-                               xref="x", yref="y", axref="x", ayref="y",
-                               showarrow=True, arrowhead=2, arrowsize=1.0,
-                               arrowwidth=2, arrowcolor=col, opacity=0.95)
-            # enlarged current marker. Diamond if clipped (out of range).
-            fig.add_trace(go.Scatter(
-                x=[cx], y=[cy], mode="markers",
-                name=f"{label_of(nd, labels)} (now)", legendgroup=nd,
-                showlegend=False,
-                marker=dict(size=16, color=col,
-                            symbol=("diamond-open" if outside else "star"),
-                            line=dict(width=1.6, color=INK)),
-                hovertemplate=(f"{label_of(nd, labels)} now<br>CO2 r=%{{x:.2f}}"
-                               f"<br>VOC r=%{{y:.2f}}"
-                               f"{' (범위밖)' if outside else ''}<extra></extra>"),
-            ))
-            # class label at the arrow tip (offset outward along the vector)
-            norm = (cx * cx + cy * cy) ** 0.5
-            ux, uy = ((cx / norm, cy / norm) if norm > 1e-6 else (1.0, 0.0))
-            off = amax * 0.07
-            lx = max(-amax * 0.98, min(amax * 0.98, cx + ux * off))
-            ly = max(-amax * 0.98, min(amax * 0.98, cy + uy * off))
-            fig.add_annotation(x=lx, y=ly, text=label_of(nd, labels),
-                               showarrow=False,
-                               xanchor=("left" if ux >= 0 else "right"),
-                               yanchor=("bottom" if uy >= 0 else "top"),
-                               font={"size": 9, "color": col},
-                               bgcolor="rgba(0,0,0,0.45)",
-                               bordercolor=col, borderwidth=1, borderpad=1,
-                               opacity=0.95)
     # quadrant labels with inequality notation (Human vs Matter)
     #  x+ = CO2 high (human factor) ; y+ = VOC high (matter factor)
     qlabels = [( amax*0.6,  amax*0.6, "Human \u2248 Matter"),   # high-high (both)
@@ -704,15 +754,80 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) ->
         legend=dict(font={"size": 12, "color": INK_DIM}, orientation="h",
                     yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
+    # node colors: shared vivid identity palette (see NODE_PALETTE)
+    meta = dict(co2_med=co2_med, co2_iqr=co2_iqr, voc_med=voc_med, voc_iqr=voc_iqr,
+                amax=amax, nodes=sorted(d["node"].unique(), key=lambda n: labels.get(n, n)))
+    return fig, meta
+
+
+def overlay_current(fig: go.Figure, meta: dict, latest: dict, labels: dict) -> go.Figure:
+    """Live layer on top of make_regime_base(): per node a vector from the
+    origin + enlarged marker + class label at the arrow tip. Cheap; runs on
+    every refresh on the (copied) cached base figure."""
+    if not meta or not latest:
+        return fig
+    amax = meta["amax"]
+    def rc(v, med, iqr): return (v - med) / iqr if iqr and iqr > 0 else 0.0
+    def clip(v):                          # clamp into [-amax, amax] for display
+        return max(-amax, min(amax, v))
+    for nd in meta["nodes"]:
+        cur = latest.get(nd)
+        if not cur:
+            continue
+        cv, vv = cur.get("co2"), cur.get("voc")
+        if cv is None or vv is None or pd.isna(cv) or pd.isna(vv):
+            continue
+        rx = rc(cv, meta["co2_med"], meta["co2_iqr"])
+        ry = rc(vv, meta["voc_med"], meta["voc_iqr"])
+        cx, cy = clip(rx), clip(ry)          # clip into view; flag if outside
+        outside = (cx != rx) or (cy != ry)
+        col = node_color(nd)
+        # vector: origin -> current (arrow)
+        fig.add_annotation(x=cx, y=cy, ax=0, ay=0,
+                           xref="x", yref="y", axref="x", ayref="y",
+                           showarrow=True, arrowhead=2, arrowsize=1.0,
+                           arrowwidth=2, arrowcolor=col, opacity=0.95)
+        # enlarged current marker. Diamond if clipped (out of range).
+        fig.add_trace(go.Scatter(
+            x=[cx], y=[cy], mode="markers",
+            name=f"{label_of(nd, labels)} (now)", legendgroup=nd,
+            showlegend=False,
+            marker=dict(size=16, color=col,
+                        symbol=("diamond-open" if outside else "star"),
+                        line=dict(width=1.6, color=INK)),
+            hovertemplate=(f"{label_of(nd, labels)} now<br>CO2 r=%{{x:.2f}}"
+                           f"<br>VOC r=%{{y:.2f}}"
+                           f"{' (범위밖)' if outside else ''}<extra></extra>"),
+        ))
+        # class label at the arrow tip (offset outward along the vector)
+        norm = (cx * cx + cy * cy) ** 0.5
+        ux, uy = ((cx / norm, cy / norm) if norm > 1e-6 else (1.0, 0.0))
+        off = amax * 0.07
+        lx = max(-amax * 0.98, min(amax * 0.98, cx + ux * off))
+        ly = max(-amax * 0.98, min(amax * 0.98, cy + uy * off))
+        fig.add_annotation(x=lx, y=ly, text=label_of(nd, labels),
+                           showarrow=False,
+                           xanchor=("left" if ux >= 0 else "right"),
+                           yanchor=("bottom" if uy >= 0 else "top"),
+                           font={"size": 9, "color": col},
+                           bgcolor="rgba(0,0,0,0.45)",
+                           bordercolor=col, borderwidth=1, borderpad=1,
+                           opacity=0.95)
     return fig
 
 
-def make_node_regime_scatter(dfa: pd.DataFrame, node_id: str, labels: dict,
-                             latest: dict = None) -> go.Figure:
+def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) -> go.Figure:
+    """Uncached base + overlay in one call (scripts / tests)."""
+    fig, meta = make_regime_base(dfa, labels)
+    return overlay_current(fig, meta, latest, labels)
+
+
+def make_node_regime_base(dfa: pd.DataFrame, node_id: str, labels: dict):
     """Per-node regime scatter using THAT NODE's own median/IQR (within-node
     RobustScaling). Answers 'is this room different from its OWN baseline?'.
     Complements the pooled scatter (which compares nodes). IQR-small nodes can
-    look jumpy -- that's expected (each node scaled to itself)."""
+    look jumpy -- that's expected (each node scaled to itself).
+    Cacheable part (density + past points + quadrants + axes); returns (fig, meta)."""
     d = dfa[dfa["node"] == node_id][["co2", "voc"]].dropna()
     nm = label_of(node_id, labels)
     if len(d) < 3:
@@ -721,7 +836,7 @@ def make_node_regime_scatter(dfa: pd.DataFrame, node_id: str, labels: dict,
                            x=0.5, y=0.5, showarrow=False, font={"color": INK_DIM})
         fig.update_layout(height=360, paper_bgcolor="rgba(0,0,0,0)",
                           plot_bgcolor="rgba(0,0,0,0)", font={"color": INK})
-        return fig
+        return fig, None
 
     # within-node RobustScaling (this node's own median/IQR)
     def robust(s):
@@ -736,43 +851,24 @@ def make_node_regime_scatter(dfa: pd.DataFrame, node_id: str, labels: dict,
         return max(abs(s.quantile(0.02)), abs(s.quantile(0.98)))
     amax = float(max(prange(zco2), prange(zvoc)))
     amax = min(max((amax * 1.15) if amax > 0 else 1.0, 1.5), 3.0)
-    def clip(v): return max(-amax, min(amax, v))
 
-    # density backdrop (this node only)
-    fig.add_trace(go.Histogram2d(
-        x=zco2.clip(-amax, amax), y=zvoc.clip(-amax, amax), nbinsx=20, nbinsy=20,
+    # density backdrop (this node only, server-aggregated)
+    fig.add_trace(density_heatmap(
+        zco2, zvoc, amax, 20,
         colorscale=[[0.0, "rgba(0,0,0,0)"], [0.2, "rgba(120,170,255,0.12)"],
                     [0.6, "rgba(120,170,255,0.30)"], [1.0, "rgba(90,140,255,0.55)"]],
-        showscale=False, zsmooth="best", hoverinfo="skip",
     ))
-    # past points
+    # past points: at most SCATTER_MAX_POINTS, evenly spaced in time (rows are
+    # id-ordered) so the cloud keeps its shape while the payload stays bounded
+    if len(zco2) > SCATTER_MAX_POINTS:
+        idx = np.linspace(0, len(zco2) - 1, SCATTER_MAX_POINTS).astype(int)
+        zco2, zvoc = zco2.iloc[idx], zvoc.iloc[idx]
     fig.add_trace(go.Scatter(
         x=zco2.clip(-amax, amax), y=zvoc.clip(-amax, amax), mode="markers",
         marker=dict(size=5, color=node_color(node_id),
                     line=dict(width=0.3, color="rgba(0,0,0,0.3)"), opacity=0.4),
         showlegend=False, hoverinfo="skip",
     ))
-    # current position vector + star (this node's own scale)
-    def rc(v, med, iqr): return (v - med) / iqr if iqr and iqr > 0 else 0.0
-    if latest and latest.get(node_id):
-        cur = latest[node_id]
-        cv, vv = cur.get("co2"), cur.get("voc")
-        if cv is not None and vv is not None and not pd.isna(cv) and not pd.isna(vv):
-            rx, ry = rc(cv, co2_med, co2_iqr), rc(vv, voc_med, voc_iqr)
-            cx, cy = clip(rx), clip(ry)
-            outside = (cx != rx) or (cy != ry)
-            fig.add_annotation(x=cx, y=cy, ax=0, ay=0, xref="x", yref="y",
-                               axref="x", ayref="y", showarrow=True, arrowhead=2,
-                               arrowsize=1.2, arrowwidth=2,
-                               arrowcolor=PASTEL["orange"], opacity=0.9)
-            fig.add_trace(go.Scatter(
-                x=[cx], y=[cy], mode="markers", showlegend=False,
-                marker=dict(size=12, color=PASTEL["orange"],
-                            symbol=("diamond-open" if outside else "star"),
-                            line=dict(width=1.2, color=INK)),
-                hovertemplate=f"{nm} now<br>CO2 r=%{{x:.2f}}<br>VOC r=%{{y:.2f}}"
-                              f"{' (out)' if outside else ''}<extra></extra>",
-            ))
     # quadrant labels (inequality)
     for qx, qy, qt in [( amax*0.6,  amax*0.6, "Human \u2248 Matter"),
                        (-amax*0.6,  amax*0.6, "Matter \u003e Human"),
@@ -793,8 +889,45 @@ def make_node_regime_scatter(dfa: pd.DataFrame, node_id: str, labels: dict,
                    tickfont={"color": INK_DIM}, zeroline=True, zerolinecolor=INK,
                    zerolinewidth=2, showline=True, linecolor=INK_DIM, mirror=True),
     )
+    meta = dict(co2_med=co2_med, co2_iqr=co2_iqr, voc_med=voc_med, voc_iqr=voc_iqr,
+                amax=amax, name=nm)
+    return fig, meta
+
+
+def overlay_node_current(fig: go.Figure, meta: dict, cur: dict) -> go.Figure:
+    """Live layer for make_node_regime_base(): vector + star on the node's own scale."""
+    if not meta or not cur:
+        return fig
+    amax = meta["amax"]; nm = meta["name"]
+    def rc(v, med, iqr): return (v - med) / iqr if iqr and iqr > 0 else 0.0
+    def clip(v): return max(-amax, min(amax, v))
+    cv, vv = cur.get("co2"), cur.get("voc")
+    if cv is None or vv is None or pd.isna(cv) or pd.isna(vv):
+        return fig
+    rx = rc(cv, meta["co2_med"], meta["co2_iqr"])
+    ry = rc(vv, meta["voc_med"], meta["voc_iqr"])
+    cx, cy = clip(rx), clip(ry)
+    outside = (cx != rx) or (cy != ry)
+    fig.add_annotation(x=cx, y=cy, ax=0, ay=0, xref="x", yref="y",
+                       axref="x", ayref="y", showarrow=True, arrowhead=2,
+                       arrowsize=1.2, arrowwidth=2,
+                       arrowcolor=PASTEL["orange"], opacity=0.9)
+    fig.add_trace(go.Scatter(
+        x=[cx], y=[cy], mode="markers", showlegend=False,
+        marker=dict(size=12, color=PASTEL["orange"],
+                    symbol=("diamond-open" if outside else "star"),
+                    line=dict(width=1.2, color=INK)),
+        hovertemplate=f"{nm} now<br>CO2 r=%{{x:.2f}}<br>VOC r=%{{y:.2f}}"
+                      f"{' (out)' if outside else ''}<extra></extra>",
+    ))
     return fig
 
+
+def make_node_regime_scatter(dfa: pd.DataFrame, node_id: str, labels: dict,
+                             latest: dict = None) -> go.Figure:
+    """Uncached base + overlay in one call (scripts / tests)."""
+    fig, meta = make_node_regime_base(dfa, node_id, labels)
+    return overlay_node_current(fig, meta, latest.get(node_id) if latest else None)
 
 def make_timeseries(dfn: pd.DataFrame) -> go.Figure:
     keys = TS_KEYS
@@ -825,10 +958,48 @@ def make_timeseries(dfn: pd.DataFrame) -> go.Figure:
 
 
 # ========================================================
+#  Cached figure layer (Phase 1b)
+#  Keys come from data_version(): the 28-day statistics rebuild once per 5-min
+#  bucket, live figures only when their node has a newer row. st.cache_data
+#  returns a fresh copy on every hit, so the overlays below may add traces to
+#  the returned figure without a deepcopy of their own.
+# ========================================================
+@st.cache_data(ttl=300, show_spinner=False)
+def stats_figures(bucket: str) -> dict:
+    """Section 2: five figures + the regime base/meta, built from one load."""
+    dfa = load_all_for_stats(bucket)
+    if dfa.empty:
+        return {}
+    labels_ = load_node_labels()
+    base, meta = make_regime_base(dfa, labels_)
+    return {"box": make_boxplots(dfa), "corr": make_corr(dfa),
+            "co2_bar": make_target_by_node(dfa, labels_, "co2"),
+            "voc_bar": make_target_by_node(dfa, labels_, "voc"),
+            "regime": base, "regime_meta": meta}
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def node_regime_figure(bucket: str, node_id: str):
+    """Section 3 left: (base figure, meta) for one node."""
+    return make_node_regime_base(load_all_for_stats(bucket), node_id, load_node_labels())
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def radar_figure(node_id: str, stamp: str, _vals: dict) -> go.Figure:
+    """Section 1: one radar, keyed on the node's newest recv_time."""
+    return make_node_radar(_vals, node_id)
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def timeseries_figure(node_id: str, stamp: str, _dfn: pd.DataFrame) -> go.Figure:
+    """Section 3: last 60 rows of one node, keyed on its newest recv_time."""
+    return make_timeseries(_dfn)
+
+
+# ========================================================
 #  Screen
 # ========================================================
 st.set_page_config(page_title="Sensing Monitor", page_icon="*", layout="wide")
-st_autorefresh(interval=REFRESH_MS, key="auto")
 
 # extra dark-theme CSS (works with config.toml; also alone)
 st.markdown(f"""
@@ -844,7 +1015,8 @@ st.markdown(f"""
 st.markdown(f"<h1 style='color:{INK};margin-bottom:2px;'>"
             "Multinode Environmental Sensing Monitor</h1>", unsafe_allow_html=True)
 
-df = load_df()
+max_id, bucket = data_version()
+df = load_df(max_id)
 if df.empty:
     st.info("No data yet. Check that the hub (hub.py) is running "
             "and that nodes "
@@ -866,12 +1038,17 @@ def _node_sort_key(node_id: str):
     return (1, 0, lbl.lower())
 
 
-nodes = sorted(df["node"].dropna().unique(), key=_node_sort_key)
-NODE_COLOR.update({n: NODE_PALETTE[i % len(NODE_PALETTE)] for i, n in enumerate(nodes)})
-latest = {n: df[df["node"] == n].iloc[-1].to_dict() for n in nodes}
-
-st.caption(f"{len(nodes)} nodes: {', '.join(label_of(n, labels) for n in nodes)}"
-           f"   |   {len(df):,} rows  -  last seen {df['recv_time'].max()} (KST)")
+def snapshot():
+    """What the live sections need: (max_id, bucket, df, nodes, latest).
+    Called at the start of every fragment run; everything behind it is cached
+    on data_version(), so a run without new rows costs two PK lookups."""
+    max_id, bucket = data_version()
+    df = load_df(max_id)
+    nodes = sorted(df["node"].dropna().unique(), key=_node_sort_key)
+    for i, n in enumerate(nodes):                       # colours stay stable per session
+        NODE_COLOR.setdefault(n, NODE_PALETTE[i % len(NODE_PALETTE)])
+    latest = {n: df[df["node"] == n].iloc[-1].to_dict() for n in nodes}
+    return max_id, bucket, df, nodes, latest
 
 
 def header(text, color):
@@ -879,153 +1056,201 @@ def header(text, color):
                 unsafe_allow_html=True)
 
 
+# Phase 1b: each section is a st.fragment with its own timer, so a refresh
+# re-runs only that block (no full-page rerun, no flicker on node selection).
+# Section 5 has no timer -- its buttons rerun just that fragment. Section 6
+# (reset) stays a plain block: its button triggers a full rerun, which is fine.
+
 # ---- Section 1: node card grid ----
-header("1) Live status by node", H_OVERVIEW)
-ncols = min(len(nodes), MAX_COLS)
-for i in range(0, len(nodes), ncols):
-    row_nodes = nodes[i:i + ncols]
-    cols = st.columns(ncols)
-    for col, node in zip(cols, row_nodes):
-        with col:
-            node_card(node, latest[node], labels)
+@st.fragment(run_every=REFRESH_LIVE)
+def section_live_status():
+    t = perf_counter()
+    _, _, df, nodes, latest = snapshot()
+    st.caption(f"{len(nodes)} nodes: {', '.join(label_of(n, labels) for n in nodes)}"
+               f"   |   {len(df):,} rows  -  last seen {df['recv_time'].max()} (KST)")
+    header("1) Live status by node", H_OVERVIEW)
+    ncols = min(len(nodes), MAX_COLS)
+    for i in range(0, len(nodes), ncols):
+        row_nodes = nodes[i:i + ncols]
+        cols = st.columns(ncols)
+        for col, node in zip(cols, row_nodes):
+            with col:
+                node_card(node, latest[node], labels)
+    _perf("sec1", t)
+
 
 # ---- Section 2: overall stats (5-min) ----
-header("2) Overall stats (5-min)", H_STATS)
-dfa = load_all_for_stats()
-if not dfa.empty:
-    # row 1: boxplot | correlation  (1:1)
-    r1c1, r1c2 = st.columns(2)
-    r1c1.plotly_chart(make_boxplots(dfa), use_container_width=True, key="box")
-    r1c2.plotly_chart(make_corr(dfa), use_container_width=True, key="corr")
-    # row 2: CO2+VOC by node (stacked, left) | CO2-VOC regime scatter (right)  (1:2)
-    r2c1, r2c2 = st.columns([1, 2])
-    with r2c1:
-        st.plotly_chart(make_target_by_node(dfa, labels, "co2"),
-                        use_container_width=True, key="co2_bar")
-        st.plotly_chart(make_target_by_node(dfa, labels, "voc"),
-                        use_container_width=True, key="voc_bar")
-    r2c2.plotly_chart(make_regime_scatter(dfa, labels, latest),
-                      use_container_width=True, key="regime")
+@st.fragment(run_every=REFRESH_STATS)
+def section_stats():
+    t = perf_counter()
+    _, bucket, _, _, latest = snapshot()
+    header("2) Overall stats (5-min)", H_STATS)
+    st.caption(f"Window: last {STATS_DAYS} days. Rebuilt once per 5-min bucket.")
+    figs = stats_figures(bucket)
+    if figs:
+        # row 1: boxplot | correlation  (1:1)
+        r1c1, r1c2 = st.columns(2)
+        r1c1.plotly_chart(figs["box"], width="stretch", key="box")
+        r1c2.plotly_chart(figs["corr"], width="stretch", key="corr")
+        # row 2: CO2+VOC by node (stacked, left) | CO2-VOC regime scatter (right)  (1:2)
+        r2c1, r2c2 = st.columns([1, 2])
+        with r2c1:
+            st.plotly_chart(figs["co2_bar"], width="stretch", key="co2_bar")
+            st.plotly_chart(figs["voc_bar"], width="stretch", key="voc_bar")
+        # live markers (★) go on top of the cached base every refresh
+        r2c2.plotly_chart(overlay_current(figs["regime"], figs["regime_meta"], latest, labels),
+                          width="stretch", key="regime")
+    _perf("sec2", t)
 
-# ---- Section 3: time series + per-node regime ----
-header("3) Time series by node", H_TS)
-sel = st.selectbox("Select node", nodes,
-                   format_func=lambda n: label_of(n, labels), key="ts_node")
-dfn = df[df["node"] == sel].tail(60)
-st.plotly_chart(make_timeseries(dfn), use_container_width=True, key="ts")
-# per-node regime scatter | vision occupancy crosshair map  (2 columns)
-r3a, r3b = st.columns(2)
-r3a.plotly_chart(make_node_regime_scatter(dfa, sel, labels, latest),
-                 use_container_width=True, key="node_regime")
-with r3b:
-    render_vision_panel(sel, labels)
-st.caption("좌: 선택 노드의 '자기 기준'(노드별 RobustScaling) — 전체 비교는 Section 2의 "
-           "pooled 산점도. 우: 같은 교실(라벨) 비전 노드의 재실 탐지 — 깜빡이는 조준선은 "
-           "최근 버킷 '최대 인원 시점'의 위치(c), 수치는 5분 버킷 통계(평균/중앙값/최대). "
-           "영상은 전송·저장되지 않습니다(좌표만 수집).")
 
-# ---- Section 4: recent rows ----
-header("4) Recent records", H_TS)
-recent = df[df["node"] == sel][["recv_time"] + SENSOR_KEYS].tail(5).iloc[::-1]
-fmt = {k: ("{:.0f}" if k in ("voc", "nox", "co2") else "{:.1f}")
-       for k in SENSOR_KEYS}
-st.dataframe(recent.style.format(fmt), use_container_width=True, hide_index=True)
+# ---- Section 3: time series + per-node regime ; Section 4: recent rows ----
+@st.fragment(run_every=REFRESH_LIVE)
+def section_node_detail():
+    t = perf_counter()
+    _, bucket, df, nodes, latest = snapshot()
+    header("3) Time series by node", H_TS)
+    sel = st.selectbox("Select node", nodes,
+                       format_func=lambda n: label_of(n, labels), key="ts_node")
+    dfn = df[df["node"] == sel].tail(60)
+    st.plotly_chart(timeseries_figure(sel, str(latest[sel].get("recv_time")), dfn),
+                    width="stretch", key="ts")
+    # per-node regime scatter | vision occupancy crosshair map  (2 columns)
+    r3a, r3b = st.columns(2)
+    base, meta = node_regime_figure(bucket, sel)
+    r3a.plotly_chart(overlay_node_current(base, meta, latest.get(sel)),
+                     width="stretch", key="node_regime")
+    with r3b:
+        render_vision_panel(sel, labels)
+    st.caption("좌: 선택 노드의 '자기 기준'(노드별 RobustScaling) — 전체 비교는 Section 2의 "
+               "pooled 산점도. 우: 같은 교실(라벨) 비전 노드의 재실 탐지 — 깜빡이는 조준선은 "
+               "최근 버킷 '최대 인원 시점'의 위치(c), 수치는 5분 버킷 통계(평균/중앙값/최대). "
+               "영상은 전송·저장되지 않습니다(좌표만 수집).")
 
-# ---- Section 5: data export ----
-header("5) Data export (CSV)", H_EXPORT)
+    header("4) Recent records", H_TS)
+    recent = df[df["node"] == sel][["recv_time"] + SENSOR_KEYS].tail(5).iloc[::-1]
+    fmt = {k: ("{:.0f}" if k in ("voc", "nox", "co2") else "{:.1f}")
+           for k in SENSOR_KEYS}
+    st.dataframe(recent.style.format(fmt), width="stretch", hide_index=True)
+    _perf("sec3+4", t)
 
-# (5-1) full download -- quick backup
-csv_all = load_df(limit=10_000_000)        # effectively all
-st.download_button(
-    "Download all data (CSV)",
-    data=csv_all.to_csv(index=False).encode("utf-8-sig"),
-    file_name=f"sensor_all_{df['recv_time'].max()[:10]}.csv",
-    mime="text/csv",
-)
 
-# (5-2) merged analysis download -- env x occupancy, join on (bucket, room)
-#        analysis-ready: one row = one 5-min bucket of one room, CO2 next to occ.
-mrg = load_merged_analysis()
-if not mrg.empty:
-    rooms = mrg["room"].nunique()
-    st.download_button(
-        f"Download merged env x occupancy CSV ({len(mrg):,} rows / {rooms} rooms)",
-        data=mrg.to_csv(index=False).encode("utf-8-sig"),
-        file_name=f"env_occ_merged_{mrg['t_kst'].max()[:10]}.csv",
-        mime="text/csv",
-        key="dl_merged",
-        help="재실 x CO2 상관 분석용. (버킷시각, 교실) 정확 조인, "
-             "occ 버킷 n>=25 품질 필터 적용. 상관은 Spearman 권장(포화형 계수 대비).",
-    )
-elif _occ_table_exists():
-    st.caption("Merged export: no matching (bucket, room) rows yet -- "
-               "needs both env and vision nodes publishing with NTP time.")
+# ---- Section 5: data export (on demand) ----
+# Phase 1b: nothing is queried or serialised until asked. Each export has a
+# "Prepare" button that runs the query + to_csv once and parks the bytes in
+# st.session_state; the download button appears after that. Before, all four
+# CSVs (two of them the full table) were rebuilt on every 10 s refresh.
+EXPORT_ON_DEMAND = True
 
-# (5-2b) vision occupancy raw download -- full occupancy schema as stored
-#         (merged export drops cents/w and low-n rows; this keeps everything)
+
+def _csv_bytes(d: pd.DataFrame) -> bytes:
+    return d.to_csv(index=False).encode("utf-8-sig")
+
+
+def export_slot(key: str, prepare_label: str, build, label_fn, file_fn, help=None,
+                empty_msg: str = None):
+    """One on-demand export. `build()` -> DataFrame runs only when the Prepare
+    button is pressed; the result (bytes + meta) stays in session_state so the
+    download button survives reruns without re-querying."""
+    slot = f"csv_{key}"
+    if st.button(prepare_label, key=f"prep_{key}"):
+        with st.spinner("Preparing CSV..."):
+            d = build()
+        meta = {"rows": len(d)}
+        if not d.empty:
+            meta.update({"rooms": d["room"].nunique() if "room" in d else None,
+                         "nodes": d["node"].nunique() if "node" in d else None,
+                         "last": str(d.iloc[-1, 0])[:10] if len(d.columns) else ""})
+        st.session_state[slot] = (_csv_bytes(d) if not d.empty else b"", meta)
+    if slot in st.session_state:
+        data, meta = st.session_state[slot]
+        if meta["rows"] == 0:
+            st.caption(empty_msg or "No rows.")
+        else:
+            st.download_button(label_fn(meta), data=data, file_name=file_fn(meta),
+                               mime="text/csv", key=f"dl_{key}", help=help)
+
+
 def load_occ_all() -> pd.DataFrame:
+    """(5-2b) vision occupancy raw -- full occupancy schema as stored (the merged
+    export drops cents/w and low-n rows; this keeps everything)."""
     if not _occ_table_exists():
         return pd.DataFrame()
     sql = ("SELECT datetime(ts,'+9 hours') AS recv_time_kst, ts AS ts_utc, "
            "node, occ AS occ_mean, occ_med, occ_max, occ_last, cents, w, n "
            "FROM occupancy ORDER BY id")
-    with closing(sqlite3.connect(DB)) as con:
-        return pd.read_sql_query(sql, con)
+    with closing(_ro()) as con:
+        d = pd.read_sql_query(sql, con)
+    if not d.empty:
+        d.insert(3, "room", d["node"].map(labels).fillna(""))
+    return d
 
-occ_all = load_occ_all()
-if not occ_all.empty:
-    occ_all.insert(3, "room", occ_all["node"].map(labels).fillna(""))
-    st.download_button(
-        f"Download vision occupancy CSV ({len(occ_all):,} rows / "
-        f"{occ_all['node'].nunique()} nodes)",
-        data=occ_all.to_csv(index=False).encode("utf-8-sig"),
-        file_name=f"occupancy_all_{str(occ_all['recv_time_kst'].max())[:10]}.csv",
-        mime="text/csv",
-        key="dl_occ_raw",
-        help="occupancy 테이블 원본 전체. cents=최대 인원 시점 centroid JSON(w 좌표계), "
-             "n=버킷 내 유효 샘플 수(정상 ~30, 낮으면 저품질 버킷). "
-             "병합 CSV와 달리 품질 필터 없이 전 행 포함 — 결측/장애 구간 분석에도 사용.",
-    )
 
-# (5-3) date-range download -- date picker + hour dropdown
-st.markdown(f"<div style='color:{INK_DIM};margin:10px 0 4px;'>"
-            "Export by date range (KST)</div>", unsafe_allow_html=True)
+@st.fragment
+def section_export():
+    t = perf_counter()
+    header("5) Data export (CSV)", H_EXPORT)
 
-lo, hi = get_time_bounds()
-if lo and hi:
-    d1, d2, d3, d4 = st.columns(4)
-    start_d = d1.date_input("Start date", value=lo.date(),
-                            min_value=lo.date(), max_value=hi.date(), key="sd")
-    start_h = d2.selectbox("Start hour", list(range(24)), index=0,
-                           format_func=lambda h: f"{h:02d}:00", key="sh")
-    end_d   = d3.date_input("End date", value=hi.date(),
-                            min_value=lo.date(), max_value=hi.date(), key="ed")
-    end_h   = d4.selectbox("End hour", list(range(24)), index=23,
-                           format_func=lambda h: f"{h:02d}:00", key="eh")
+    # (5-1) full download -- quick backup
+    export_slot("all", "Prepare all-data CSV", query_all,
+                lambda m: "Download all data (CSV)",
+                lambda m: f"sensor_all_{m['last']}.csv")
 
-    start_dt = datetime.combine(start_d, time(start_h, 0, 0))
-    end_dt   = datetime.combine(end_d,   time(end_h, 59, 59))
+    # (5-2) merged analysis download -- env x occupancy, join on (bucket, room)
+    #        analysis-ready: one row = one 5-min bucket of one room, CO2 next to occ.
+    if _occ_table_exists():
+        export_slot("merged", "Prepare merged env x occupancy CSV", load_merged_analysis,
+                    lambda m: f"Download merged env x occupancy CSV ({m['rows']:,} rows / "
+                              f"{m['rooms']} rooms)",
+                    lambda m: f"env_occ_merged_{m['last']}.csv",
+                    help="재실 x CO2 상관 분석용. (버킷시각, 교실) 정확 조인, "
+                         "occ 버킷 n>=25 품질 필터 적용. 상관은 Spearman 권장(포화형 계수 대비).",
+                    empty_msg="Merged export: no matching (bucket, room) rows yet -- "
+                              "needs both env and vision nodes publishing with NTP time.")
+        # (5-2b) vision occupancy raw
+        export_slot("occ_raw", "Prepare vision occupancy CSV", load_occ_all,
+                    lambda m: f"Download vision occupancy CSV ({m['rows']:,} rows / "
+                              f"{m['nodes']} nodes)",
+                    lambda m: f"occupancy_all_{m['last']}.csv",
+                    help="occupancy 테이블 원본 전체. cents=최대 인원 시점 centroid JSON(w 좌표계), "
+                         "n=버킷 내 유효 샘플 수(정상 ~30, 낮으면 저품질 버킷). "
+                         "병합 CSV와 달리 품질 필터 없이 전 행 포함 — 결측/장애 구간 분석에도 사용.",
+                    empty_msg="No occupancy rows yet.")
 
-    if start_dt > end_dt:
-        st.warning("Start is later than end. Check the range.")
+    # (5-3) date-range download -- date picker + hour dropdown, queried on "Query range"
+    st.markdown(f"<div style='color:{INK_DIM};margin:10px 0 4px;'>"
+                "Export by date range (KST)</div>", unsafe_allow_html=True)
+    lo, hi = get_time_bounds()
+    if lo and hi:
+        d1, d2, d3, d4 = st.columns(4)
+        start_d = d1.date_input("Start date", value=lo.date(),
+                                min_value=lo.date(), max_value=hi.date(), key="sd")
+        start_h = d2.selectbox("Start hour", list(range(24)), index=0,
+                               format_func=lambda h: f"{h:02d}:00", key="sh")
+        end_d   = d3.date_input("End date", value=hi.date(),
+                                min_value=lo.date(), max_value=hi.date(), key="ed")
+        end_h   = d4.selectbox("End hour", list(range(24)), index=23,
+                               format_func=lambda h: f"{h:02d}:00", key="eh")
+
+        start_dt = datetime.combine(start_d, time(start_h, 0, 0))
+        end_dt   = datetime.combine(end_d,   time(end_h, 59, 59))
+
+        if start_dt > end_dt:
+            st.warning("Start is later than end. Check the range.")
+        else:
+            st.caption(f"Range: {start_dt:%Y-%m-%d %H:00} ~ {end_dt:%Y-%m-%d %H:00}")
+            export_slot("range", "Query range", lambda: query_range(start_dt, end_dt),
+                        lambda m: f"Download range CSV ({m['rows']:,} rows)",
+                        lambda m: f"sensor_{start_dt:%Y%m%d_%H}-{end_dt:%Y%m%d_%H}.csv",
+                        empty_msg="No data in the selected range.")
     else:
-        rng = query_range(start_dt, end_dt)
-        n_rows = len(rng)
-        st.caption(f"Range: {start_dt:%Y-%m-%d %H:00} ~ {end_dt:%Y-%m-%d %H:00}"
-                   f"   -   {n_rows:,} rows")
-        st.download_button(
-            f"Download range CSV ({n_rows:,} rows)",
-            data=rng.to_csv(index=False).encode("utf-8-sig"),
-            file_name=f"sensor_{start_dt:%Y%m%d_%H}-{end_dt:%Y%m%d_%H}.csv",
-            mime="text/csv",
-            disabled=(n_rows == 0),
-            key="dl_range",
-        )
-        if n_rows == 0:
-            st.info("No data in the selected range.")
-else:
-    st.caption("Range export becomes available once data accumulates.")
+        st.caption("Range export becomes available once data accumulates.")
+    _perf("sec5", t)
 
+
+section_live_status()
+section_stats()
+section_node_detail()
+section_export()
 
 # ---- Section 6: data reset (clear table, with auto-backup) ----
 header("6) Data reset", H_EXPORT)
@@ -1036,7 +1261,7 @@ with st.expander("Clear all collected data (DANGER)", expanded=False):
         "automatically before deletion."
     )
     try:
-        with closing(sqlite3.connect(DB)) as con:
+        with closing(_ro()) as con:
             total_rows = con.execute("SELECT COUNT(*) FROM readings").fetchone()[0]
     except Exception:
         total_rows = 0
@@ -1048,14 +1273,14 @@ with st.expander("Clear all collected data (DANGER)", expanded=False):
                  disabled=(not confirm or total_rows == 0), key="reset_btn"):
         try:
             # 1) auto-backup: save full CSV next to the DB
-            backup_df = load_df(limit=10_000_000)
+            backup_df = query_all()
             stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_path = os.path.join(os.path.dirname(os.path.abspath(DB)) or ".",
                                        f"sensor_backup_{stamp}.csv")
             backup_df.to_csv(backup_path, index=False, encoding="utf-8-sig")
 
             # 2) clear table (hub.py untouched; it keeps writing new rows)
-            with closing(sqlite3.connect(DB)) as con:
+            with closing(sqlite3.connect(DB, timeout=DB_TIMEOUT_S)) as con:
                 con.execute("DELETE FROM readings")
                 con.commit()
             # VACUUM is optional (reclaims file size). Skip silently if the
@@ -1079,3 +1304,5 @@ with st.expander("Clear all collected data (DANGER)", expanded=False):
             st.info("Refresh (or wait for auto-refresh) to see the empty dashboard.")
         except Exception as e:
             st.error(f"Reset failed: {e}")
+
+_perf("full run")

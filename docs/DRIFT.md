@@ -62,3 +62,16 @@
 | PreToolUse 훅 명령 | `python .claude/hooks/precommit_tests.py`(상대경로) | `python "$CLAUDE_PROJECT_DIR/.claude/hooks/precommit_tests.py"` | Bash 도구의 셸 cwd는 호출 간에 유지되므로 `cd hub` 뒤에는 상대경로가 깨져 **모든 Bash 호출이 훅 오류로 차단**됐다(2026-08-29 검증 중 발견). 절대경로 환경변수로 교체. 훅 스크립트 자체는 `__file__` 기준이라 변경 없음 |
 | deny 동작 확인 | Phase 1 완료 기준 §4.4-2 | 저장소 루트에서 시작한 세션(2026-08-29)에서 `ssh q sudo true` → `Permission to use Bash with command ssh q sudo true has been denied.` | 확인 완료. 위 행(상위 폴더 세션)의 미차단 원인이 작업 디렉터리였음을 재확인 |
 | PR 개설 | Claude Code가 `gh pr create` | **사용자가 compare URL로 개설**(PR 본문은 Claude가 작성해 전달) | `gh` 미설치, `GH_TOKEN`/`GITHUB_TOKEN` 없음. `gh pr checks` 대신 GitHub REST API(`/actions/runs`) 무인증 조회로 CI 결과 확인 |
+
+## Phase 1b — 플랜 §5와 실제 구현의 차이
+| 항목 | 플랜 | 실제 | 사유 |
+|---|---|---|---|
+| before 측정 방법 | 배포 후 `journalctl`의 `[perf]` 로그 + 브라우저 DevTools 웹소켓 바이트 | `hub/scripts/perf_probe.py`(bare 모드)로 **배포·재시작 없이** 보드에서 측정. 페이로드는 figure JSON / CSV 바이트로 근사 | 재시작(sudo) 없이 before를 얻기 위해. 브라우저 DevTools 수치는 없음 — Streamlit은 변경 없는 요소를 재전송하지 않으므로 probe 수치는 상한 |
+| ② 캐시 키 | `MAX(id)` | `data_version()` = (`MAX(id)`, 최신 행의 5분 버킷). 무거운 28일 통계는 **버킷**으로, 라이브 figure는 노드별 `recv_time`으로 키 | `MAX(id)`는 8노드가 수 초마다 바꾸므로 60 s 주기마다 캐시 미스 → 통계는 버킷당 1회만 재생성 |
+| ② ★ 마커 오버레이 | `copy.deepcopy` 후 `add_trace` | deepcopy 없이 `st.cache_data` 반환값에 직접 추가 | `st.cache_data`는 호출마다 unpickle한 새 복사본을 돌려주므로 deepcopy가 중복 |
+| ③ 노드별 산점도 과거점 | "서버 집계본만 전송" | 밀도 배경은 `np.histogram2d` 집계, 과거점은 **시간 균등 표본 ≤ 1,500점**(`SCATTER_MAX_POINTS`) | 점을 없애면 화면이 달라짐. 표본화로 모양 유지, 페이로드 634 KB → 49 KB |
+| ② boxplot 이상치 | (언급 없음) | `boxpoints="outliers"` 대신 순위 균등 표본 ≤ 300점 scatter | 사전 집계 `go.Box(q1=…)`에는 이상치 인자가 없음 |
+| bare 모드 검사 | `deploy.sh`의 `import dashboard` | fragment 본문은 bare 모드에서 실행되지 않음(Streamlit이 컨텍스트 없으면 `None` 반환) → `perf_probe.py`가 `__wrapped__`로 호출 | import 검사만으로는 섹션 코드가 실행되지 않으므로 probe를 배포 후 검증에 사용 |
+| `components.html` | (없음) | `st.components.v1.html` 2026-06-01 이후 제거 예고(1.58에선 경고). `st.iframe`은 URL 전용, `st.html`은 iframe 격리 없음 → **Phase 5**에서 처리 | 시각 동일 기준 유지 |
+| dashboard 유닛 `After=` | 1b에서 수정 | Phase 0 D-1에서 이미 `multinode_aq_hub.service`로 수정됨 | — |
+| 태블릿 체감 기록 [ASK] | 1b | **연기** — 행동 지침용 LED 인디케이터 부착·학생 수행 후 | 사용자 결정 2026-08-29 |
