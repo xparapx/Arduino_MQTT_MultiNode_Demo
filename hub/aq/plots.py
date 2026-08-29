@@ -131,7 +131,7 @@ def action_summary(devs: dict) -> dict:
     for d, p in devs.items():
         var = "co2" if d == "fan" else "voc"
         val = p["values"].get(var)
-        parts.append(f"{DEVICE_KO.get(d, d)} {p['rule']}"
+        parts.append(f"{DEVICE_KO.get(d, d)} {'ON · ' if p['state'] == 1 else ''}{p['rule']}"
                      + (f" ({var} {val:.0f})" if isinstance(val, (int, float)) else ""))
     on_devs = [p for p in devs.values() if p["state"] == 1]
     return {"word": word, "reason": " · ".join(parts), "kept": kept,

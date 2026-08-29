@@ -63,3 +63,16 @@ DB: `ix_readings_node_ts`, `ix_occupancy_node_ts` 생성(2.36 s), hub `locked` 0
 - 실행 직후 readings 새 행(05:43:36) · journal wal · hub `locked`/error 0 · hub/dashboard active.
 - 보드 AppTest: 페이지 2 예외 0(메트릭 5·표 6, I 절은 weekly 후), fragment 0.91 s; 페이지 1 예외 0.
 - 첫 요약: "Regimes now: matter 3, clean 2 · ON: CLASS_03 purifier · QC hold: CLASS_06 · Forecast alert: CLASS_03 VOC 206 · Highest CO2: CLASS_04 529 ppm". 재실×CO₂ ρ=0.52 (n=1,171, CLASS_01·03).
+
+## 대시보드 손질 — 합의 5항목 · (PR #13, 2026-08-29, 브랜치 `feat/dashboard-polish`)
+Phase 6 후 화면 검토에서 합의한 항목. Phase 번호 없음(태그 없음), 보드는 `git pull`만.
+1. 페이지 2 요약 카드 → "최근 hourly 판정 요약 — hh:mm KST"
+2. E) 교실당 한 행: 교실 · **행동** · 근거 · 판정 시각(hourly run, KST) · 유지(ON 시작 시각 + 최소 동작 종료). B) 표의 환풍기/공청기 두 칸 → 행동 한 칸. 어휘 `plots.ACTION_WORDS`(환기 필요 / 공기청정 필요 / 환기·공기청정 필요 / 조치 없음 / 판정 보류, 히스테리시스·최소 동작 유지 시 "(유지)") — **임시**, LED 인디케이터 문구 확정 시 dict 한 곳만 교체
+3. B) 평면 별 라벨: 축 비율 거리 0.07 미만인 이웃끼리 다른 textposition 슬롯(`plots.label_positions`), 호버는 그대로
+4. G) "마지막 비전 버킷 (KST)" 열: analyst daily가 `db.last_occupancy_bucket()`(occupancy 전체 노드별 MAX(ts), 인덱스 사용)을 `occ_co2.by_room[room].last_bucket`에 저장, 비전 노드가 창 이전에 멈춘 교실도 n=0 행으로 남김 → 페이지가 `win_start`와 비교해 "· 중단"
+5. 사이드바 "비전 노드 N / 5 (24h 내 수신)" — 총수는 `occupancy`에 기록된 노드, 환경 노드 총수는 `readings`에 기록된 노드(nodes.json 16개는 접두사가 없어 구분 불가, DRIFT 참조)
+
+검증
+- 로컬: `ruff check` OK · **112 passed**(신규 `tests/test_plots.py` 5건, `test_occ_co2` +1)
+- 보드(머지 전, `git archive origin/feat/dashboard-polish` → `/tmp/aq_polish`, DB는 backup API 스냅샷, 작업 트리 무변경): 새 analyst daily **5.5 s / 80행**(프로세스 wall 13.9 s), `occ_co2.by_room` 5교실 — CLASS_01 08-28 21:55 · CLASS_03 08-23 23:30 · CLASS_02/05/08 창 이전(중단). 페이지 2 AppTest 예외 0, `page2 0.80 s`(Phase 6 0.91 s), 표 6·메트릭 5; 페이지 1 예외 0. 사이드바 "환경 노드 6 / 8 활성 · 비전 노드 1 / 5 (24h 내 수신)"
+- 실 hourly(06:05 UTC) E 표: 조치 없음 4 · 판정 보류 2(CLASS_03 공청기 14:43부터 ON 유지, CLASS_06)

@@ -19,7 +19,8 @@ def test_action_summary_words():
     pur_off = _act("purifier", 0, "voc < 120", 85.0)
     a = plots.action_summary({"fan": fan_on, "purifier": pur_off})
     assert a["word"] == plots.ACTION_WORDS["fan"] and not a["kept"]
-    assert a["reason"].startswith("레짐 인체 · 환풍기 co2 > 1000") and "(voc 85)" in a["reason"]
+    assert a["reason"].startswith("레짐 인체 · 환풍기 ON · co2 > 1000")
+    assert "(voc 85)" in a["reason"]
     assert a["since"] == fan_on["since"] and a["hold_until"] == fan_on["hold_until"]
 
     pur_on = _act("purifier", 1, "voc > 200 in matter/mixed", 240.0)
@@ -39,6 +40,7 @@ def test_action_summary_words():
     hold = plots.action_summary({"fan": _act("fan", 1, "hold", None),
                                  "purifier": _act("purifier", 0, "hold", None)})
     assert hold["word"] == plots.ACTION_WORDS["hold"] and "레짐" not in hold["reason"]
+    assert hold["reason"] == "환풍기 ON · hold · 공청기 hold"   # a held device that is still ON
     assert none["since"] is None and none["hold_until"] is None
     assert plots.action_summary({})["word"] == "—"
 
