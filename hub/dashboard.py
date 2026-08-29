@@ -37,6 +37,8 @@ import streamlit as st
 import streamlit.components.v1 as components
 from streamlit_autorefresh import st_autorefresh
 
+from aq.db import bucket_5min
+
 # ---- Config ----
 DB         = "sensor_data.db"
 NODES_PATH = "nodes.json"
@@ -160,9 +162,27 @@ def _query_recent(limit: int) -> pd.DataFrame:
     return df.iloc[::-1].reset_index(drop=True) if not df.empty else df
 
 
-@st.cache_data(ttl=5)
-def load_df(limit: int = ROW_LIMIT) -> pd.DataFrame:
-    """Recent rows for the live sections (cached)."""
+def data_version() -> "tuple[int, str]":
+    """Cache key for everything on screen: (MAX(id), 5-min bucket of the newest
+    row). Two PK lookups, ~1 ms. max_id keys the live figures (they rebuild only
+    when a row arrived); the bucket keys the 28-day statistics (one rebuild per
+    5-min bucket, however many rows land inside it)."""
+    if not os.path.isfile(DB):
+        return 0, ""
+    with closing(sqlite3.connect(DB)) as con:
+        row = con.execute("SELECT id, ts FROM readings "
+                          "WHERE id = (SELECT MAX(id) FROM readings)").fetchone()
+    if not row:
+        return 0, ""
+    try:
+        return int(row[0]), bucket_5min(row[1])
+    except ValueError:                      # unexpected ts format: fall back to raw
+        return int(row[0]), str(row[1])
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_df(max_id: int, limit: int = ROW_LIMIT) -> pd.DataFrame:
+    """Recent rows for the live sections. Re-queried only when max_id moved."""
     return _query_recent(limit)
 
 
@@ -171,8 +191,9 @@ def query_all() -> pd.DataFrame:
     return _query_recent(10_000_000)
 
 
-@st.cache_data(ttl=300)               # stats cached for 5 min
-def load_all_for_stats() -> pd.DataFrame:
+@st.cache_data(ttl=300, show_spinner=False)
+def load_all_for_stats(bucket: str) -> pd.DataFrame:
+    """Rows for section 2 / node regime. Keyed on the newest 5-min bucket."""
     if not os.path.isfile(DB):
         return pd.DataFrame()
     sql = ("SELECT node, pm1p0, pm2p5, pm4p0, pm10p0, sen_temp, sen_hum, voc, nox, "
@@ -196,8 +217,9 @@ def query_range(start_kst: datetime, end_kst: datetime) -> pd.DataFrame:
         return pd.read_sql_query(sql, con, params=(start_utc, end_utc))
 
 
+@st.cache_data(ttl=300, show_spinner=False)
 def get_time_bounds():
-    """Min/max time in DB (KST) -- defaults for the range picker."""
+    """Min/max time in DB (KST) -- defaults for the range picker. Full scan, so cached."""
     if not os.path.isfile(DB):
         return None, None
     sql = ("SELECT MIN(datetime(ts,'+9 hours')), MAX(datetime(ts,'+9 hours')) "
@@ -234,6 +256,7 @@ def label_of(node_id: str, labels: dict) -> str:
 VIS_ACC  = "#FFB300"            # crosshair / occupancy accent (vivid amber)
 VIS_GRID = "#2b3242"            # map grid line
 
+@st.cache_data(ttl=300, show_spinner=False)
 def _occ_table_exists() -> bool:
     if not os.path.isfile(DB):
         return False
@@ -243,7 +266,7 @@ def _occ_table_exists() -> bool:
     return bool(r)
 
 
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=60, show_spinner=False)
 def load_occ_latest() -> pd.DataFrame:
     """Last bucket per vision node (+9h KST time)."""
     if not _occ_table_exists():
@@ -256,7 +279,7 @@ def load_occ_latest() -> pd.DataFrame:
         return pd.read_sql_query(sql, con)
 
 
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=60, show_spinner=False)
 def load_occ_hist(node_id: str, limit: int = 24) -> pd.DataFrame:
     """Recent buckets for the mini bar strip (oldest -> newest)."""
     if not _occ_table_exists():
@@ -495,8 +518,9 @@ def node_card(node_id: str, vals: dict, labels: dict):
             f"<div style='text-align:center;font-weight:700;color:{INK};"
             f"font-size:14px;margin-bottom:2px;'>{label_of(node_id, labels)}</div>",
             unsafe_allow_html=True)
-        # one radar per node (6 vars normalized by gauge range)
-        st.plotly_chart(make_node_radar(vals, node_id),
+        # one radar per node (6 vars normalized by gauge range); rebuilt only
+        # when this node has a newer row (cache key = its recv_time)
+        st.plotly_chart(radar_figure(node_id, str(vals.get("recv_time")), vals),
                         use_container_width=True, key=f"radar_{node_id}")
 
 
@@ -596,8 +620,13 @@ def make_target_by_node(dfa: pd.DataFrame, labels: dict, key: str) -> go.Figure:
     return fig
 
 
-def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) -> go.Figure:
-    """CO2-VOC RELATIVE regime scatter (RobustScaling). Each point = one reading.
+
+def make_regime_base(dfa: pd.DataFrame, labels: dict):
+    """CO2-VOC RELATIVE regime scatter (RobustScaling), cacheable part: density
+    background + quadrant labels + axes. Returns (fig, meta); meta carries the
+    scaling (median/IQR per axis), the range and the node list so that
+    overlay_current() can place the live markers on the same axes later
+    without touching dfa again.
     RobustScaling: (v - median) / IQR  -> robust to outliers & skew, stable origin.
     Purpose = RELATIVE regime (where a point sits within the distribution), good for
     flexible regime-switching detection. NOTE: normalization removes ABSOLUTE level
@@ -614,7 +643,7 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) ->
                            x=0.5, y=0.5, showarrow=False, font={"color": INK_DIM})
         fig.update_layout(height=420, paper_bgcolor="rgba(0,0,0,0)",
                           plot_bgcolor="rgba(0,0,0,0)", font={"color": INK})
-        return fig
+        return fig, None
 
     # RobustScaling: (v - median) / IQR per axis (robust to outliers/skew)
     def robust(s):
@@ -622,14 +651,9 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) ->
         iqr = s.quantile(0.75) - s.quantile(0.25)
         return (s - med) / iqr if iqr and iqr > 0 else (s - med) * 0.0
     zco2 = robust(d["co2"]); zvoc = robust(d["voc"])
-
-    # 2D density (histogram) as background -> denser quadrant = deeper tint
-    fig = go.Figure()
-    # (density trace added after range is known, so clipping is consistent)
-    # normalization params (reuse for mapping current values to same robust-space)
+    # normalization params (reused by overlay_current for the live values)
     co2_med = d["co2"].median(); co2_iqr = d["co2"].quantile(0.75) - d["co2"].quantile(0.25)
     voc_med = d["voc"].median(); voc_iqr = d["voc"].quantile(0.75) - d["voc"].quantile(0.25)
-    def rc(v, med, iqr): return (v - med) / iqr if iqr and iqr > 0 else 0.0
 
     # axis range from PERCENTILES (not max) so a single outlier can't blow up scale
     def prange(s):
@@ -639,9 +663,7 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) ->
     amax = (amax * 1.15) if amax > 0 else 1.0
     amax = min(max(amax, 1.5), 3.0)       # 1.5~3.0 (max 3 grid at dtick=1)
 
-    def clip(v):                          # clamp into [-amax, amax] for display
-        return max(-amax, min(amax, v))
-
+    fig = go.Figure()
     # density background (clipped to range so out-of-range points don't distort)
     fig.add_trace(go.Histogram2d(
         x=zco2.clip(-amax, amax), y=zvoc.clip(-amax, amax),
@@ -650,54 +672,6 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) ->
                     [0.5, "rgba(120,170,255,0.28)"], [1.0, "rgba(90,140,255,0.55)"]],
         showscale=False, zsmooth="best", hoverinfo="skip",
     ))
-
-    # node colors: shared vivid identity palette (see NODE_PALETTE)
-    node_list = sorted(d["node"].unique(), key=lambda n: labels.get(n, n))
-    # 과거 개별 산점은 제거 — 분포 맥락은 밀도 배경(Histogram2d)만 유지 (가독성)
-    # current position: vector from origin + enlarged marker + class label (per node)
-    if latest:
-        for i, nd in enumerate(node_list):
-            cur = latest.get(nd)
-            if not cur:
-                continue
-            cv, vv = cur.get("co2"), cur.get("voc")
-            if cv is None or vv is None or pd.isna(cv) or pd.isna(vv):
-                continue
-            rx, ry = rc(cv, co2_med, co2_iqr), rc(vv, voc_med, voc_iqr)
-            cx, cy = clip(rx), clip(ry)          # clip into view; flag if outside
-            outside = (cx != rx) or (cy != ry)
-            col = node_color(nd)
-            # vector: origin -> current (arrow)
-            fig.add_annotation(x=cx, y=cy, ax=0, ay=0,
-                               xref="x", yref="y", axref="x", ayref="y",
-                               showarrow=True, arrowhead=2, arrowsize=1.0,
-                               arrowwidth=2, arrowcolor=col, opacity=0.95)
-            # enlarged current marker. Diamond if clipped (out of range).
-            fig.add_trace(go.Scatter(
-                x=[cx], y=[cy], mode="markers",
-                name=f"{label_of(nd, labels)} (now)", legendgroup=nd,
-                showlegend=False,
-                marker=dict(size=16, color=col,
-                            symbol=("diamond-open" if outside else "star"),
-                            line=dict(width=1.6, color=INK)),
-                hovertemplate=(f"{label_of(nd, labels)} now<br>CO2 r=%{{x:.2f}}"
-                               f"<br>VOC r=%{{y:.2f}}"
-                               f"{' (범위밖)' if outside else ''}<extra></extra>"),
-            ))
-            # class label at the arrow tip (offset outward along the vector)
-            norm = (cx * cx + cy * cy) ** 0.5
-            ux, uy = ((cx / norm, cy / norm) if norm > 1e-6 else (1.0, 0.0))
-            off = amax * 0.07
-            lx = max(-amax * 0.98, min(amax * 0.98, cx + ux * off))
-            ly = max(-amax * 0.98, min(amax * 0.98, cy + uy * off))
-            fig.add_annotation(x=lx, y=ly, text=label_of(nd, labels),
-                               showarrow=False,
-                               xanchor=("left" if ux >= 0 else "right"),
-                               yanchor=("bottom" if uy >= 0 else "top"),
-                               font={"size": 9, "color": col},
-                               bgcolor="rgba(0,0,0,0.45)",
-                               bordercolor=col, borderwidth=1, borderpad=1,
-                               opacity=0.95)
     # quadrant labels with inequality notation (Human vs Matter)
     #  x+ = CO2 high (human factor) ; y+ = VOC high (matter factor)
     qlabels = [( amax*0.6,  amax*0.6, "Human \u2248 Matter"),   # high-high (both)
@@ -722,15 +696,80 @@ def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) ->
         legend=dict(font={"size": 12, "color": INK_DIM}, orientation="h",
                     yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
+    # node colors: shared vivid identity palette (see NODE_PALETTE)
+    meta = dict(co2_med=co2_med, co2_iqr=co2_iqr, voc_med=voc_med, voc_iqr=voc_iqr,
+                amax=amax, nodes=sorted(d["node"].unique(), key=lambda n: labels.get(n, n)))
+    return fig, meta
+
+
+def overlay_current(fig: go.Figure, meta: dict, latest: dict, labels: dict) -> go.Figure:
+    """Live layer on top of make_regime_base(): per node a vector from the
+    origin + enlarged marker + class label at the arrow tip. Cheap; runs on
+    every refresh on the (copied) cached base figure."""
+    if not meta or not latest:
+        return fig
+    amax = meta["amax"]
+    def rc(v, med, iqr): return (v - med) / iqr if iqr and iqr > 0 else 0.0
+    def clip(v):                          # clamp into [-amax, amax] for display
+        return max(-amax, min(amax, v))
+    for nd in meta["nodes"]:
+        cur = latest.get(nd)
+        if not cur:
+            continue
+        cv, vv = cur.get("co2"), cur.get("voc")
+        if cv is None or vv is None or pd.isna(cv) or pd.isna(vv):
+            continue
+        rx = rc(cv, meta["co2_med"], meta["co2_iqr"])
+        ry = rc(vv, meta["voc_med"], meta["voc_iqr"])
+        cx, cy = clip(rx), clip(ry)          # clip into view; flag if outside
+        outside = (cx != rx) or (cy != ry)
+        col = node_color(nd)
+        # vector: origin -> current (arrow)
+        fig.add_annotation(x=cx, y=cy, ax=0, ay=0,
+                           xref="x", yref="y", axref="x", ayref="y",
+                           showarrow=True, arrowhead=2, arrowsize=1.0,
+                           arrowwidth=2, arrowcolor=col, opacity=0.95)
+        # enlarged current marker. Diamond if clipped (out of range).
+        fig.add_trace(go.Scatter(
+            x=[cx], y=[cy], mode="markers",
+            name=f"{label_of(nd, labels)} (now)", legendgroup=nd,
+            showlegend=False,
+            marker=dict(size=16, color=col,
+                        symbol=("diamond-open" if outside else "star"),
+                        line=dict(width=1.6, color=INK)),
+            hovertemplate=(f"{label_of(nd, labels)} now<br>CO2 r=%{{x:.2f}}"
+                           f"<br>VOC r=%{{y:.2f}}"
+                           f"{' (범위밖)' if outside else ''}<extra></extra>"),
+        ))
+        # class label at the arrow tip (offset outward along the vector)
+        norm = (cx * cx + cy * cy) ** 0.5
+        ux, uy = ((cx / norm, cy / norm) if norm > 1e-6 else (1.0, 0.0))
+        off = amax * 0.07
+        lx = max(-amax * 0.98, min(amax * 0.98, cx + ux * off))
+        ly = max(-amax * 0.98, min(amax * 0.98, cy + uy * off))
+        fig.add_annotation(x=lx, y=ly, text=label_of(nd, labels),
+                           showarrow=False,
+                           xanchor=("left" if ux >= 0 else "right"),
+                           yanchor=("bottom" if uy >= 0 else "top"),
+                           font={"size": 9, "color": col},
+                           bgcolor="rgba(0,0,0,0.45)",
+                           bordercolor=col, borderwidth=1, borderpad=1,
+                           opacity=0.95)
     return fig
 
 
-def make_node_regime_scatter(dfa: pd.DataFrame, node_id: str, labels: dict,
-                             latest: dict = None) -> go.Figure:
+def make_regime_scatter(dfa: pd.DataFrame, labels: dict, latest: dict = None) -> go.Figure:
+    """Uncached base + overlay in one call (scripts / tests)."""
+    fig, meta = make_regime_base(dfa, labels)
+    return overlay_current(fig, meta, latest, labels)
+
+
+def make_node_regime_base(dfa: pd.DataFrame, node_id: str, labels: dict):
     """Per-node regime scatter using THAT NODE's own median/IQR (within-node
     RobustScaling). Answers 'is this room different from its OWN baseline?'.
     Complements the pooled scatter (which compares nodes). IQR-small nodes can
-    look jumpy -- that's expected (each node scaled to itself)."""
+    look jumpy -- that's expected (each node scaled to itself).
+    Cacheable part (density + past points + quadrants + axes); returns (fig, meta)."""
     d = dfa[dfa["node"] == node_id][["co2", "voc"]].dropna()
     nm = label_of(node_id, labels)
     if len(d) < 3:
@@ -739,7 +778,7 @@ def make_node_regime_scatter(dfa: pd.DataFrame, node_id: str, labels: dict,
                            x=0.5, y=0.5, showarrow=False, font={"color": INK_DIM})
         fig.update_layout(height=360, paper_bgcolor="rgba(0,0,0,0)",
                           plot_bgcolor="rgba(0,0,0,0)", font={"color": INK})
-        return fig
+        return fig, None
 
     # within-node RobustScaling (this node's own median/IQR)
     def robust(s):
@@ -754,7 +793,6 @@ def make_node_regime_scatter(dfa: pd.DataFrame, node_id: str, labels: dict,
         return max(abs(s.quantile(0.02)), abs(s.quantile(0.98)))
     amax = float(max(prange(zco2), prange(zvoc)))
     amax = min(max((amax * 1.15) if amax > 0 else 1.0, 1.5), 3.0)
-    def clip(v): return max(-amax, min(amax, v))
 
     # density backdrop (this node only)
     fig.add_trace(go.Histogram2d(
@@ -770,27 +808,6 @@ def make_node_regime_scatter(dfa: pd.DataFrame, node_id: str, labels: dict,
                     line=dict(width=0.3, color="rgba(0,0,0,0.3)"), opacity=0.4),
         showlegend=False, hoverinfo="skip",
     ))
-    # current position vector + star (this node's own scale)
-    def rc(v, med, iqr): return (v - med) / iqr if iqr and iqr > 0 else 0.0
-    if latest and latest.get(node_id):
-        cur = latest[node_id]
-        cv, vv = cur.get("co2"), cur.get("voc")
-        if cv is not None and vv is not None and not pd.isna(cv) and not pd.isna(vv):
-            rx, ry = rc(cv, co2_med, co2_iqr), rc(vv, voc_med, voc_iqr)
-            cx, cy = clip(rx), clip(ry)
-            outside = (cx != rx) or (cy != ry)
-            fig.add_annotation(x=cx, y=cy, ax=0, ay=0, xref="x", yref="y",
-                               axref="x", ayref="y", showarrow=True, arrowhead=2,
-                               arrowsize=1.2, arrowwidth=2,
-                               arrowcolor=PASTEL["orange"], opacity=0.9)
-            fig.add_trace(go.Scatter(
-                x=[cx], y=[cy], mode="markers", showlegend=False,
-                marker=dict(size=12, color=PASTEL["orange"],
-                            symbol=("diamond-open" if outside else "star"),
-                            line=dict(width=1.2, color=INK)),
-                hovertemplate=f"{nm} now<br>CO2 r=%{{x:.2f}}<br>VOC r=%{{y:.2f}}"
-                              f"{' (out)' if outside else ''}<extra></extra>",
-            ))
     # quadrant labels (inequality)
     for qx, qy, qt in [( amax*0.6,  amax*0.6, "Human \u2248 Matter"),
                        (-amax*0.6,  amax*0.6, "Matter \u003e Human"),
@@ -811,8 +828,45 @@ def make_node_regime_scatter(dfa: pd.DataFrame, node_id: str, labels: dict,
                    tickfont={"color": INK_DIM}, zeroline=True, zerolinecolor=INK,
                    zerolinewidth=2, showline=True, linecolor=INK_DIM, mirror=True),
     )
+    meta = dict(co2_med=co2_med, co2_iqr=co2_iqr, voc_med=voc_med, voc_iqr=voc_iqr,
+                amax=amax, name=nm)
+    return fig, meta
+
+
+def overlay_node_current(fig: go.Figure, meta: dict, cur: dict) -> go.Figure:
+    """Live layer for make_node_regime_base(): vector + star on the node's own scale."""
+    if not meta or not cur:
+        return fig
+    amax = meta["amax"]; nm = meta["name"]
+    def rc(v, med, iqr): return (v - med) / iqr if iqr and iqr > 0 else 0.0
+    def clip(v): return max(-amax, min(amax, v))
+    cv, vv = cur.get("co2"), cur.get("voc")
+    if cv is None or vv is None or pd.isna(cv) or pd.isna(vv):
+        return fig
+    rx = rc(cv, meta["co2_med"], meta["co2_iqr"])
+    ry = rc(vv, meta["voc_med"], meta["voc_iqr"])
+    cx, cy = clip(rx), clip(ry)
+    outside = (cx != rx) or (cy != ry)
+    fig.add_annotation(x=cx, y=cy, ax=0, ay=0, xref="x", yref="y",
+                       axref="x", ayref="y", showarrow=True, arrowhead=2,
+                       arrowsize=1.2, arrowwidth=2,
+                       arrowcolor=PASTEL["orange"], opacity=0.9)
+    fig.add_trace(go.Scatter(
+        x=[cx], y=[cy], mode="markers", showlegend=False,
+        marker=dict(size=12, color=PASTEL["orange"],
+                    symbol=("diamond-open" if outside else "star"),
+                    line=dict(width=1.2, color=INK)),
+        hovertemplate=f"{nm} now<br>CO2 r=%{{x:.2f}}<br>VOC r=%{{y:.2f}}"
+                      f"{' (out)' if outside else ''}<extra></extra>",
+    ))
     return fig
 
+
+def make_node_regime_scatter(dfa: pd.DataFrame, node_id: str, labels: dict,
+                             latest: dict = None) -> go.Figure:
+    """Uncached base + overlay in one call (scripts / tests)."""
+    fig, meta = make_node_regime_base(dfa, node_id, labels)
+    return overlay_node_current(fig, meta, latest.get(node_id) if latest else None)
 
 def make_timeseries(dfn: pd.DataFrame) -> go.Figure:
     keys = TS_KEYS
@@ -843,6 +897,45 @@ def make_timeseries(dfn: pd.DataFrame) -> go.Figure:
 
 
 # ========================================================
+#  Cached figure layer (Phase 1b)
+#  Keys come from data_version(): the 28-day statistics rebuild once per 5-min
+#  bucket, live figures only when their node has a newer row. st.cache_data
+#  returns a fresh copy on every hit, so the overlays below may add traces to
+#  the returned figure without a deepcopy of their own.
+# ========================================================
+@st.cache_data(ttl=300, show_spinner=False)
+def stats_figures(bucket: str) -> dict:
+    """Section 2: five figures + the regime base/meta, built from one load."""
+    dfa = load_all_for_stats(bucket)
+    if dfa.empty:
+        return {}
+    labels_ = load_node_labels()
+    base, meta = make_regime_base(dfa, labels_)
+    return {"box": make_boxplots(dfa), "corr": make_corr(dfa),
+            "co2_bar": make_target_by_node(dfa, labels_, "co2"),
+            "voc_bar": make_target_by_node(dfa, labels_, "voc"),
+            "regime": base, "regime_meta": meta}
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def node_regime_figure(bucket: str, node_id: str):
+    """Section 3 left: (base figure, meta) for one node."""
+    return make_node_regime_base(load_all_for_stats(bucket), node_id, load_node_labels())
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def radar_figure(node_id: str, stamp: str, _vals: dict) -> go.Figure:
+    """Section 1: one radar, keyed on the node's newest recv_time."""
+    return make_node_radar(_vals, node_id)
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def timeseries_figure(node_id: str, stamp: str, _dfn: pd.DataFrame) -> go.Figure:
+    """Section 3: last 60 rows of one node, keyed on its newest recv_time."""
+    return make_timeseries(_dfn)
+
+
+# ========================================================
 #  Screen
 # ========================================================
 st.set_page_config(page_title="Sensing Monitor", page_icon="*", layout="wide")
@@ -862,7 +955,8 @@ st.markdown(f"""
 st.markdown(f"<h1 style='color:{INK};margin-bottom:2px;'>"
             "Multinode Environmental Sensing Monitor</h1>", unsafe_allow_html=True)
 
-df = load_df()
+max_id, bucket = data_version()
+df = load_df(max_id)
 if df.empty:
     st.info("No data yet. Check that the hub (hub.py) is running "
             "and that nodes "
@@ -911,20 +1005,19 @@ _perf("sec1")
 
 # ---- Section 2: overall stats (5-min) ----
 header("2) Overall stats (5-min)", H_STATS)
-dfa = load_all_for_stats()
-if not dfa.empty:
+figs = stats_figures(bucket)
+if figs:
     # row 1: boxplot | correlation  (1:1)
     r1c1, r1c2 = st.columns(2)
-    r1c1.plotly_chart(make_boxplots(dfa), use_container_width=True, key="box")
-    r1c2.plotly_chart(make_corr(dfa), use_container_width=True, key="corr")
+    r1c1.plotly_chart(figs["box"], use_container_width=True, key="box")
+    r1c2.plotly_chart(figs["corr"], use_container_width=True, key="corr")
     # row 2: CO2+VOC by node (stacked, left) | CO2-VOC regime scatter (right)  (1:2)
     r2c1, r2c2 = st.columns([1, 2])
     with r2c1:
-        st.plotly_chart(make_target_by_node(dfa, labels, "co2"),
-                        use_container_width=True, key="co2_bar")
-        st.plotly_chart(make_target_by_node(dfa, labels, "voc"),
-                        use_container_width=True, key="voc_bar")
-    r2c2.plotly_chart(make_regime_scatter(dfa, labels, latest),
+        st.plotly_chart(figs["co2_bar"], use_container_width=True, key="co2_bar")
+        st.plotly_chart(figs["voc_bar"], use_container_width=True, key="voc_bar")
+    # live markers (★) go on top of the cached base every refresh
+    r2c2.plotly_chart(overlay_current(figs["regime"], figs["regime_meta"], latest, labels),
                       use_container_width=True, key="regime")
 
 _perf("sec2")
@@ -934,10 +1027,12 @@ header("3) Time series by node", H_TS)
 sel = st.selectbox("Select node", nodes,
                    format_func=lambda n: label_of(n, labels), key="ts_node")
 dfn = df[df["node"] == sel].tail(60)
-st.plotly_chart(make_timeseries(dfn), use_container_width=True, key="ts")
+st.plotly_chart(timeseries_figure(sel, str(latest[sel].get("recv_time")), dfn),
+                use_container_width=True, key="ts")
 # per-node regime scatter | vision occupancy crosshair map  (2 columns)
 r3a, r3b = st.columns(2)
-r3a.plotly_chart(make_node_regime_scatter(dfa, sel, labels, latest),
+base, meta = node_regime_figure(bucket, sel)
+r3a.plotly_chart(overlay_node_current(base, meta, latest.get(sel)),
                  use_container_width=True, key="node_regime")
 with r3b:
     render_vision_panel(sel, labels)

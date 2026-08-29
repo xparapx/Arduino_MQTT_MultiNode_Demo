@@ -75,12 +75,20 @@ def main() -> int:
     d = type("NS", (), ns)  # attribute access over the script namespace
     labels = d.load_node_labels()
 
-    # 2) loaders, uncached
-    df = T("load_df(5000)", lambda: uncached(d.load_df)())
+    # 2) loaders, uncached. New API (Phase 1b): data_version() -> (max_id, bucket)
+    new_api = hasattr(d, "data_version")
+    if new_api:
+        max_id, bucket = T("data_version", lambda: d.data_version())
+        df = T("load_df(5000)", lambda: uncached(d.load_df)(max_id))
+    else:
+        df = T("load_df(5000)", lambda: uncached(d.load_df)())
     nodes = sorted(df["node"].dropna().unique(), key=d._node_sort_key)
     latest = {n: df[df["node"] == n].iloc[-1].to_dict() for n in nodes}
     sel = nodes[0]
-    dfa = T("load_all_for_stats", lambda: uncached(d.load_all_for_stats)())
+    if new_api:
+        dfa = T("load_all_for_stats", lambda: uncached(d.load_all_for_stats)(bucket))
+    else:
+        dfa = T("load_all_for_stats", lambda: uncached(d.load_all_for_stats)())
     rows.append(("  rows in dfa", 0.0, len(dfa)))
 
     # 3) section 1: radars
@@ -89,17 +97,15 @@ def main() -> int:
       lambda figs: sum(fig_bytes(f) for f in figs))
 
     # 4) section 2 figures (old API: builders take dfa; new API: stats_figures(max_id))
-    if hasattr(d, "stats_figures"):
-        max_id = d.readings_max_id()
+    if new_api:
         figs = T("sec2 stats_figures (uncached)",
-                 lambda: uncached(d.stats_figures)(max_id),
-                 lambda fs: sum(fig_bytes(f) for f in fs.values()))
-        T("sec2 stats_figures (cached hit)", lambda: d.stats_figures(max_id))
-        if hasattr(d, "overlay_current"):
-            T("sec2 overlay ★ (deepcopy+markers)",
-              lambda: d.overlay_current(copy.deepcopy(figs["regime"]), figs["regime_meta"],
-                                        latest, labels),
-              fig_bytes)
+                 lambda: uncached(d.stats_figures)(bucket),
+                 lambda fs: sum(fig_bytes(f) for k, f in fs.items() if k != "regime_meta"))
+        T("sec2 stats_figures (cached hit)", lambda: d.stats_figures(bucket))
+        T("sec2 overlay ★ on regime",
+          lambda: d.overlay_current(copy.deepcopy(figs["regime"]), figs["regime_meta"],
+                                    latest, labels),
+          fig_bytes)
     else:
         T("sec2 boxplots", lambda: d.make_boxplots(dfa), fig_bytes)
         T("sec2 corr", lambda: d.make_corr(dfa), fig_bytes)
@@ -111,9 +117,9 @@ def main() -> int:
     # 5) section 3
     dfn = df[df["node"] == sel].tail(60)
     T("sec3 timeseries", lambda: d.make_timeseries(dfn), fig_bytes)
-    if hasattr(d, "node_regime_figure"):
+    if new_api:
         T("sec3 node regime (uncached)",
-          lambda: uncached(d.node_regime_figure)(d.readings_max_id(), sel), fig_bytes)
+          lambda: uncached(d.node_regime_figure)(bucket, sel)[0], fig_bytes)
     else:
         T("sec3 node regime", lambda: d.make_node_regime_scatter(dfa, sel, labels, latest),
           fig_bytes)
