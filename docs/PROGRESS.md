@@ -82,4 +82,5 @@ Phase 6 후 화면 검토에서 합의한 항목. Phase 번호 없음(태그 없
 - `webapp.py`(stdlib HTTP, 8502) · `aq/webdata.py`(읽기 전용, 버전 메모이즈) · `aq/derive.py`(plots.py 순수 로직 분리) · `web/`(HTML 2 · CSS · JS 4, 외부 라이브러리 없음) · `systemd/multinode_aq_web.service` · deploy.sh 재시작 매핑
 - 픽스처(analyst hourly+daily 후) API 크기: status 0.4 KB · live 7.3 KB · stats 14.2 KB · series 7.2 KB · analysis 79.6 KB(gzip 전) · warm 캐시 ≤ 1 ms(PC)
 - pytest **121 passed**(신규 `tests/test_webapp.py` 9건: 상수 동기화, 빈 DB, live/stats/series/status/analysis 번들, HTTP 엔드포인트, gzip, CSV 내보내기·reset 가드). e2e가 정적 경로 탈출 결함(`hub/web` 접두사 비교)을 잡아 수정.
+- 로컬 미리보기(픽스처) 사용자 피드백 반영: A) QC 표를 노드당 1행 + 최근 7일 통과/탈락 점 띠로 축소 · 재실 탐지 지도 높이 320px 고정(4:3), 통계 4칸을 우측 열 상단으로 · 정적 파일 `no-cache`(배포 즉시 반영). 브랜치 fetch → `/tmp/aq_web` 보드 미리보기(:8503, 읽기 전용)도 사용자가 실행.
 - 완료 기준 §12.2 판정과 보드 측정은 배포 후 기록.
