@@ -1,0 +1,13 @@
+[Unit]
+Description=Air-quality analyst: hourly regime / action / forecast
+# Reads readings/occupancy read-only, writes analysis/actuator_state only.
+# No EnvironmentFile: analyst.py needs no broker credentials.
+After=multinode_aq_hub.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/arduino/multinode_aq/hub/.venv/bin/python /home/arduino/multinode_aq/hub/analyst.py run --mode hourly
+WorkingDirectory=/home/arduino/multinode_aq/hub
+User=arduino
+TimeoutStartSec=300
+Nice=10
