@@ -43,6 +43,24 @@ def test_spearman_by_room_payload(cfg):
     assert p["n"] == 23 and p["spearman_rho"] > 0.7   # pooled: two rooms, two baselines
     assert p["by_room"]["CLASS_01"]["slope"] == pytest.approx(20.0, abs=0.01)
     assert p["by_room"]["CLASS_02"]["rho"] == pytest.approx(1.0)
+    # without last_seen the window's occupancy frame gives the last bucket
+    assert p["by_room"]["CLASS_01"]["last_bucket"] == "2026-08-29 00:55:00"
+    assert list(p["by_room"]) == ["CLASS_01", "CLASS_02"]
+
+
+def test_last_seen_adds_stopped_rooms(cfg):
+    """A room whose vision node stopped before the window keeps a row
+    (n = 0) with its all-time last bucket; last_seen wins over the frame."""
+    env, occ = _data()
+    labels = dict(LABELS, vis_03="CLASS_03", env_03="CLASS_03")
+    last_seen = {"vis_01": "2026-08-29 01:00:00", "vis_02": "2026-08-29 00:55:00",
+                 "vis_03": "2026-08-10 12:00:00", "vis_99": "2026-08-01 00:00:00"}
+    p = occ_co2.spearman_by_room(env, occ, labels, cfg, last_seen)
+    assert list(p["by_room"]) == ["CLASS_01", "CLASS_02", "CLASS_03"]
+    assert p["by_room"]["CLASS_01"]["last_bucket"] == "2026-08-29 01:00:00"
+    assert p["by_room"]["CLASS_03"] == {"rho": None, "n": 0, "slope": None,
+                                        "last_bucket": "2026-08-10 12:00:00"}
+    assert p["n"] == 23                                  # pooled stats unchanged
 
 
 def test_unlabelled_nodes_and_empty(cfg):

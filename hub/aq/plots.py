@@ -24,6 +24,13 @@ TS_FMT = "%Y-%m-%d %H:%M:%S"
 DENSITY_SCALE = [[0.0, "rgba(0,0,0,0)"], [0.15, "rgba(120,170,255,0.10)"],
                  [0.5, "rgba(120,170,255,0.28)"], [1.0, "rgba(90,140,255,0.55)"]]
 
+# Action wording shown in B and E (one row per room). Provisional: to be aligned
+# with the LED indicator wording once that is fixed -- change only this dict.
+ACTION_WORDS = {"fan": "환기 필요", "purifier": "공기청정 필요", "both": "환기·공기청정 필요",
+                "none": "조치 없음", "hold": "판정 보류", "keep": " (유지)"}
+DEVICE_KO = {"fan": "환풍기", "purifier": "공청기"}
+HOLD = "hold"
+
 
 def _layout(fig: go.Figure, height: int, **kw) -> go.Figure:
     fig.update_layout(height=height, paper_bgcolor="rgba(0,0,0,0)",
@@ -64,13 +71,13 @@ def plane_figure(regime_now: dict, labels: dict, cfg: dict, model_meta: dict | N
                                  name=f"centroid {c['regime']}", showlegend=False,
                                  hovertemplate=(f"{c['regime']} centroid<br>co2 {c['mu_raw'][0]:.0f}"
                                                 f" ppm · voc {c['mu_raw'][1]:.0f}<extra></extra>")))
-    for node, p in regime_now.items():
-        if not (p["co2"] == p["co2"] and p["voc"] == p["voc"]):
-            continue
-        x, y = p["co2"] / reg["co2_scale"], p["voc"] / reg["voc_scale"]
+    stars = [(node, p, p["co2"] / reg["co2_scale"], p["voc"] / reg["voc_scale"])
+             for node, p in regime_now.items() if p["co2"] == p["co2"] and p["voc"] == p["voc"]]
+    positions = label_positions([(x / xmax, y / ymax) for _, _, x, y in stars])
+    for (node, p, x, y), pos in zip(stars, positions, strict=True):
         room = labels.get(node, node)
         fig.add_trace(go.Scatter(
-            x=[x], y=[y], mode="markers+text", text=[room], textposition="top center",
+            x=[x], y=[y], mode="markers+text", text=[room], textposition=pos,
             textfont={"size": 10, "color": node_color(node)},
             marker=dict(symbol="star", size=16, color=node_color(node), line=dict(width=1.2, color=INK)),
             name=room, showlegend=False,
@@ -84,16 +91,63 @@ def plane_figure(regime_now: dict, labels: dict, cfg: dict, model_meta: dict | N
     return fig
 
 
+LABEL_SLOTS = ("top center", "bottom center", "middle right", "middle left",
+               "top right", "bottom left", "top left", "bottom right")
+LABEL_NEAR = 0.07       # axis-fraction distance under which two star labels would collide
+
+
+def label_positions(pts: list[tuple[float, float]], near: float = LABEL_NEAR) -> list[str]:
+    """One plotly textposition per point so that points closer than ``near``
+    (in axis fractions) get different label slots. Greedy: every point takes the
+    first slot none of its earlier neighbours uses; hover always has the full text."""
+    out: list[str] = []
+    for i, (x, y) in enumerate(pts):
+        used = {out[j] for j, (px, py) in enumerate(pts[:i])
+                if ((x - px) ** 2 + (y - py) ** 2) ** 0.5 < near}
+        out.append(next((sl for sl in LABEL_SLOTS if sl not in used), LABEL_SLOTS[0]))
+    return out
+
+
+def action_summary(devs: dict) -> dict:
+    """Collapse the fan / purifier action payloads of one room into one row:
+    word (ACTION_WORDS), reason, and -- for the devices that are ON -- since
+    (latest switch-on, UTC) and hold_until (latest, UTC); both None when nothing
+    is ON. ``kept`` when every ON device is only held by hysteresis / minimum
+    run time."""
+    if not devs:
+        return {"word": "—", "reason": "", "since": None, "hold_until": None, "kept": False}
+    if all(p["rule"] == HOLD for p in devs.values()):
+        word, kept = ACTION_WORDS["hold"], False
+    else:
+        on = [d for d in ("fan", "purifier") if devs.get(d, {}).get("state") == 1]
+        word = ACTION_WORDS["both" if len(on) == 2 else on[0] if on else "none"]
+        kept = bool(on) and all(devs[d]["rule"].startswith(("keep", "min_run")) for d in on)
+        if kept:
+            word += ACTION_WORDS["keep"]
+    parts = []
+    regime = next((p["values"].get("regime") for p in devs.values()), None)
+    if regime in REGIME_KO:
+        parts.append(f"레짐 {REGIME_KO[regime]}")
+    for d, p in devs.items():
+        var = "co2" if d == "fan" else "voc"
+        val = p["values"].get(var)
+        parts.append(f"{DEVICE_KO.get(d, d)} {'ON · ' if p['state'] == 1 else ''}{p['rule']}"
+                     + (f" ({var} {val:.0f})" if isinstance(val, (int, float)) else ""))
+    on_devs = [p for p in devs.values() if p["state"] == 1]
+    return {"word": word, "reason": " · ".join(parts), "kept": kept,
+            "since": max(p["since"] for p in on_devs) if on_devs else None,
+            "hold_until": max(p["hold_until"] for p in on_devs) if on_devs else None}
+
+
 def regime_table(regime_now: dict, actions: dict, labels: dict) -> pd.DataFrame:
     rows = []
     for node, p in regime_now.items():
-        acts = actions.get(node, {})
-        rows.append({"교실": labels.get(node, node), "레짐": REGIME_KO.get(p["regime"], p["regime"]),
+        rows.append({"교실": labels.get(node, node),
+                     "레짐": REGIME_KO.get(p["regime"], "보류" if p["regime"] == HOLD else p["regime"]),
                      "CO₂": None if p["co2"] != p["co2"] else round(p["co2"]),
                      "VOC": None if p["voc"] != p["voc"] else round(p["voc"]),
                      "체류(min)": f"{'≥' if p['dwell_censored'] else ''}{p['dwell_min']:.0f}",
-                     "환풍기": "ON" if acts.get("fan", {}).get("state") == 1 else "off",
-                     "공청기": "ON" if acts.get("purifier", {}).get("state") == 1 else "off"})
+                     "행동": action_summary(actions.get(node, {}))["word"]})
     return pd.DataFrame(rows)
 
 
@@ -177,16 +231,20 @@ def transition_matrix_figure(counts: dict) -> go.Figure:
 
 # ---- E / F / G / I tables ----------------------------------------------------------
 
-def actions_table(actions: dict, labels: dict) -> pd.DataFrame:
+def actions_table(actions: dict, labels: dict, run_at: str | None = None) -> pd.DataFrame:
+    """One row per room: 행동 · 근거 · 판정 시각 (the hourly run, KST) · 유지 (when
+    something is ON: since when, plus the minimum-run end while it still binds)."""
     rows = []
     for node, devs in actions.items():
-        for dev, p in devs.items():
-            rows.append({"교실": labels.get(node, node), "장치": "환풍기" if dev == "fan" else "공청기",
-                         "상태": "ON" if p["state"] == 1 else "off", "규칙": p["rule"],
-                         "값": ", ".join(f"{k} {v:.0f}" if isinstance(v, (int, float)) else f"{k} {v}"
-                                        for k, v in p["values"].items() if v is not None),
-                         "since (KST)": _kst(p["since"]).strftime("%m-%d %H:%M"),
-                         "hold until": _kst(p["hold_until"]).strftime("%H:%M")})
+        a = action_summary(devs)
+        keep = "—"
+        if a["since"]:
+            keep = f"{_kst(a['since']).strftime('%m-%d %H:%M')}부터"
+            if run_at is None or a["hold_until"] > run_at:
+                keep += f" · 최소 ~{_kst(a['hold_until']).strftime('%H:%M')}"
+        rows.append({"교실": labels.get(node, node), "행동": a["word"], "근거": a["reason"],
+                     "판정 시각": _kst(run_at).strftime("%m-%d %H:%M") if run_at else "—",
+                     "유지": keep})
     return pd.DataFrame(rows)
 
 
@@ -204,11 +262,21 @@ def forecast_table(forecasts: dict, regime_now: dict, labels: dict, cfg: dict) -
     return pd.DataFrame(rows)
 
 
-def occ_table(payload: dict, labels: dict) -> pd.DataFrame:
+def occ_table(payload: dict, labels: dict, win_start: str | None = None) -> pd.DataFrame:
+    """One row per room with a vision node. 마지막 비전 버킷 = last occupancy
+    bucket (KST); a room whose last bucket is before win_start is marked 중단."""
     rows = []
     for room, s in payload.get("by_room", {}).items():
+        last = s.get("last_bucket")
+        if not last:
+            seen = "—"
+        else:
+            seen = _kst(last).strftime("%m-%d %H:%M")
+            if win_start and last < win_start:
+                seen += " · 중단"
         rows.append({"교실": room, "조인 행": s["n"], "Spearman ρ": s["rho"],
-                     "기울기 (ppm/인)": None if s["slope"] is None else round(s["slope"], 1)})
+                     "기울기 (ppm/인)": None if s["slope"] is None else round(s["slope"], 1),
+                     "마지막 비전 버킷 (KST)": seen})
     return pd.DataFrame(rows)
 
 

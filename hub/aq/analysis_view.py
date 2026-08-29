@@ -18,7 +18,7 @@ from pathlib import Path
 import streamlit as st
 
 from aq import governance
-from aq.ui_common import DB, INK, _occ_table_exists, _ro, data_version, load_node_labels
+from aq.ui_common import DB, INK, _occ_table_exists, _ro, data_version
 
 TS_FMT = "%Y-%m-%d %H:%M:%S"
 KST = timedelta(hours=9)
@@ -92,20 +92,26 @@ def kst(ts_utc: str | None, fmt: str = "%m-%d %H:%M") -> str:
 def service_status(max_id: int, aid: int) -> dict:
     """hub freshness, node activity, analyst runs and model version."""
     out = {"hub_last": None, "hub_age_min": None, "readings_rows": 0, "env_active": 0,
-           "vis_recent": 0, "hourly": "", "daily": "", "weekly": "", "model": None,
-           "journal": None}
+           "vis_recent": 0, "vis_nodes": [], "env_nodes": [], "hourly": "", "daily": "", "weekly": "",
+           "model": None, "journal": None}
     if not os.path.isfile(DB):
         return out
     with closing(_ro()) as con:
         out["journal"] = con.execute("PRAGMA journal_mode").fetchone()[0]
         out["readings_rows"] = con.execute("SELECT COUNT(*) FROM readings").fetchone()[0]
         last = con.execute("SELECT MAX(ts) FROM readings").fetchone()[0]
+        # node totals come from the tables, not nodes.json: on the board every node id
+        # is "node_XXXXXX", so only readings / occupancy tell environment and vision apart
+        out["env_nodes"] = [r[0] for r in con.execute(
+            "SELECT node FROM readings GROUP BY node ORDER BY node")]
         out["env_active"] = con.execute(
             "SELECT COUNT(*) FROM (SELECT node FROM readings "
             "WHERE id > (SELECT MAX(id) FROM readings) - 2000 GROUP BY node "
             "HAVING MAX(ts) >= datetime('now', ?))", (f"-{ACTIVE_WINDOW_MIN} minutes",)
         ).fetchone()[0]
         if _occ_table_exists():
+            out["vis_nodes"] = [r[0] for r in con.execute(
+                "SELECT node FROM occupancy GROUP BY node ORDER BY node")]
             out["vis_recent"] = con.execute(
                 "SELECT COUNT(*) FROM (SELECT node FROM occupancy "
                 "WHERE id > (SELECT MAX(id) FROM occupancy) - 2000 GROUP BY node "
@@ -130,7 +136,7 @@ def render_sidebar(page: str) -> None:
     max_id, _ = data_version()
     aid, _ = analysis_version()
     s = service_status(max_id, aid)
-    n_env = sum(1 for k in load_node_labels() if not k.startswith("vis"))
+    n_env = len(s["env_nodes"])
     with st.sidebar:
         st.markdown(f"<div style='font-weight:700;color:{INK};font-size:15px;margin-bottom:6px'>"
                     "multinode_aq · UNO Q (aqhub)</div>", unsafe_allow_html=True)
@@ -139,7 +145,8 @@ def render_sidebar(page: str) -> None:
         fresh = s["hub_age_min"] is not None and s["hub_age_min"] <= ACTIVE_WINDOW_MIN
         st.markdown(f"**hub.py** {'🟢 수집 중' if fresh else '🔴 수신 지연'}  \n"
                     f"마지막 수신 {kst(s['hub_last'])} KST  \n"
-                    f"환경 노드 {s['env_active']} / {n_env} 활성 · 비전 노드 {s['vis_recent']} 최근  \n"
+                    f"환경 노드 {s['env_active']} / {n_env} 활성 · "
+                    f"비전 노드 {s['vis_recent']} / {len(s['vis_nodes'])} (24h 내 수신)  \n"
                     f"readings {s['readings_rows']:,} 행 · journal {s['journal']}")
         st.markdown("---")
         if s["hourly"]:

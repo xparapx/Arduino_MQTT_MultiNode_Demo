@@ -154,6 +154,22 @@ def load_occupancy(conn: sqlite3.Connection, start: str, end: str) -> pd.DataFra
     return df.sort_values(["node", "bucket"]).reset_index(drop=True)[cols]
 
 
+def last_occupancy_bucket(conn: sqlite3.Connection) -> dict[str, str]:
+    """{node: last 5-minute bucket} over the whole occupancy table (all time,
+    not just an analysis window) so a vision node that stopped reporting still
+    has a "last seen" the dashboard can show as stopped. Read-only; served by
+    ix_occupancy_node_ts."""
+    if "occupancy" not in existing_tables(conn):
+        return {}
+    rows = conn.execute("SELECT node, MAX(ts) FROM occupancy GROUP BY node").fetchall()
+    if not rows:
+        return {}
+    import pandas as pd
+
+    buckets = floor_buckets(pd.Series([ts for _, ts in rows]))
+    return {node: b for (node, _), b in zip(rows, buckets, strict=True)}
+
+
 ANALYSIS_COLS = ("run_at", "kind", "scope", "win_start", "win_end", "model_ver", "payload")
 
 
