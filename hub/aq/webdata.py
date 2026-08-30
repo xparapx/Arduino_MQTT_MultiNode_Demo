@@ -42,6 +42,8 @@ RECORDS_N = 5
 OCC_HIST = 24
 ACTIVE_WINDOW_MIN = 15        # node with a row in the last 15 min counts as active
 VISION_RECENT_DAYS = 1
+BAND24_HOURS = 24            # action cards: value trace behind the hysteresis band
+BAND24_BUCKET_MIN = 5
 STALE_MIN = 12                # vision bucket older than this -> "지연"
 
 # Same tables as aq.ui_common.METRICS / GAUGE_KEYS / NODE_PALETTE (kept in sync by
@@ -360,6 +362,67 @@ class WebData:
                "WHERE kind=? ORDER BY id DESC LIMIT ?")
         return [_parse(r) for r in con.execute(sql, (kind, limit)).fetchall()]
 
+    def _band24_readings(self, con, start: str, end: str) -> dict[str, dict[str, list]]:
+        """{node: {"co2": [...], "voc": [...]}} -- 5-min bucket means over (start, end],
+        one slot per bucket (None where nothing was received)."""
+        n_slots = BAND24_HOURS * 60 // BAND24_BUCKET_MIN
+        if "readings" not in self._tables(con):
+            return {}
+        d = pd.read_sql_query("SELECT node, ts, co2, voc FROM readings WHERE ts > ? AND ts <= ?",
+                              con, params=(start, end))
+        if d.empty:
+            return {}
+        t0 = datetime.strptime(start, TS_FMT)
+        secs = (pd.to_datetime(d["ts"], format=TS_FMT) - t0).dt.total_seconds()
+        d["slot"] = (secs // (BAND24_BUCKET_MIN * 60)).astype(int).clip(0, n_slots - 1)
+        out: dict[str, dict[str, list]] = {}
+        for node, g in d.groupby("node"):
+            m = g.groupby("slot")[["co2", "voc"]].mean()
+            out[node] = {k: [None] * n_slots for k in ("co2", "voc")}
+            for slot, r in m.iterrows():
+                for k in ("co2", "voc"):
+                    v = _num(r[k])
+                    out[node][k][int(slot)] = None if v is None else round(v, 1)
+        return out
+
+    def _band24_history(self, con, start: str, end: str) -> dict[str, dict]:
+        """{node: {"on": {device: [[h0, h1], ...]}, "unjudged": [[h0, h1], ...]}} from the
+        hourly action rows in (start, end]. Hours count from ``start``; a run's state
+        holds until the next run (or ``end``). rule == "hold" = QC-excluded run: the
+        rule layer was not evaluated and the state is the carried-over one."""
+        if "analysis" not in self._tables(con):
+            return {}
+        rows = con.execute("SELECT run_at, scope, payload FROM analysis WHERE kind='action' "
+                           "AND run_at > ? AND run_at <= ? ORDER BY run_at, id", (start, end)).fetchall()
+        t0 = datetime.strptime(start, TS_FMT)
+        h_end = (datetime.strptime(end, TS_FMT) - t0).total_seconds() / 3600
+        hours = lambda ts: (datetime.strptime(ts, TS_FMT) - t0).total_seconds() / 3600  # noqa: E731
+        per: dict[str, dict[str, list[tuple[float, dict]]]] = {}
+        for run_at, scope, payload in rows:
+            p = json.loads(payload)
+            per.setdefault(scope, {}).setdefault(p["device"], []).append((hours(run_at), p))
+        out: dict[str, dict] = {}
+        for node, devs in per.items():
+            on: dict[str, list] = {}
+            unjudged: list = []
+            for dev, runs in devs.items():
+                segs: list = []
+                for i, (h0, p) in enumerate(runs):
+                    h1 = runs[i + 1][0] if i + 1 < len(runs) else h_end
+                    if p.get("state") == 1:
+                        if segs and abs(segs[-1][1] - h0) < 1e-9:
+                            segs[-1][1] = h1
+                        else:
+                            segs.append([h0, h1])
+                    if p.get("rule") == "hold" and dev == "fan":      # same for both devices
+                        if unjudged and abs(unjudged[-1][1] - h0) < 1e-9:
+                            unjudged[-1][1] = h1
+                        else:
+                            unjudged.append([h0, h1])
+                on[dev] = [[round(a, 3), round(b, 3)] for a, b in segs]
+            out[node] = {"on": on, "unjudged": [[round(a, 3), round(b, 3)] for a, b in unjudged]}
+        return out
+
     def model_meta(self, ver: str | None) -> dict | None:
         if not ver or ver == "adhoc":
             return None
@@ -401,6 +464,14 @@ class WebData:
                  ("regime_now", "action", "forecast", "qc", "band", "transition", "occ_co2",
                   "explore", "summary")}
             events = self._recent_rows(con, "model_event", 20)
+            # E: 24 h behind the action cards, anchored at the hourly action run
+            b24: dict = {"start": None, "end": None, "readings": {}, "history": {}}
+            if L["action"]:
+                b24_end = L["action"][0]["run_at"]
+                b24_start = (datetime.strptime(b24_end, TS_FMT) - timedelta(hours=BAND24_HOURS)).strftime(TS_FMT)
+                b24.update(start=b24_start, end=b24_end,
+                           readings=self._band24_readings(con, b24_start, b24_end),
+                           history=self._band24_history(con, b24_start, b24_end))
         reg_rows = L["regime_now"]
         ver = reg_rows[0]["model_ver"] if reg_rows else None
         out["model"].update({"ver": ver, "meta": self.model_meta(ver)})
@@ -459,7 +530,11 @@ class WebData:
                           "action": {**a, "since_kst": kst(a["since"]) if a["since"] else None,
                                      "hold_until_kst": kst(a["hold_until"], "%H:%M") if a["hold_until"] else None,
                                      "binding": binding},
-                          "devices": actions.get(n, {})})
+                          "devices": actions.get(n, {}),
+                          "band24": {"start_kst": kst(b24["start"]), "end_kst": kst(b24["end"]),
+                                     "hours": BAND24_HOURS, "bucket_min": BAND24_BUCKET_MIN,
+                                     **b24["readings"].get(n, {"co2": [], "voc": []}),
+                                     **b24["history"].get(n, {"on": {}, "unjudged": []})}})
         out["rooms"] = rooms
         out["action_run_at_kst"] = kst(action_run_at) if action_run_at else None
         # C: band

@@ -61,8 +61,9 @@
 
     // E
     h += sec("action", "red", "행동지침 — 레짐(ML) × 임계(규칙) × 히스테리시스", `hourly · 환풍기 ON CO₂&gt;${r.fan.on_co2} / OFF &lt;${r.fan.off_co2} · 공청기 ON VOC&gt;${r.purifier.on_voc} / OFF &lt;${r.purifier.off_voc} · 최소 ${r.min_run_minutes}분`);
-    h += `<div class="acts">${A.rooms.map(actionCard).join("")}</div>`
-      + `<p class="note">행동 = 환기 필요(환풍기 ON) / 공기청정 필요(공청기 ON) / 환기·공기청정 필요 / 조치 없음 / 판정 보류(QC 탈락) · (유지) = 히스테리시스·최소 동작으로 유지 중 · 판정 시각 = hourly ${esc(A.action_run_at_kst || "—")} KST · 어휘는 LED 인디케이터 문구와 맞출 예정</p>`;
+    h += `<div class="panel howto"><div><span class="sw z-off"></span>OFF 구간 — 하한 미만, 끔</div><div><span class="sw z-band"></span>밴드 — 하한~상한, 이전 상태 유지</div><div><span class="sw z-on"></span>ON 구간 — 상한 초과, 레짐 게이트 열리면 켬</div>`
+      + `<div><span class="sw mk"></span>현재값 (hourly ${esc(A.action_run_at_kst || "—")} KST 판정)</div><div><span class="sw trk"></span>장치 ON 이력</div><div><span class="sw hat"></span>QC 탈락 — 규칙 미평가, 상태 유지</div></div>`
+      + `<div class="acts">${A.rooms.map((x) => actionCard(x, r)).join("")}</div>`;
 
     // F
     h += sec("forecast", "purple", "예측 · 경보 — 30분 후 CO₂ · VOC", "hourly · 다중출력 회귀(StandardScaler → Ridge) · 타깃 = 미래 실측값 · 경보 = 예측값이 ON 임계 초과");
@@ -107,15 +108,27 @@
     if (ws) ws.addEventListener("change", (e) => { within = e.target.value; render(); });
   }
 
-  function actionCard(x) {
+  // E card: header + action word, then per device "now" (value · zone chip · band gauge)
+  // over its 24 h trace. Device state is always ON / OFF (actuator_state); a QC-excluded
+  // run only means the rule layer was not evaluated ("미평가"), the state carries over.
+  function actionCard(x, rules) {
     const a = x.action, k = a.kind, col = css(actionColor[k] || "--grid");
-    const devs = x.devices || {};
-    const diag = x.judged ? `${AQ.REGIME_KO[x.regime] || x.regime} · 체류 ${x.dwell_censored ? "≥" : ""}${num(x.dwell_min)}분` : "—";
-    const rule = Object.values(devs).map((d) => `${d.device === "fan" ? "환풍기" : "공청기"} ${d.state ? "ON · " : ""}${d.rule}`).join("\n") || "—";
-    const keep = a.since_kst ? `${a.since_kst}부터${a.binding ? ` · 최소 ~${a.hold_until_kst}` : ""}` : "—";
-    const why = x.judged ? `CO₂ ${num(x.co2)} ppm · VOC ${num(x.voc)} · ${esc(a.reason)}` : esc(a.reason || "QC 게이트 미달 — 규칙층도 돌리지 않음");
+    const why = x.judged ? `${AQ.REGIME_KO[x.regime] || x.regime} · 체류 ${x.dwell_censored ? "≥" : ""}${num(x.dwell_min)}분 · ${esc(a.reason)}` : esc(a.reason || "QC 게이트 미달 — 규칙 미평가, 장치 상태는 마지막 값 그대로");
     return `<div class="act${k === "hold" ? " hold" : ""}" style="border-left-color:${col}"><div class="h">${nm(x)}${regime(x.regime)}</div><div class="do">${actionChip(k, a.word, true)}</div>`
-      + `<div class="chain"><div><b>진단 (ML)</b><span>${esc(diag)}</span></div><div><b>판단 (규칙)</b><span style="white-space:pre-line">${esc(rule)}</span></div><div><b>유지</b><span>${esc(keep)}</span></div></div><div class="why">${why}</div></div>`;
+      + `<div class="devs">${deviceBlock(x, "fan", rules)}${deviceBlock(x, "purifier", rules)}</div><div class="why">${why}</div></div>`;
+  }
+
+  function deviceBlock(x, dev, rules) {
+    const ko = dev === "fan" ? "환풍기" : "공청기", d = (x.devices || {})[dev], c = CH.bandCfg(rules, dev), b = x.band24 || {};
+    const state = d ? d.state === 1 : false, kept = state && /^(keep|min_run)/.test(d.rule || "");
+    const st = !d ? '<span class="st">—</span>' : d.rule === "hold" ? `<span class="st${state ? " on" : ""}">${state ? "ON" : "OFF"} · 미평가</span>`
+      : state ? (kept ? '<span class="st keep">ON · 유지</span>' : '<span class="st on">ON</span>') : '<span class="st">OFF</span>';
+    const key = dev === "fan" ? "co2" : "voc";
+    const v = x.judged ? x[key] : ((d || {}).values || {})[key] ?? null, z = CH.bandZone(c, v);   // unjudged: the value the skipped rule saw
+    const val = v === null || v === undefined ? "<span>—</span>" : `<b>${c.var} ${num(Math.round(v))}</b>${c.unit ? `<span>${c.unit}</span>` : ""}<span class="zc z-${z}">${CH.ZONE_KO[z]}</span>`;
+    const series = dev === "fan" ? b.co2 : b.voc;
+    const body = series && series.length ? CH.bandGauge(c, v) + CH.bandStrip(c, b, dev, ko) : `<div class="empty">${b.hours || 24}h 수신 없음</div>`;
+    return `<div class="dev"><div class="lbl"><span class="nm">${ko} ${st}</span><span class="val">${val}</span></div>${body}</div>`;
   }
 
   async function load() {

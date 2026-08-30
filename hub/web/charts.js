@@ -237,5 +237,75 @@ const CH = (() => {
     return s + "</svg>";
   }
 
-  return { radar, box, hbars, line, occBars, plane, band, matrix, corr, density, rc };
+  // ---- page 2 E: hysteresis band gauge + 24 h strip -----------------------------------
+  // One value axis for both: OFF zone (< off) 25 %, band (off..on) 50 %, ON zone (> on) 25 %.
+  const W_OFF = 0.25, W_BAND = 0.5;
+  const bandCfg = (rules, dev) => {
+    const r = rules[dev], on = dev === "fan" ? r.on_co2 : r.on_voc, off = dev === "fan" ? r.off_co2 : r.off_voc, span = on - off;
+    return { on, off, lo: Math.max(0, off - span), hi: on + span, var: dev === "fan" ? "CO₂" : "VOC", unit: dev === "fan" ? "ppm" : "" };
+  };
+  const bandFrac = (c, v) => {
+    v = Math.min(Math.max(v, c.lo), c.hi);
+    if (v < c.off) return (v - c.lo) / (c.off - c.lo) * W_OFF;
+    if (v <= c.on) return W_OFF + (v - c.off) / (c.on - c.off) * W_BAND;
+    return W_OFF + W_BAND + (v - c.on) / (c.hi - c.on) * (1 - W_OFF - W_BAND);
+  };
+  const bandZone = (c, v) => v === null || v === undefined ? null : v > c.on ? "on" : v < c.off ? "off" : "band";
+  const hex = (c) => c.length === 4 ? [1, 2, 3].map((i) => parseInt(c[i] + c[i], 16)) : [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+  const mix = (a, b, p) => "#" + hex(a).map((v, i) => Math.round(v * p + hex(b)[i] * (1 - p)).toString(16).padStart(2, "0")).join("");
+  // zone fills = regime palette (off → 청정, band → 물질, on → 복합) mixed toward the panel, as app.css --zone-*
+  const zoneFill = (k) => mix(css({ off: "--rg-clean", band: "--rg-matter", on: "--rg-mixed" }[k]), css("--panel"), parseFloat(css("--zone-mix")) / 100);
+  const ZONE_KO = { off: "OFF 구간", band: "밴드", on: "ON 구간" };
+
+  function bandGauge(c, v) {
+    const W = 320, H = 14, barY = 1, barH = 12, x = (val) => bandFrac(c, val) * W;
+    let s = `<svg class="chart gauge" viewBox="0 0 ${W} ${H}">`;
+    s += `<rect x="0" y="${barY}" width="${f1(x(c.off) - 1)}" height="${barH}" rx="3" fill="${zoneFill("off")}"/>`;
+    s += `<rect x="${f1(x(c.off) + 1)}" y="${barY}" width="${f1(x(c.on) - x(c.off) - 2)}" height="${barH}" fill="${zoneFill("band")}"/>`;
+    s += `<rect x="${f1(x(c.on) + 1)}" y="${barY}" width="${f1(W - x(c.on) - 1)}" height="${barH}" rx="3" fill="${zoneFill("on")}"/>`;
+    if (v !== null && v !== undefined) {
+      const cx = Math.min(Math.max(x(v), 5), W - 5), z = bandZone(c, v);
+      s += `<g data-tip="${c.var} ${num(v)} ${c.unit} · ${ZONE_KO[z]}\n하한 ${c.off} · 상한 ${c.on}"><line x1="${f1(cx)}" x2="${f1(cx)}" y1="${barY - 1}" y2="${barY + barH + 1}" stroke="${css("--ink")}" stroke-width="2"/>`
+         + `<circle cx="${f1(cx)}" cy="${barY + barH / 2}" r="4.5" fill="${css("--ink")}" stroke="${css("--panel")}" stroke-width="2"/></g>`;
+    }
+    return s + "</svg>";
+  }
+
+  function bandStrip(c, b, dev, devKo) {
+    const data = dev === "fan" ? b.co2 : b.voc, n = data.length, hours = b.hours || 24;
+    const W = 320, H = 58, top = 2, plotH = 36, trkY = top + plotH + 4, trkH = 5, axisY = H - 1;
+    const ink = css("--ink"), foot = css("--foot"), grid = css("--grid"), plot = css("--plot"), panel = css("--panel");
+    const y = (v) => top + plotH - bandFrac(c, v) * plotH, x = (i) => (i / (n - 1)) * W, xh = (h) => (h / hours) * W;
+    const uid = `h${Math.random().toString(36).slice(2, 7)}`;
+    let s = `<svg class="chart strip" viewBox="0 0 ${W} ${H}"><defs><pattern id="${uid}" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="${foot}" stroke-width="1"/></pattern></defs>`;
+    s += `<rect x="0" y="${top}" width="${W}" height="${f1(y(c.on) - top)}" fill="${zoneFill("on")}"/>`
+       + `<rect x="0" y="${f1(y(c.on))}" width="${W}" height="${f1(y(c.off) - y(c.on))}" fill="${zoneFill("band")}"/>`
+       + `<rect x="0" y="${f1(y(c.off))}" width="${W}" height="${f1(top + plotH - y(c.off))}" fill="${zoneFill("off")}"/>`;
+    // value trace: one path per run of non-null buckets
+    let d = "", pen = false;
+    data.forEach((v, i) => { if (v === null) { pen = false; return; } d += `${pen ? "L" : "M"}${f1(x(i))} ${f1(y(v))} `; pen = true; });
+    if (d) s += `<path d="${d.trim()}" fill="none" stroke="${ink}" stroke-width="1.5" stroke-linejoin="round"/>`;
+    // ON history track + unjudged (QC-excluded) hours
+    s += `<rect x="0" y="${trkY}" width="${W}" height="${trkH}" fill="${plot}" stroke="${grid}" stroke-width="1"/>`;
+    for (const [a, z] of (b.on || {})[dev] || []) s += `<rect x="${f1(xh(a))}" y="${trkY}" width="${f1(Math.max(0, xh(z) - xh(a)))}" height="${trkH}" fill="${css("--track-on")}"/>`;
+    for (const [a, z] of b.unjudged || []) s += `<rect x="${f1(xh(a))}" y="${trkY}" width="${f1(Math.max(0, xh(z) - xh(a)))}" height="${trkH}" fill="url(#${uid})"/>`;
+    // hourly hover columns
+    const per = n / hours;
+    for (let h = 0; h < hours; h++) {
+      const seg = data.slice(Math.round(h * per), Math.round((h + 1) * per)).filter((v) => v !== null);
+      const mean = seg.length ? seg.reduce((p, q) => p + q, 0) / seg.length : null;
+      const on = ((b.on || {})[dev] || []).some(([a, z]) => h + 0.5 >= a && h + 0.5 < z);
+      const unj = (b.unjudged || []).some(([a, z]) => h + 0.5 >= a && h + 0.5 < z);
+      const tip = `${hours - h}h 전 ~ ${hours - h - 1}h 전 · ${c.var} ${mean === null ? "결측" : `평균 ${num(Math.round(mean))} · ${ZONE_KO[bandZone(c, mean)]}`}\n${devKo} ${on ? "ON" : "OFF"}${unj ? " · 규칙 미평가(QC)" : ""}`;
+      s += `<rect x="${f1(xh(h))}" y="${top}" width="${f1(xh(1))}" height="${trkY + trkH - top}" fill="transparent" data-tip="${esc(tip)}"/>`;
+    }
+    for (const h of [0, 8, 16]) s += `<text x="${f1(xh(h))}" y="${axisY}" font-size="9" fill="${foot}">-${hours - h}h</text>`;
+    s += `<text x="${W}" y="${axisY}" text-anchor="end" font-size="9" fill="${foot}">판정</text>`;
+    let last = n - 1;
+    while (last >= 0 && data[last] === null) last--;
+    if (last >= 0) s += `<circle cx="${f1(x(last))}" cy="${f1(y(data[last]))}" r="4" fill="${ink}" stroke="${panel}" stroke-width="2" pointer-events="none"/>`;
+    return s + "</svg>";
+  }
+
+  return { radar, box, hbars, line, occBars, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO };
 })();
