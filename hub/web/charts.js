@@ -300,7 +300,7 @@ const CH = (() => {
       s += `<rect x="${f1(xh(h))}" y="${top}" width="${f1(xh(1))}" height="${trkY + trkH - top}" fill="transparent" data-tip="${esc(tip)}"/>`;
     }
     for (const h of [0, 8, 16]) s += `<text x="${f1(xh(h))}" y="${axisY}" font-size="9" fill="${foot}">-${hours - h}h</text>`;
-    s += `<text x="${W}" y="${axisY}" text-anchor="end" font-size="9" fill="${foot}">판정</text>`;
+    s += `<text x="${W}" y="${axisY}" text-anchor="end" font-size="9" fill="${foot}">지금</text>`;
     let last = n - 1;
     while (last >= 0 && data[last] === null) last--;
     if (last >= 0) s += `<circle cx="${f1(x(last))}" cy="${f1(y(data[last]))}" r="4" fill="${ink}" stroke="${panel}" stroke-width="2" pointer-events="none"/>`;

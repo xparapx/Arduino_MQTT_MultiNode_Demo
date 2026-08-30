@@ -464,10 +464,11 @@ class WebData:
                  ("regime_now", "action", "forecast", "qc", "band", "transition", "occ_co2",
                   "explore", "summary")}
             events = self._recent_rows(con, "model_event", 20)
-            # E: 24 h behind the action cards, anchored at the hourly action run
+            # E: the 24 h behind the action cards end at the newest readings bucket
+            # ("now"), not at the hourly run -- the run can be up to an hour old.
             b24: dict = {"start": None, "end": None, "readings": {}, "history": {}}
             if L["action"]:
-                b24_end = L["action"][0]["run_at"]
+                b24_end = max(self.data_version()[1] or "", L["action"][0]["run_at"])
                 b24_start = (datetime.strptime(b24_end, TS_FMT) - timedelta(hours=BAND24_HOURS)).strftime(TS_FMT)
                 b24.update(start=b24_start, end=b24_end,
                            readings=self._band24_readings(con, b24_start, b24_end),
