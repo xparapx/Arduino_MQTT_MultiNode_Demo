@@ -117,6 +117,19 @@ def test_analysis_bundle(site):
     assert a["summary"]["lines"]
     assert len(a["qc"]) == 8 and all(len(q["days"]) <= 8 for q in a["qc"])   # one row per node
     assert any(q["failed_days"] for q in a["qc"])
+    # E: 24 h band trace per room, anchored at the hourly action run
+    n_slots = webdata.BAND24_HOURS * 60 // webdata.BAND24_BUCKET_MIN
+    for r in a["rooms"]:
+        b = r["band24"]
+        assert b["end_kst"] and b["hours"] == webdata.BAND24_HOURS
+        assert len(b["co2"]) == len(b["voc"]) and len(b["co2"]) in (0, n_slots)
+        assert all(0 <= h0 <= h1 <= webdata.BAND24_HOURS
+                   for segs in [*b["on"].values(), b["unjudged"]] for h0, h1 in segs)
+        if r["judged"]:
+            assert sum(v is not None for v in b["co2"]) > 0
+        else:
+            assert b["unjudged"] or not b["co2"]          # QC-excluded run -> hatched hours
+    assert any(sum(v is not None for v in r["band24"]["co2"]) > 200 for r in a["rooms"])
     json.dumps(a, allow_nan=False)                                   # no NaN anywhere
 
 
