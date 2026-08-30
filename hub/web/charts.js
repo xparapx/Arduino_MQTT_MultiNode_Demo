@@ -253,8 +253,8 @@ const CH = (() => {
   const bandZone = (c, v) => v === null || v === undefined ? null : v > c.on ? "on" : v < c.off ? "off" : "band";
   const hex = (c) => c.length === 4 ? [1, 2, 3].map((i) => parseInt(c[i] + c[i], 16)) : [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
   const mix = (a, b, p) => "#" + hex(a).map((v, i) => Math.round(v * p + hex(b)[i] * (1 - p)).toString(16).padStart(2, "0")).join("");
-  // zone fills = regime palette (off → 청정, band → 물질, on → 복합) mixed toward the panel, as app.css --zone-*
-  const zoneFill = (k) => mix(css({ off: "--rg-clean", band: "--rg-matter", on: "--rg-mixed" }[k]), css("--panel"), parseFloat(css("--zone-mix")) / 100);
+  // zone fills = regime palette (off → 청정, band → 인체, on → 복합) mixed toward the panel, as app.css --zone-*
+  const zoneFill = (k) => mix(css({ off: "--rg-clean", band: "--rg-human", on: "--rg-mixed" }[k]), css("--panel"), parseFloat(css("--zone-mix")) / 100);
   const ZONE_KO = { off: "OFF 구간", band: "밴드", on: "ON 구간" };
 
   function bandGauge(c, v) {

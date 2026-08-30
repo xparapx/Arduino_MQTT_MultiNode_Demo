@@ -10,7 +10,7 @@
   /* regime palette (user, 2026-08-29): 청정 / 물질 / 인체 / 복합 */
   --rg-clean: #12CBC4; --rg-matter: #FFC312; --rg-human: #9980FA; --rg-mixed: #ED4C67;
   --rg-tint: 22%;
-  --zone-mix: 42%;              /* hysteresis zones = regime colours mixed toward the panel */
+  --zone-mix: 22%;              /* hysteresis zones = regime colours at the density-map quadrant tint (0.22) */
   --track-on: #cfd6e0;
   --chip-ok: #3b6b4c; --chip-ex: #7a3f3f; --chip-warn: #7a5a3f;
   --acc: #FFB300; --map-bg: #161a22; --map-line: #2a3140; --bar: #3d4c60;
@@ -27,7 +27,7 @@
   --badge-ink: #ffffff;
   --rg-clean: #0fa8a2; --rg-matter: #d39a00; --rg-human: #7a5fe0; --rg-mixed: #d63f5a;
   --rg-tint: 16%;
-  --zone-mix: 38%;
+  --zone-mix: 22%;
   --track-on: #3d4c60;
   --chip-ok: #9fd3b1; --chip-ex: #f0b4b1; --chip-warn: #f0cba8;
   --acc: #b87a00; --map-bg: #f3f5f8; --map-line: #dfe3ea; --bar: #b9c4d3;
@@ -163,7 +163,7 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .st.on { color: var(--ink); border-color: var(--ink); } .st.keep { color: var(--acc); border-color: var(--acc); }
 .zc { font-size: 10px; padding: 1px 6px; border-radius: 4px; color: var(--ink); font-weight: 500; }
 .z-off { background: color-mix(in srgb, var(--rg-clean) var(--zone-mix), var(--panel)); }
-.z-band { background: color-mix(in srgb, var(--rg-matter) var(--zone-mix), var(--panel)); }
+.z-band { background: color-mix(in srgb, var(--rg-human) var(--zone-mix), var(--panel)); }
 .z-on { background: color-mix(in srgb, var(--rg-mixed) var(--zone-mix), var(--panel)); }
 .howto { display: flex; flex-wrap: wrap; gap: 6px 26px; font-size: 12px; color: var(--dim); padding: 10px 16px; margin-bottom: 12px; }
 .howto div { display: flex; gap: 7px; align-items: center; }
