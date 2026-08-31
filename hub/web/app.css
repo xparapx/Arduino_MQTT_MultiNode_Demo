@@ -194,6 +194,14 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .vp .tag { position: absolute; right: 8px; bottom: 6px; font-size: 9px; color: var(--foot); font-family: "IBM Plex Mono", monospace; }
 @keyframes vb { 0%, 100% { opacity: 1; } 50% { opacity: 0.18; } }
 .vp .side2 { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+/* vision node ON / OFF chips -- fills the empty space above the bucket-trend bars */
+.vp .vnodes { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; margin: 0 0 auto; }
+.vp .vnc { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+  font-size: 10.5px; font-family: "IBM Plex Mono", monospace;
+  background: var(--chip2-bg); border: 1px solid var(--chip2-bd); color: var(--dim); }
+.vp .vnc i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); opacity: 0.5; }
+.vp .vnc.on { color: var(--green); border-color: var(--chip-ok); }
+.vp .vnc.on i { background: var(--green); opacity: 1; }
 .vp .bars { display: flex; align-items: flex-end; gap: 2px; height: 110px; }
 .vp .bars i { flex: 1; background: var(--bar); border-radius: 2px 2px 0 0; min-height: 2px; }
 .vp .bars i.now { background: var(--acc); }

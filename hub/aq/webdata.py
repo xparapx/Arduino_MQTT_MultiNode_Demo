@@ -281,6 +281,14 @@ class WebData:
             if latest.empty:
                 return {"available": False, "reason": "no rows"}
             labels = self.labels()
+            now = datetime.now(UTC).replace(tzinfo=None)
+            vnodes = []                       # every vision node's latest bucket -> ON / OFF chips
+            for _, v in latest.iterrows():
+                a = (now - datetime.strptime(v["ts"], TS_FMT)).total_seconds() / 60
+                vnodes.append({"node": v["node"], "room": labels.get(v["node"], v["node"]),
+                               "age_min": round(a, 1), "on": a <= STALE_MIN,
+                               "last_kst": v["recv_time"]})
+            vnodes.sort(key=lambda x: self._sort_key(x["room"]))
             vn = next((v for v in latest["node"] if labels.get(v, v) == lbl), None)
             if vn is None:
                 return {"available": False, "reason": "no vision node", "label": lbl}
@@ -293,9 +301,9 @@ class WebData:
         except (ValueError, TypeError, IndexError):
             cents = []
         w = int(row["w"]) if row["w"] else 96
-        age = (datetime.now(UTC).replace(tzinfo=None)
-               - datetime.strptime(row["ts"], TS_FMT)).total_seconds() / 60
+        age = next(x["age_min"] for x in vnodes if x["node"] == vn)
         return {"available": True, "label": lbl, "vision_node": vn, "recv_time": row["recv_time"],
+                "nodes": vnodes,
                 "age_min": round(age, 1), "stale": age > STALE_MIN,
                 "occ": _num(row["occ"]), "occ_med": _num(row["occ_med"]),
                 "occ_max": _num(row["occ_max"]), "n": _num(row["n"]), "w": w, "cents": cents,

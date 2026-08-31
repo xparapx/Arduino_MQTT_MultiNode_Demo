@@ -93,6 +93,9 @@ def test_series_records_occupancy(site):
     occ = s["occupancy"]
     assert occ["available"] and occ["label"] == s["label"] and len(occ["hist"]) <= webdata.OCC_HIST
     assert all(len(c) == 2 for c in occ["cents"])
+    assert len(occ["nodes"]) == 5                                   # ON/OFF chip per vision node
+    assert all({"node", "room", "on", "age_min", "last_kst"} <= set(v) for v in occ["nodes"])
+    assert any(v["node"] == occ["vision_node"] for v in occ["nodes"])
     assert w.series("nope")["times"] == []
 
 
