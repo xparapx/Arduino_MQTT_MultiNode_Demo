@@ -18,8 +18,8 @@
     }
     const cfg = A.cfg, r = cfg.rules, run = cfg.run;
     let h = "";
-    // summary
-    if (A.summary) h += `<div class="panel summary"><div class="t">최근 hourly 판정 요약 — ${esc(A.summary.run_at_kst.slice(6))} KST</div><div class="lines">${A.summary.lines.map((l) => `<div>• ${esc(l)}</div>`).join("")}</div><div class="tt" style="margin-top:8px">hourly ${esc(A.summary.run_at_kst)} KST · 결정론적 템플릿 문장 · 판단 루프 밖</div></div>`;
+    // (hourly summary panel removed 2026-09-01 -- the sections below show the same
+    // information visually; /api/analysis still carries "summary" untouched)
 
     // A
     const meta = A.model.meta, tr = A.transition;
