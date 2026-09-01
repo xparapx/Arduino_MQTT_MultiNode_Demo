@@ -93,3 +93,22 @@ Phase 6 후 화면 검토에서 합의한 항목. Phase 번호 없음(태그 없
 
 후속 PR(2026-08-29): 행동 문구 색 칩(PR #16) · **공개 인스턴스** — `webapp.py --public`은 `/api/export`·`/api/reset`을 403으로 막고 `/api/status.public=true`로 페이지가 5·6절을 렌더하지 않음. 유닛 `multinode_aq_web_public.service`(8502, `--public`)를 8501(관리용) 옆에 추가, Tailscale Funnel은 **8502만** 공개(사용자 결정: 토큰 방식 대신 인스턴스 분리). e2e 1건 추가(10 passed).
 결정 2026-08-29: **Streamlit(`multinode_aq_dashboard`) 정지**, 웹 서비스가 8501 인수(유닛 `--port 8501`). 코드 제거는 Phase 7 뒤 정리 PR. 미결:  · 호스팅은 Tailscale `serve`(테일넷) 우선, **Funnel은 `--public` 모드(reset 차단·export 제한·토큰) 이후로 보류**(사용자 결정 2026-08-29) · `/api/status`의 COUNT(*) 캐시.
+
+## 웹 손질 + 실물 액추에이터 조사 + 비전 노드 안정성 진단 · (2026-09-01, main 직접 커밋)
+
+웹 손질 (b0b74de, 803245b — 배포·확인 완료):
+1. 페이지 1 비전 패널: `/api/series` occupancy에 `nodes`(비전 노드 전체의 마지막 버킷·`on` = 12분 내 수신) 추가, 버킷 추이 위 빈 공간에 ON/OFF 칩 렌더(`.vnodes/.vnc`). e2e 단언 3건 추가, 122 passed.
+2. 페이지 2: h1 아래 설명 캡션 삭제, "최근 hourly 판정 요약" 패널 제거(+사용 안 하는 `.summary` CSS). analyst·`/api/analysis`의 summary는 그대로 — 화면만 제외.
+
+실물 액추에이터 조사 (구현 전 — 사용자 결정 대기):
+- 공청기 = 휴앤텍 SS-3631PW(52W). **통전 복구형 실물 테스트 통과**(재통전 시 자동모드 재개, 설명서 p.8). 12h 자동꺼짐 있음 → 플러그 사이클이 리셋하므로 플러그 제어가 오히려 필수. 환풍기 = 기계식, 문제 없음.
+- 플러그 = Tapo 10A 에너지 모니터링. 로컬 제어 검증: python-kasa ≥0.7.4(KLAP) + **앱에서 기기별 "서드파티 제어" ON 필수**(fw 1.4.x부터 옵트인, 403 이슈의 해결책) + 펌웨어 자동업데이트 OFF + IP DHCP 예약.
+- 확장(8교실) 대안 = Shelly Plug S: 공식 로컬 API(REST/WS/**MQTT 네이티브** → 허브 mosquitto에 직접), 클라우드 계정 불요, 국내 유통 약해 직구. `actuator.py`는 드라이버 계층 분리(kasa/MQTT)로 양쪽 대응 설계.
+- 통합 원칙: actuator_state를 **읽기만** 하는 별도 서비스(불변식 유지). 에너지 모니터링 와트값으로 실동작 검증.
+
+비전 노드 안정성 진단 (occupancy DB + 운용 펌웨어 `occ_node_portenta_cloud.ino`(manual.html 6-2) 정독):
+- 증상: 한 시점에 1노드만 생존, 죽으면 전원 재인가 전까지 영구 다운(E647F1 ~8/23 → 44F2FB 8/25~28 → E1B3AA 8/31~). 생존 중엔 일일 255~288행(만점 288)으로 건강.
+- **원인(확정적)**: `wd.start()`가 setup() 맨 끝인데 setup() 초반에 `while(1)` 데드엔드 2곳(cam.begin 실패, 관문1 실패). WDT 리셋(웜 리셋)은 HM0360 센서를 리셋하지 못해 cam.begin이 실패하기 쉽고, 그 시점엔 IWDG 미무장 → **워치독 없는 무한루프 = 벽돌**. 부차: TLS 협상 wd.kick 1회뿐(30s 초과 시 연결 중 WDT), NTP 1회 동기화(주당 수 분 표류·49.7d rollover), WiFi/MQTT 연속 실패 시 자가 복구 없음.
+- 대책 2계층 (펌웨어 v3는 다음 세션):
+  (1) 펌웨어: wd.start()를 setup() 첫 줄로 · 데드엔드 → 재시도 후 NVIC_SystemReset() · 3버킷 연속 발행 실패 시 자가 리셋 · NTP 6h 재동기화 · TLS 구간 wd.kick 보강.
+  (2) 하드웨어: 비전 노드 USB 전원을 Tapo 플러그에 물리고 **매일 07:59 OFF / 08:00 KST ON**(카메라 이상은 전원 재인가만 확실). 1단계 = Tapo 앱 자체 스케줄(코드 0줄, 허브 무관), 2단계 = actuator.py + systemd 타이머(23:00 UTC)로 이관.
