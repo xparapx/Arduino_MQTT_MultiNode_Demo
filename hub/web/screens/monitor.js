@@ -115,7 +115,10 @@
   });
   AQ.router.register({
     name: "mon-stats", group: "mon", label: "전체통계", icon: "stats", color: "orange",
-    activate() { this.un = store.sub("/api/stats", 300000, (d) => { S.stats = d; renderStats(this.el); }); },
+    activate() {
+      if (!S.stats && !this.el.innerHTML) this.el.innerHTML = sec("stats", "orange", "전체 통계 — 최근 28일", "") + '<div class="panel empty">서버 집계 계산 중…</div>';
+      this.un = store.sub("/api/stats", 300000, (d) => { S.stats = d; renderStats(this.el); });
+    },
     deactivate() { if (this.un) { this.un(); this.un = null; } },
     repaint() { renderStats(this.el); },
   });
