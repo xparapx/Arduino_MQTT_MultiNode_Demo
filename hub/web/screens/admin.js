@@ -23,7 +23,7 @@
     const b = S.bounds || {};
     const lo = (b.lo || "").slice(0, 10), hi = (b.hi || "").slice(0, 10);
     const hours = [...Array(24).keys()].map((h) => `<option value="${h}">${String(h).padStart(2, "0")}:00</option>`).join("");
-    return sec("export", "purple", "데이터 내보내기 (CSV) — 요청 시 생성", "버튼을 누르기 전엔 쿼리 · 직렬화 없음")
+    return sec("export", "purple", "데이터 내보내기 (CSV)", "요청 시 생성 · 버튼을 누르기 전엔 쿼리 · 직렬화 없음")
       + `<div class="grid g2"><div class="panel"><div class="tt" style="margin-bottom:10px">DB = 영구 원본 · CSV = 그 순간의 사본. 준비 → 다운로드.</div>`
       + `<div class="row"><button class="btn" data-export="all">전체 readings CSV 준비</button><button class="btn" data-export="merged">env × occupancy 병합 CSV 준비</button><button class="btn" data-export="occupancy">occupancy 원본 CSV 준비</button></div><div class="row" id="export-out" style="margin-top:10px"></div></div>`
       + `<div class="panel"><div class="tt" style="margin-bottom:8px">Export by date range (KST)</div>`

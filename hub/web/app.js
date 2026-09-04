@@ -87,6 +87,10 @@ const AQ = (() => {
     history: '<circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/>',
     home: '<path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/><path d="M10 20v-6h4v6"/>',
     admin: '<line x1="5" y1="6" x2="19" y2="6"/><circle cx="10" cy="6" r="2"/><line x1="5" y1="12" x2="19" y2="12"/><circle cx="15" cy="12" r="2"/><line x1="5" y1="18" x2="19" y2="18"/><circle cx="8" cy="18" r="2"/>',
+    monitor: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+    diagnose: '<circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="21" y2="21"/><polyline points="7,10.5 9,10.5 10,8 11.5,13 12.5,10.5 14,10.5"/>',
+    gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/>',
+    pulse: '<polyline points="3,12 8,12 10,7 13,17 15,12 21,12"/>',
   };
   function sec(icon, color, title, meta) {
     return `<div class="sec"><div class="chip" style="--c: var(--${color})"><svg viewBox="0 0 24 24">${ICONS[icon]}</svg><h2>${esc(title)}</h2></div><div class="meta">${meta || ""}</div></div>`;
