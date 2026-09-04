@@ -5,22 +5,23 @@ library only.
     uv run python webapp.py --db fixtures/sample.db   # PC, fixture data
 
 Routes
-    GET  /                    web/index.html   (page 1, monitoring)
-    GET  /diagnosis           web/diagnosis.html (page 2, diagnosis)
-    GET  /static/<file>       web/<file>
-    GET  /api/status          sidebar block (hub freshness, nodes, analyst runs, model)
-    GET  /api/live            section 1 (radar per node)
-    GET  /api/stats           section 2 (28-day box stats, CO2 / VOC means per node)
-    GET  /api/series?node=    sections 3 + 4 (60 buckets, records, vision panel)
-    GET  /api/bounds          KST min / max for the range export
+    GET  /                    web/index.html   (SPA shell -- hash-routed screens)
+    GET  /diagnosis           302 -> /#dx-regime (old page-2 bookmarks)
+    GET  /static/<file>       web/<file> (incl. web/screens/*)
+    GET  /api/status          sidebar / Home status (hub freshness, nodes, analyst runs, model)
+    GET  /api/live            radar screen (+ node list for the series screen)
+    GET  /api/stats           stats screen (28-day box stats, CO2 / VOC means per node)
+    GET  /api/series?node=    series + records screens (60 buckets, records, vision panel)
+    GET  /api/bounds          KST min / max for the range export (관리 screen)
     GET  /api/export?kind=all|merged|occupancy|range[&start=&end=]   CSV, built on request
-    GET  /api/analysis        page 2 bundle (analysis table + models/)
-    POST /api/reset           section 6: CSV backup then DELETE FROM readings
+    GET  /api/analysis        diagnosis bundle (analysis table + models/) -- dx-* + Home
+    POST /api/reset           관리 screen: CSV backup then DELETE FROM readings
                               (body {"confirm": "DELETE"}) -- same behaviour as dashboard.py
 
 --public (monitoring-only instance, e.g. the one behind Tailscale Funnel on 8502):
 /api/export and /api/reset answer 403 and /api/status carries "public": true, so
-the pages hide sections 5 and 6. The admin instance (8501) runs without it.
+the client hides the admin screens (최근기록 · 유효범위 · 모델이력 · 관리). The
+admin instance (8501) runs without it.
 
 The data layer is aq.webdata (read-only, memoised on the DB version). Reset is
 the one write and lives here, not in aq/ (CI guard), exactly as page 1 keeps
@@ -47,8 +48,8 @@ from urllib.parse import parse_qs, urlparse
 HUB = Path(__file__).resolve().parent
 WEB = HUB / "web"
 MIN_GZIP = 1024
-PAGES = {"/": "index.html", "/index.html": "index.html", "/diagnosis": "diagnosis.html",
-         "/diagnosis.html": "diagnosis.html"}
+PAGES = {"/": "index.html", "/index.html": "index.html"}
+REDIRECTS = {"/diagnosis": "/#dx-regime", "/diagnosis.html": "/#dx-regime"}   # old page-2 bookmarks
 
 
 def _log(msg: str) -> None:
@@ -106,6 +107,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._api(url.path[5:], q)
             elif url.path in PAGES:
                 self._static(PAGES[url.path])
+            elif url.path in REDIRECTS:
+                self.send_response(302)
+                self.send_header("Location", REDIRECTS[url.path])
+                self.send_header("Content-Length", "0")
+                self.end_headers()
             elif url.path.startswith("/static/"):
                 self._static(url.path[8:])
             else:

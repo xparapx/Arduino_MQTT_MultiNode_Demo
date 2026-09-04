@@ -144,9 +144,11 @@ def test_http_endpoints(site):
     node = site["data"].env_nodes()[0]
     assert get(f"{url}/api/series?node={node}")["node"] == node
     r, body = get(f"{url}/", raw=True)
-    assert r.status == 200 and b"page1.js" in body
-    r, body = get(f"{url}/diagnosis", raw=True)
-    assert b"page2.js" in body
+    assert r.status == 200 and b"router.js" in body and b"screens/monitor.js" in body
+    r, body = get(f"{url}/diagnosis", raw=True)          # 302 -> shell (urllib follows)
+    assert r.status == 200 and b"screens/diagnosis.js" in body
+    r, body = get(f"{url}/static/screens/monitor.js", raw=True)
+    assert r.status == 200
     r, body = get(f"{url}/static/app.css", raw=True)
     assert "text/css" in r.headers["Content-Type"] and b"--panel" in body
     with pytest.raises(urllib.error.HTTPError) as e:
