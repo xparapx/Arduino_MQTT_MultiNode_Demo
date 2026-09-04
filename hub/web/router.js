@@ -35,7 +35,7 @@ AQ.router = (() => {
     if (!current) return "";
     const es = groupEntries(current.group);
     if (es.length < 2) return "";
-    return es.map((e) => `<a role="tab" data-go="${e.name}" class="${e.name === current.name ? "on" : ""}"${e.name === current.name ? ' aria-current="page"' : ""}><svg viewBox="0 0 24 24">${AQ.icons[e.icon]}</svg>${esc(e.label)}</a>`).join("");
+    return es.map((e) => `<a role="tab" data-go="${e.name}" class="${e.name === current.name ? "on" : ""}" style="--c: var(--${e.color || "cyan"})"${e.name === current.name ? ' aria-current="page"' : ""}><svg viewBox="0 0 24 24">${AQ.icons[e.icon]}</svg><span>${esc(e.label)}</span></a>`).join("");
   }
   function dockHTML() {
     return Object.entries(GROUPS)

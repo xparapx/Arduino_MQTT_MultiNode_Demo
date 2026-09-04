@@ -104,7 +104,7 @@
 
   // ---- screens -----------------------------------------------------------------------
   AQ.router.register({
-    name: "mon-live", group: "mon", label: "실시간상태", icon: "radar",
+    name: "mon-live", group: "mon", label: "실시간상태", icon: "radar", color: "cyan",
     activate(param) {
       this.p = param || null;
       if (this.un) this.un();
@@ -114,19 +114,19 @@
     repaint() { renderLive(this.el, this.p); },
   });
   AQ.router.register({
-    name: "mon-stats", group: "mon", label: "전체통계", icon: "stats",
+    name: "mon-stats", group: "mon", label: "전체통계", icon: "stats", color: "orange",
     activate() { this.un = store.sub("/api/stats", 300000, (d) => { S.stats = d; renderStats(this.el); }); },
     deactivate() { if (this.un) { this.un(); this.un = null; } },
     repaint() { renderStats(this.el); },
   });
   AQ.router.register({
-    name: "mon-series", group: "mon", label: "시계열&비전", icon: "series",
+    name: "mon-series", group: "mon", label: "시계열&비전", icon: "series", color: "blue",
     activate() { this.un = store.sub("/api/live", 60000, async (d) => { onLive(d); await loadSeries(); renderSeries(this.el); }); },
     deactivate() { if (this.un) { this.un(); this.un = null; } },
     repaint() { renderSeries(this.el); },
   });
   AQ.router.register({
-    name: "mon-records", group: "mon", label: "최근기록", icon: "records", admin: true,
+    name: "mon-records", group: "mon", label: "최근기록", icon: "records", color: "green", admin: true,
     activate() { this.un = store.sub("/api/live", 60000, async (d) => { onLive(d); await loadSeries(); renderRecords(this.el); }); },
     deactivate() { if (this.un) { this.un(); this.un = null; } },
     repaint() { renderRecords(this.el); },
