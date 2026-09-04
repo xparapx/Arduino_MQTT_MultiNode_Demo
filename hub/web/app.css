@@ -212,6 +212,24 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
   padding: 10px 14px; border-radius: 8px; font-size: 12px; z-index: 60; display: none; }
 
 /* ---- tablet (<= 1100px): sidebar becomes a top bar, grids go to 2 columns ---- */
+/* ---- SPA shell: views + sub-tab bar ---- */
+.view { display: none; }
+.view.on { display: block; }
+.nav a .n svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.2;
+  stroke-linecap: round; stroke-linejoin: round; }
+.nav a.on.g-dx .n { background: var(--purple); }
+.nav a.on.g-admin .n { background: var(--orange); }
+.subtabs { position: sticky; top: 0; z-index: 30; display: flex; gap: 6px; margin: 0 0 6px;
+  padding: 8px 0; background: var(--bg); overflow-x: auto; scrollbar-width: none; }
+.subtabs::-webkit-scrollbar { display: none; }
+.subtabs a { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 999px;
+  border: 1px solid var(--grid); color: var(--dim); font-size: 12.5px; font-weight: 600;
+  text-decoration: none; white-space: nowrap; }
+.subtabs a svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; }
+.subtabs a.on { background: var(--panel); color: var(--ink); border-color: var(--cyan); }
+.subtabs a:hover { color: var(--ink); }
+
 @media (max-width: 1100px) {
   .app { grid-template-columns: 1fr; }
   .side { position: static; height: auto; display: grid; grid-template-columns: auto 1fr; grid-template-areas:

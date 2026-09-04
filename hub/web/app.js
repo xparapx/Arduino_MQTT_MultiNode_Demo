@@ -79,6 +79,8 @@ const AQ = (() => {
     people: '<circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.5-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c3 0 5 2 5 5"/>',
     explore: '<circle cx="11" cy="11" r="7"/><line x1="16" y1="16" x2="21" y2="21"/>',
     history: '<circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/>',
+    home: '<path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/><path d="M10 20v-6h4v6"/>',
+    admin: '<line x1="5" y1="6" x2="19" y2="6"/><circle cx="10" cy="6" r="2"/><line x1="5" y1="12" x2="19" y2="12"/><circle cx="15" cy="12" r="2"/><line x1="5" y1="18" x2="19" y2="18"/><circle cx="8" cy="18" r="2"/>',
   };
   function sec(icon, color, title, meta) {
     return `<div class="sec"><div class="chip" style="--c: var(--${color})"><svg viewBox="0 0 24 24">${ICONS[icon]}</svg><h2>${esc(title)}</h2></div><div class="meta">${meta || ""}</div></div>`;
@@ -95,6 +97,33 @@ const AQ = (() => {
     return `<div class="wrap"><table class="tbl ${cls}"><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table></div>`;
   }
 
+  // ---- store: shared version-gated feeds (one interval per URL, active screens only) --
+  const feeds = {};
+  async function pull(url) {
+    const f = feeds[url];
+    if (!f || !f.subs.size || f.inflight || document.hidden) return;
+    f.inflight = true;
+    try {
+      const d = await getJSON(url);
+      const changed = !f.data || f.data.version !== d.version;
+      f.data = d;
+      if (changed) f.subs.forEach((cb) => cb(d));
+    } catch (e) { console.warn(e); } finally { f.inflight = false; }
+  }
+  const store = {
+    sub(url, every, cb) {
+      const f = feeds[url] || (feeds[url] = { subs: new Set(), data: null, timer: null, inflight: false });
+      f.subs.add(cb);
+      if (!f.timer) f.timer = setInterval(() => pull(url), every);
+      if (f.data) cb(f.data); else pull(url);
+      return () => { f.subs.delete(cb); if (!f.subs.size && f.timer) { clearInterval(f.timer); f.timer = null; } };
+    },
+    get: (url) => (feeds[url] || {}).data,
+    refresh(url) { const f = feeds[url]; if (f) { f.data = null; return pull(url); } },
+  };
+  // a tab restored from background: fetch everything subscribers are waiting for
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) Object.keys(feeds).forEach(pull); });
+
   // ---- sidebar -----------------------------------------------------------------------
   function renderSidebar(s) {
     const set = (id, html, cls) => { const el = $(id); if (!el) return; el.innerHTML = html; el.className = "v " + (cls || ""); };
@@ -107,13 +136,18 @@ const AQ = (() => {
     set("#st-daily", `${s.daily_kst || "—"} · ${s.weekly_kst || "—"}`);
     set("#st-model", s.model || "없음");
   }
-  const mode = { public: false };
+  const mode = { public: false, known: false, last: null };
+  const statusFns = [];
+  const onStatus = (fn) => { statusFns.push(fn); if (mode.last) fn(mode.last); };
   function initSidebar(onFirst) {
     let first = true;
     poll(async () => {
       const s = await getJSON("/api/status");
       mode.public = !!s.public;
+      mode.known = true;
+      mode.last = s;
       renderSidebar(s);
+      statusFns.forEach((fn) => { try { fn(s); } catch (e) { console.warn(e); } });
       const foot = $(".foot");
       if (foot && s.public && !foot.dataset.pub) { foot.dataset.pub = "1"; foot.insertAdjacentHTML("afterbegin", "public · 모니터링 전용<br>"); }
       if (first) { first = false; if (onFirst) onFirst(s); }
@@ -121,5 +155,5 @@ const AQ = (() => {
   }
 
   return { $, esc, css, num, dash, theme, setTheme, initTheme, onTheme, getJSON, poll, initTip, toast, sec, dot,
-           regime, chip, actionChip, regimeColor, REGIME_KO, table, initSidebar, mode };
+           regime, chip, actionChip, regimeColor, REGIME_KO, table, initSidebar, mode, store, onStatus, icons: ICONS };
 })();
