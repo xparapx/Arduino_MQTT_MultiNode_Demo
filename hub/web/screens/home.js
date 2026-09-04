@@ -6,7 +6,7 @@
   const { $, esc, num, sec, dot, regime, actionChip, chip, table, store, onStatus } = AQ;
   let A = null, L = null;
 
-  const metric = (l, v, d, cls) => `<div class="metric${cls ? " " + cls : ""}"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d || ""}</div></div>`;
+  const metric = (l, v, d, mc) => `<div class="metric${mc ? " mc" : ""}"${mc ? ` style="--mc:var(--${mc})"` : ""}><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d || ""}</div></div>`;
   const nm = (r) => `${dot(r.color)}${esc(r.label)}`;
 
   function statusCard() {
@@ -14,10 +14,10 @@
     if (!s) return sec("home", "cyan", "시스템 상태", "") + '<div class="panel empty">상태를 불러오는 중…</div>';
     return sec("home", "cyan", "시스템 상태", "60 s 갱신")
       + `<div class="panel"><div class="grid g4" style="gap:10px">`
-      + metric("hub.py 수집", s.fresh ? "● 수집 중" : "● 수신 지연", s.hub_last_kst ? `마지막 수신 ${esc(s.hub_last_kst)} KST` : "수신 없음")
-      + metric("환경 노드", `${s.env_active} / ${s.env_total} 활성`, `비전 ${s.vis_recent} / ${s.vis_total} (24h)`)
-      + metric("analyst.py", s.hourly_kst ? `hourly ${esc(s.hourly_kst)}` : "실행 없음", `daily ${esc(s.daily_kst || "—")} · weekly ${esc(s.weekly_kst || "—")}`)
-      + metric("진단 모델", esc(s.model || "없음"), `readings ${num(s.readings_rows)} 행`)
+      + metric("hub.py 수집", s.fresh ? "● 수집 중" : "● 수신 지연", s.hub_last_kst ? `마지막 수신 ${esc(s.hub_last_kst)} KST` : "수신 없음", s.fresh ? "green" : "red")
+      + metric("환경 노드", `${s.env_active} / ${s.env_total} 활성`, `비전 ${s.vis_recent} / ${s.vis_total} (24h)`, "cyan")
+      + metric("analyst.py", s.hourly_kst ? `hourly ${esc(s.hourly_kst)}` : "실행 없음", `daily ${esc(s.daily_kst || "—")} · weekly ${esc(s.weekly_kst || "—")}`, "blue")
+      + metric("진단 모델", esc(s.model || "없음"), `readings ${num(s.readings_rows)} 행`, "purple")
       + `</div></div>`;
   }
 
@@ -42,7 +42,7 @@
   function summaryCard() {
     const sm = A && !A.empty ? A.summary : null;
     if (!sm || !sm.lines || !sm.lines.length) return "";
-    return sec("history", "purple", "오늘 한눈에 — hourly 판정 요약", sm.run_at_kst ? `hourly ${esc(sm.run_at_kst)} KST` : "")
+    return sec("history", "purple", "오늘 한눈에", sm.run_at_kst ? `hourly ${esc(sm.run_at_kst)} KST` : "")
       + `<div class="panel"><div style="display:flex;flex-direction:column;gap:6px;font-size:13px">${sm.lines.map((l) => `<div>· ${esc(l)}</div>`).join("")}</div></div>`;
   }
 
