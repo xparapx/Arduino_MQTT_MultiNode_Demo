@@ -25,7 +25,7 @@
   function renderLive(el, node) {
     const d = S.live;
     if (!d || !d.nodes.length) { el.innerHTML = secMeta("") + '<div class="panel empty">데이터가 아직 없습니다 — hub.py와 노드 발행을 확인하세요.</div>'; return; }
-    $("#sub").textContent = `${d.nodes.length} nodes: ${d.nodes.map((n) => n.label).join(", ")} · ${num(d.rows)} rows — last seen ${d.last_seen_kst} (KST) · 온습도 대표값 SCD30 · 데이터가 바뀔 때만 다시 그림`;
+    $("#sub").textContent = `${num(d.rows)} rows — last seen ${d.last_seen_kst} (KST), 데이터 변경시 재반영`;
     const one = node ? d.nodes.find((n) => n.node === node) : null;
     if (one) {
       el.innerHTML = sec("radar", "cyan", `실시간 상태(Radar) — ${esc(one.label)}`, "60 s 갱신 · ★ = ML 타깃")

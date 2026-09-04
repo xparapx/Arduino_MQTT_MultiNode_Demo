@@ -41,7 +41,7 @@
     const brows = A.rooms.map((x) => ({ cls: x.judged ? "" : "dim", cells: [nm(x), regime(x.regime), num(x.co2), num(x.voc), x.judged ? `${x.dwell_censored ? "≥" : ""}${num(x.dwell_min)}` : "—", actionChip(x.action.kind, x.action.word)], txt: [5] }));
     return sec("plane", "cyan", "절대 레짐 (FixedScaling)", `hourly · ${esc(A.model.ver || "—")} predict · ${cfg.regime.smooth_window * cfg.regime.bucket_minutes}분 평활 · CO₂÷${cfg.regime.co2_scale} · VOC÷${cfg.regime.voc_scale}`)
       + `<div class="grid g5" style="align-items:stretch"><div class="span3 panel" style="height:${BH}px">${CH.plane(A.rooms, cfg, meta, BH - 30)}</div>`
-      + `<div class="span2 panel" style="height:${BH}px;display:flex;flex-direction:column">${table(["교실", "레짐", "CO₂", "VOC", "체류(min)", "행동"], brows)}<p class="note" style="margin-top:auto">체류 = 현재 레짐에 머문 시간(관측 하한). 축은 외기 기준 고정 — 재학습해도 4분면 위치가 유지되어 지난주와 비교 가능. 제외 = QC 게이트 미달 — 평면에 별 없음.</p></div></div>`;
+      + `<div class="span2 panel" style="height:${BH}px;display:flex;flex-direction:column">${table(["교실", "레짐", "CO₂", "VOC", "체류(min)", "행동"], brows)}</div></div>`;
   }
 
   // ---- C: 스위칭 밴드 ----------------------------------------------------------------
@@ -131,7 +131,7 @@
       h += `<div class="grid g3"><div class="panel"><div class="tt" style="margin-bottom:6px">Spearman 상관 (${run.daily_window_days}일)</div>${CH.corr(ex)}</div>`
         + `<div class="panel"><div class="tt" style="margin-bottom:6px">Pooled 상대 레짐 — 노드 간 비교 · ★ 현재 (n=${num(p.n)})</div>${CH.density(p, cur)}</div>`
         + `<div class="panel"><div class="row" style="margin-bottom:6px"><span class="tt">자기 기준 (within-node${wn ? `, n=${num(wn.n)}` : ""})</span><select id="within-sel">${nodes.map((x) => `<option value="${esc(x.node)}"${x.node === within ? " selected" : ""}>${esc(x.label)}</option>`).join("")}</select></div>${wn ? CH.density(wn, wcur) : '<div class="info">노드 집계본 없음</div>'}</div></div>`
-        + '<p class="note">여기 두 산점도는 "층위 1: 보는 도구". 판정 엔진(레짐·행동)은 고정 스케일 GMM만 사용 — 데이터 의존 스케일러는 재학습 때 군집이 뒤집히기 때문.</p>';
+;
     } else h += '<div class="info">daily 실행 후 표시됩니다.</div>';
     return h;
   }

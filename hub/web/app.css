@@ -77,7 +77,7 @@ main { padding: 22px 28px 60px; min-width: 0; max-width: 1500px; }
   width: 320px; max-width: 100%; }
 .sec .chip svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2;
   stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
-.sec h2 { font-size: 17px; font-weight: 600; margin: 0; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sec h2 { font-size: 14px; font-weight: 600; margin: 0; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sec .meta { margin-left: auto; font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--dim); text-align: right; }
 
 /* ---- panels, grids, tables ---- */
@@ -101,7 +101,7 @@ main { padding: 22px 28px 60px; min-width: 0; max-width: 1500px; }
   font-family: "IBM Plex Mono", monospace; border: 1px solid var(--grid); color: var(--dim); white-space: nowrap; }
 .chipx.ok { color: var(--green); border-color: var(--chip-ok); } .chipx.ex { color: var(--red); border-color: var(--chip-ex); }
 .chipx.warn { color: var(--orange); border-color: var(--chip-warn); }
-.regime { padding: 2px 8px; border-radius: 5px; font-weight: 600; font-size: 12px; display: inline-block; font-family: "IBM Plex Sans KR", system-ui, sans-serif;
+.regime { padding: 2px 8px; border-radius: 5px; font-weight: 600; font-size: 12px; display: inline-block; white-space: nowrap; font-family: "IBM Plex Sans KR", system-ui, sans-serif;
   border: 1px solid color-mix(in srgb, var(--rc, var(--dim)) 55%, transparent); background: color-mix(in srgb, var(--rc, var(--dim)) var(--rg-tint), transparent); color: var(--rc, var(--dim)); }
 .r-clean { --rc: var(--rg-clean); } .r-matter { --rc: var(--rg-matter); } .r-human { --rc: var(--rg-human); } .r-mixed { --rc: var(--rg-mixed); }
 .r-hold { --rc: var(--dim); background: var(--panel2); }
@@ -231,7 +231,7 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .subtabs a svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2;
   stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
 .subtabs a.on { background: var(--panel); border-color: var(--c, var(--cyan)); color: var(--ink);
-  font-weight: 700; font-size: 14px; }
+  font-weight: 700; font-size: 15px; }
 .subtabs a.on::after { content: ""; position: absolute; top: 0; bottom: 0; width: 45%; left: -60%;
   background: linear-gradient(105deg, transparent, color-mix(in srgb, var(--c, var(--cyan)) 38%, transparent), transparent);
   animation: subtab-sweep 2.4s linear infinite; pointer-events: none; }
@@ -266,7 +266,7 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
   .dock a.on.g-dx { color: var(--purple); }
   .dock a.on.g-admin { color: var(--orange); }
   .sec { margin: 18px 0 10px; flex-wrap: wrap; gap: 8px; }
-  .sec .chip { padding: 6px 12px 6px 10px; gap: 8px; width: 100%; } .sec .chip svg { width: 16px; height: 16px; } .sec h2 { font-size: 14px; }
+  .sec .chip { padding: 6px 12px 6px 10px; gap: 8px; width: 100%; } .sec .chip svg { width: 16px; height: 16px; } .sec h2 { font-size: 12px; }
   .sec .meta { display: none; }
   .panel { padding: 10px 12px; border-radius: 8px; }
   .grid { gap: 8px; }
@@ -276,7 +276,7 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
   .g6 > .panel { padding: 8px; }
   .subtabs { gap: 5px; }
   .subtabs a { flex-direction: column; gap: 3px; padding: 6px 2px; font-size: 10.5px; }
-  .subtabs a.on { font-size: 11.5px; }
+  .subtabs a.on { font-size: 12.5px; }
   .subtabs a svg { width: 17px; height: 17px; }
   .subtabs a span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .boxrow { overflow-x: auto; -webkit-overflow-scrolling: touch; }
