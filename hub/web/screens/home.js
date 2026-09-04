@@ -11,8 +11,8 @@
 
   function statusCard() {
     const s = AQ.mode.last;
-    if (!s) return sec("home", "cyan", "시스템 상태", "") + '<div class="panel empty">상태를 불러오는 중…</div>';
-    return sec("home", "cyan", "시스템 상태", "60 s 갱신")
+    if (!s) return sec("pulse", "cyan", "시스템 상태", "") + '<div class="panel empty">상태를 불러오는 중…</div>';
+    return sec("pulse", "cyan", "시스템 상태", "60 s 갱신")
       + `<div class="panel"><div class="grid g4" style="gap:10px">`
       + metric("hub.py 수집", s.fresh ? "● 수집 중" : "● 수신 지연", s.hub_last_kst ? `마지막 수신 ${esc(s.hub_last_kst)} KST` : "수신 없음", s.fresh ? "green" : "red")
       + metric("환경 노드", `${s.env_active} / ${s.env_total} 활성`, `비전 ${s.vis_recent} / ${s.vis_total} (24h)`, "cyan")

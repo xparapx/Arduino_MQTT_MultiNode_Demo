@@ -9,9 +9,9 @@ AQ.router = (() => {
   const { $, esc } = AQ;
   const GROUPS = {
     home: { label: "Home", short: "Home", icon: "home", cls: "g-home" },
-    mon: { label: "모니터링", short: "모니터", icon: "series", cls: "g-mon" },
-    dx: { label: "진단 & 추론", short: "진단", icon: "plane", cls: "g-dx" },
-    admin: { label: "관리", short: "관리", icon: "admin", cls: "g-admin", admin: true },
+    mon: { label: "모니터링", short: "모니터", icon: "monitor", cls: "g-mon" },
+    dx: { label: "진단 & 추론", short: "진단", icon: "diagnose", cls: "g-dx" },
+    admin: { label: "관리", short: "관리", icon: "gear", cls: "g-admin", admin: true },
   };
   const reg = [], byName = {};
   const scroll = {};

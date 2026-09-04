@@ -19,7 +19,7 @@
     const cfg = A.cfg, run = cfg.run;
     const meta = A.model.meta, tr = A.transition;
     const judged = A.rooms.filter((x) => x.judged).length, held = A.rooms.length - judged;
-    let h = sec("shield", "cyan", "유효 범위 — 이 페이지의 해석이 성립하는 조건", `daily 06:00 UTC · ${run.daily_window_days}일 창 · hourly ${run.hourly_window_hours}h`)
+    let h = sec("shield", "cyan", "유효 범위", `해석 성립 조건 · daily 06:00 UTC · ${run.daily_window_days}일 창 · hourly ${run.hourly_window_hours}h`)
       + `<div class="panel"><div class="grid g4" style="gap:10px">`
       + metric("daily 분석 창", kstRange(A.daily_window), A.run_at.daily_kst ? `daily ${esc(A.run_at.daily_kst)} KST` : "daily 미실행")
       + metric("진단 모델", esc(A.model.ver || "—"), meta ? `${num(meta.rows)}행 · ${meta.window_days}d 학습` : "")
