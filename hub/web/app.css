@@ -230,37 +230,38 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .subtabs a.on { background: var(--panel); color: var(--ink); border-color: var(--cyan); }
 .subtabs a:hover { color: var(--ink); }
 
-@media (max-width: 1100px) {
-  .app { grid-template-columns: 1fr; }
-  .side { position: static; height: auto; display: grid; grid-template-columns: auto 1fr; grid-template-areas:
-    "brand nav" "status status" "analyst analyst" "theme foot"; gap: 8px 16px; align-items: center; padding: 12px 16px; }
-  .brand { grid-area: brand; } .nav { grid-area: nav; flex-direction: row; margin-top: 0; justify-content: flex-end; }
-  .status { margin-top: 0; padding-top: 8px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; }
-  .nav + .status { grid-area: status; } .status + .status { grid-area: analyst; border-top: none; padding-top: 0; }
-  .theme { grid-area: theme; margin-top: 0; } .foot { grid-area: foot; margin-top: 0; text-align: right; }
-  .foot br { display: none; }
-  .g4, .g6, .radar-grid, .acts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .g3, .g5 { grid-template-columns: 1fr; } .span2, .span3 { grid-column: auto; }
-  main { padding: 16px; }
-  .panel[style*="height"] { height: auto !important; }
-  svg.chart[style*="height"] { height: auto !important; }
-}
-/* ---- phone (<= 720px): one column, compact chips, map full width, tables scroll ---- */
-@media (max-width: 720px) {
+.radar-card[data-go] { cursor: pointer; }
+.radar-card.one { max-width: 520px; margin: 0 auto; }
+
+/* ---- mobile (< 900px, Mealboard single breakpoint): bottom dock, one screen ---- */
+.dock { display: none; }
+.scrollx { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 899.98px) {
   html, body { font-size: 13px; }
-  main { padding: 12px 10px 40px; }
+  .app { grid-template-columns: 1fr; }
+  .side { display: none; }              /* 상태 요약은 Home · 시스템 상세는 관리 화면에서 */
+  main { padding: 12px 12px calc(70px + env(safe-area-inset-bottom)); max-width: none; }
   h1 { font-size: 17px; } .sub { font-size: 12px; }
-  .side { grid-template-columns: 1fr; grid-template-areas: "brand" "nav" "status" "analyst" "theme" "foot"; gap: 8px; }
-  .nav { justify-content: stretch; } .nav a { flex: 1; justify-content: center; padding: 8px 10px; }
-  .status { grid-template-columns: 1fr; } .foot { text-align: left; }
+  .dock { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    height: calc(56px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
+    background: var(--side); border-top: 1px solid var(--grid); }
+  .dock a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; color: var(--dim); text-decoration: none; -webkit-tap-highlight-color: transparent; }
+  .dock a svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .dock a span { font-size: 11px; font-weight: 700; }
+  .dock a.on { color: var(--cyan); }
+  .dock a.on.g-dx { color: var(--purple); }
+  .dock a.on.g-admin { color: var(--orange); }
   .sec { margin: 18px 0 10px; flex-wrap: wrap; gap: 8px; }
   .sec .chip { padding: 6px 12px 6px 10px; gap: 8px; } .sec .chip svg { width: 16px; height: 16px; } .sec h2 { font-size: 14px; }
   .sec .meta { display: none; }
   .panel { padding: 10px 12px; border-radius: 8px; }
   .grid { gap: 8px; }
-  .g2, .g3, .g4, .g5, .g6, .radar-grid, .acts { grid-template-columns: 1fr; }
+  .g2, .g3, .g5, .g6, .acts { grid-template-columns: 1fr; }
+  .g4, .radar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }   /* 레이더 2열 × 4행 */
+  .span2, .span3 { grid-column: auto; }
   .g6 > .panel { padding: 8px; }
-  .radar-card svg.chart { max-width: 260px; margin: 0 auto; }
   .metric .v { font-size: 17px; }
   .tbl th, .tbl td { padding: 6px 6px; font-size: 11px; }
   .vp .maprow { flex-direction: column; }
@@ -269,5 +270,11 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
   .vp .bars { height: 70px; }
   .act .do .achip.big { font-size: 16px; }
   .row { gap: 6px; } .btn { padding: 6px 10px; }
+  .panel[style*="height"] { height: auto !important; }
+  svg.chart[style*="height"] { height: auto !important; }
+  .scrollx svg.chart { min-width: 880px; }        /* 밴드(viewBox 1100) 가로 스크롤 */
   #tip { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
 }
