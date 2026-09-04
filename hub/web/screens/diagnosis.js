@@ -39,7 +39,7 @@
     const cfg = A.cfg, meta = A.model.meta;
     const BH = 470;
     const brows = A.rooms.map((x) => ({ cls: x.judged ? "" : "dim", cells: [nm(x), regime(x.regime), num(x.co2), num(x.voc), x.judged ? `${x.dwell_censored ? "≥" : ""}${num(x.dwell_min)}` : "—", actionChip(x.action.kind, x.action.word)], txt: [5] }));
-    return sec("plane", "cyan", "현재 레짐 (FixedScaling)", `hourly · ${esc(A.model.ver || "—")} predict · ${cfg.regime.smooth_window * cfg.regime.bucket_minutes}분 평활 · CO₂÷${cfg.regime.co2_scale} · VOC÷${cfg.regime.voc_scale}`)
+    return sec("plane", "cyan", "절대 레짐 (FixedScaling)", `hourly · ${esc(A.model.ver || "—")} predict · ${cfg.regime.smooth_window * cfg.regime.bucket_minutes}분 평활 · CO₂÷${cfg.regime.co2_scale} · VOC÷${cfg.regime.voc_scale}`)
       + `<div class="grid g5" style="align-items:stretch"><div class="span3 panel" style="height:${BH}px">${CH.plane(A.rooms, cfg, meta, BH - 30)}</div>`
       + `<div class="span2 panel" style="height:${BH}px;display:flex;flex-direction:column">${table(["교실", "레짐", "CO₂", "VOC", "체류(min)", "행동"], brows)}<p class="note" style="margin-top:auto">체류 = 현재 레짐에 머문 시간(관측 하한). 축은 외기 기준 고정 — 재학습해도 4분면 위치가 유지되어 지난주와 비교 가능. 제외 = QC 게이트 미달 — 평면에 별 없음.</p></div></div>`;
   }
@@ -169,7 +169,7 @@
       repaint() { render(this.el); },
     });
   }
-  screen("dx-regime", "현재레짐·탐색", "plane", renderRegime);
+  screen("dx-regime", "레짐·탐색", "plane", renderRegime);
   screen("dx-band", "밴드·전이", "band", renderBand);
   screen("dx-action", "행동·경보", "action", renderAction);
   screen("dx-scope", "유효범위", "shield", renderScope, true);
