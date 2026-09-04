@@ -51,7 +51,7 @@
     if (A.band) {
       const sh = A.band.share;
       const legend = A.regimes.map((k) => `<span><i style="--sw:${AQ.regimeColor(k)}"></i>${AQ.REGIME_KO[k]} ${pct(sh[k] || 0)}</span>`).join("") + (sh.missing ? `<span><i style="--sw:${css("--grid")}"></i>결측 ${pct(sh.missing)}</span>` : "");
-      h += `<div class="panel">${CH.band(A.band)}<div class="legend">${legend}</div></div>`;
+      h += `<div class="panel"><div class="scrollx">${CH.band(A.band)}</div><div class="legend">${legend}</div></div>`;
     } else h += '<div class="info">daily 실행 후 표시됩니다.</div>';
     return h;
   }

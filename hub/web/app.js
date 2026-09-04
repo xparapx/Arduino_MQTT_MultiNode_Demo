@@ -54,6 +54,12 @@ const AQ = (() => {
       tip.style.left = x + "px"; tip.style.top = y + "px";
     });
     document.addEventListener("mouseleave", () => { tip.style.display = "none"; });
+    if (matchMedia("(hover: none)").matches) {          // touch: tap shows the tip as a toast
+      document.addEventListener("click", (e) => {
+        const el = e.target.closest && e.target.closest("[data-tip]");
+        if (el) toast(esc(el.getAttribute("data-tip")).replace(/\n/g, "<br>"), 5000);
+      });
+    }
   }
   function toast(msg, ms = 4000) {
     let t = $("#toast");

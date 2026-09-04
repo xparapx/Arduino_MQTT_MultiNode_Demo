@@ -8,10 +8,10 @@
 AQ.router = (() => {
   const { $, esc } = AQ;
   const GROUPS = {
-    home: { label: "Home", icon: "home", cls: "g-home" },
-    mon: { label: "모니터링", icon: "series", cls: "g-mon" },
-    dx: { label: "진단 & 추론", icon: "plane", cls: "g-dx" },
-    admin: { label: "관리", icon: "admin", cls: "g-admin", admin: true },
+    home: { label: "Home", short: "Home", icon: "home", cls: "g-home" },
+    mon: { label: "모니터링", short: "모니터", icon: "series", cls: "g-mon" },
+    dx: { label: "진단 & 추론", short: "진단", icon: "plane", cls: "g-dx" },
+    admin: { label: "관리", short: "관리", icon: "admin", cls: "g-admin", admin: true },
   };
   const reg = [], byName = {};
   const scroll = {};
@@ -37,11 +37,21 @@ AQ.router = (() => {
     if (es.length < 2) return "";
     return es.map((e) => `<a role="tab" data-go="${e.name}" class="${e.name === current.name ? "on" : ""}"${e.name === current.name ? ' aria-current="page"' : ""}><svg viewBox="0 0 24 24">${AQ.icons[e.icon]}</svg>${esc(e.label)}</a>`).join("");
   }
+  function dockHTML() {
+    return Object.entries(GROUPS)
+      .filter(([g, cfg]) => !(cfg.admin && (AQ.mode.public || !AQ.mode.known)) && groupEntries(g).length)
+      .map(([g, cfg]) => {
+        const on = current && current.group === g;
+        return `<a role="tab" class="${cfg.cls}${on ? " on" : ""}" href="#${firstOf(g)}" data-go="${firstOf(g)}"${on ? ' aria-current="page"' : ""}><svg viewBox="0 0 24 24">${AQ.icons[cfg.icon]}</svg><span>${cfg.short}</span></a>`;
+      }).join("");
+  }
   function renderNav() {
     const nav = $("#nav");
     if (nav) nav.innerHTML = navHTML();
     const st = $("#subtabs");
     if (st) { const h = subtabsHTML(); st.innerHTML = h; st.style.display = h ? "" : "none"; }
+    const dock = $("#dock");
+    if (dock) dock.innerHTML = dockHTML();
   }
 
   function go(name, param = null, push = true) {
