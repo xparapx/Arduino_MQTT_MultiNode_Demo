@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>교실 공기질 AI — 발표자료</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ---- tokens: multinode_aq dashboard (dark) ---- */
+:root{
+  --bg:#1a1d24; --side:#14171d; --panel:#242832; --panel2:#2b303b; --plot:#1e222b;
+  --ink:#e6e8ec; --dim:#aab2bd; --grid:#3a414e; --rowline:#2f3541; --foot:#6b7482;
+  --blue:#a1c9f4; --orange:#ffb482; --green:#8de5a1; --red:#ff9f9b; --purple:#d0bbff;
+  --yellow:#fffea3; --cyan:#b9f2f0; --acc:#FFB300; --badge-ink:#111;
+  --rg-clean:#12CBC4; --rg-matter:#FFC312; --rg-human:#9980FA; --rg-mixed:#ED4C67;
+  --chip2-bg:#1a1f29; --chip2-bd:#333b49;
+  --n1:#FF5CA8; --n2:#8B7CFF; --n3:#00E5B0; --n4:#FFB300; --n5:#4DD2FF; --n6:#C4FF4D; --n7:#FF8A5C; --n8:#EAEAEA;
+  --sans:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;overflow:hidden}
+.mono{font-family:var(--mono)}
+
+/* ---- 1920x1080 shell: stage selector + slide area ---- */
+.app{display:grid;grid-template-columns:300px minmax(0,1fr);height:100vh}
+.side{background:var(--side);border-right:1px solid var(--grid);padding:26px 18px;display:flex;flex-direction:column;overflow:auto}
+.brand{font-family:var(--mono);font-size:11.5px;color:var(--dim);letter-spacing:.05em}
+.brand b{display:block;color:var(--ink);font-family:var(--sans);font-size:17px;font-weight:700;margin-top:4px;line-height:1.35}
+.nav{display:flex;flex-direction:column;gap:4px;margin-top:24px}
+.nav a{padding:10px 12px;border-radius:9px;display:flex;gap:11px;align-items:center;color:var(--dim);text-decoration:none;font-size:14px;border:1px solid transparent;cursor:pointer}
+.nav a:hover{background:var(--panel);color:var(--ink)}
+.nav a .n{font-family:var(--mono);font-size:11px;min-width:24px;height:20px;border-radius:6px;display:grid;place-items:center;background:var(--grid);color:var(--ink);flex:0 0 auto}
+.nav a.on{background:var(--panel);color:var(--ink);border-color:var(--pc,var(--cyan));font-weight:700}
+.nav a.on .n{background:var(--pc,var(--cyan));color:var(--badge-ink)}
+.nav .grp{font-family:var(--mono);font-size:10px;color:var(--foot);letter-spacing:.14em;margin:16px 10px 4px}
+.side .foot{margin-top:auto;font-size:11px;color:var(--foot);font-family:var(--mono);line-height:1.6;padding-top:18px}
+.side .keys{margin-top:14px;font-size:11px;color:var(--foot);font-family:var(--mono)}
+.side .keys b{color:var(--dim);font-weight:600}
+
+main{position:relative;min-width:0;overflow:hidden}
+.view{display:none;position:absolute;inset:0;padding:44px 60px 40px;overflow:auto}
+.view.on{display:block;animation:fadein .28s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.14em;color:var(--pc,var(--cyan))}
+h1{font-size:44px;font-weight:700;margin:10px 0 6px;letter-spacing:-.01em;line-height:1.2}
+h2{font-size:20px;font-weight:600;margin:0}
+.lead{color:var(--dim);font-size:19px;max-width:1100px;margin:6px 0 0}
+.pageno{position:absolute;right:60px;top:48px;font-family:var(--mono);font-size:13px;color:var(--foot)}
+
+.panel{background:var(--panel);border:1px solid var(--grid);border-radius:14px;padding:22px 26px;min-width:0}
+.grid{display:grid;gap:18px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.span2{grid-column:span 2}
+.tt{font-family:var(--mono);font-size:12.5px;color:var(--dim)}
+.big{font-size:34px;font-weight:700;line-height:1.15}
+.big small{font-size:16px;color:var(--dim);font-weight:500}
+.hl{color:var(--acc)}
+.kchip{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:9px;background:var(--chip2-bg);border:1px solid var(--chip2-bd);font-family:var(--mono);font-size:13px;color:var(--dim)}
+.kchip b{color:var(--ink)}
+.regime{padding:3px 12px;border-radius:6px;font-weight:700;font-size:14px;display:inline-block;white-space:nowrap;
+  border:1px solid color-mix(in srgb,var(--rc) 55%,transparent);background:color-mix(in srgb,var(--rc) 22%,transparent);color:var(--rc)}
+svg text{font-family:var(--sans)}
+svg .mono{font-family:var(--mono)}
+.caption{font-size:13px;color:var(--foot);margin-top:10px}
+.arrowhint{position:absolute;bottom:26px;right:60px;font-family:var(--mono);font-size:12px;color:var(--foot)}
+ul.pts{margin:10px 0 0 2px;padding:0;list-style:none}
+ul.pts li{margin:9px 0;padding-left:22px;position:relative;font-size:17px}
+ul.pts li::before{content:"";position:absolute;left:2px;top:9px;width:9px;height:9px;border-radius:3px;background:var(--pc,var(--cyan))}
+.dimtx{color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+  <div class="brand">multinode_aq · physical AI<b>교실 공기질을 읽는<br>피지컬 AI 시스템</b></div>
+  <nav class="nav" id="nav"></nav>
+  <div class="keys"><b>← →</b> 이동 · <b>1–9, 0</b> 바로가기 · <b>F</b> 전체화면</div>
+  <div class="foot">8 환경 노드 + 5 비전 노드<br>2026-07-07 → 운영 중<br>readings 127,000+ 행</div>
+</aside>
+<main id="main">
+
+<!-- ========== 0 표지 ========== -->
+<section class="view" data-c="cyan">
+  <div style="height:14vh"></div>
+  <div class="eyebrow">SOCIAL IMPACT × PHYSICAL AI × DATA</div>
+  <h1 style="font-size:58px;max-width:1200px">우리 교실의 공기는 지금,<br>왜 이런 상태일까?</h1>
+  <p class="lead" style="font-size:22px;margin-top:16px">13개 노드가 스스로 재고, 판단하고, 행동을 제안하는<br>학교 공기질 진단 시스템 — 60일째 무중단 운영 중</p>
+  <div style="display:flex;gap:10px;margin-top:34px;flex-wrap:wrap">
+    <span class="kchip">환경 노드 <b>8</b> · 비전 노드 <b>5</b></span>
+    <span class="kchip">수집 <b>127,000+ 행</b> / 5분 버킷</span>
+    <span class="kchip">레짐 진단 <b>GMM</b> + 규칙 + 예측</span>
+    <span class="kchip">웹 대시보드 <b>실시간 공개</b></span>
+  </div>
+  <div style="margin-top:40px;display:flex;gap:10px">
+    <span class="regime" style="--rc:var(--rg-clean)">청정</span>
+    <span class="regime" style="--rc:var(--rg-matter)">물질</span>
+    <span class="regime" style="--rc:var(--rg-human)">인체</span>
+    <span class="regime" style="--rc:var(--rg-mixed)">복합</span>
+    <span class="tt" style="align-self:center;margin-left:6px">— 교실 공기의 네 가지 상태, 이 발표의 주인공</span>
+  </div>
+</section>
+
+<!-- ========== 1 동기 ========== -->
+<section class="view" data-c="green">
+  <div class="eyebrow">01 · WHY</div>
+  <h1>학교에서 찾은 문제, 데이터로 답하다</h1>
+  <p class="lead">소셜 임팩트: 우리가 매일 6시간 이상 머무는 교실 — 그 공기를 아무도 측정하지 않는다.</p>
+  <div class="grid g3" style="margin-top:28px">
+    <div class="panel" style="border-top:3px solid var(--red)">
+      <div class="tt">문제 인식</div>
+      <div class="big" style="margin-top:8px">보이지 않는<br>교실 공기</div>
+      <ul class="pts" style="--pc:var(--red)">
+        <li>CO₂ 1,000 ppm↑ → 집중력·판단력 저하 (연구 다수)</li>
+        <li>환기는 "느낌"으로 — 근거 데이터가 없음</li>
+        <li>교실마다 상태가 다른데 일괄 대응</li>
+      </ul>
+    </div>
+    <div class="panel" style="border-top:3px solid var(--cyan)">
+      <div class="tt">접근 방식</div>
+      <div class="big" style="margin-top:8px">피지컬 AI<br>+ 데이터</div>
+      <ul class="pts" style="--pc:var(--cyan)">
+        <li>센서·보드를 직접 설계/제작 — <b>측정</b></li>
+        <li>60일 무중단 파이프라인 — <b>관리</b></li>
+        <li>ML 레짐 진단 + 규칙 — <b>진단·해석</b></li>
+        <li>행동지침·예측 경보 — <b>해결 제안</b></li>
+      </ul>
+    </div>
+    <div class="panel" style="border-top:3px solid var(--green)">
+      <div class="tt">임팩트 목표</div>
+      <div class="big" style="margin-top:8px">복제 가능한<br>학교 솔루션</div>
+      <ul class="pts" style="--pc:var(--green)">
+        <li>교실당 저비용 DIY 노드 — 확산 가능</li>
+        <li>영상 미전송 비전 — <b>프라이버시 보존</b></li>
+        <li>누구나 보는 공개 대시보드 — 행동 변화 유도</li>
+      </ul>
+    </div>
+  </div>
+  <p class="caption">핵심 메시지: "측정 → 관리 → 진단 → 해석 → 해결 제안"의 전 과정을 학생 손으로 완주했다.</p>
+</section>
+
+<!-- ========== 2 큰 그림 ========== -->
+<section class="view" data-c="cyan">
+  <div class="eyebrow">02 · BIG PICTURE</div>
+  <h1>시스템 큰 그림 — 데이터가 흐르는 길</h1>
+  <p class="lead">교실 13곳의 측정값이 5분마다 하나의 판단으로 모이는 파이프라인.</p>
+  <div class="panel" style="margin-top:24px;padding:30px">
+  <svg viewBox="0 0 1560 470" style="width:100%;height:auto" role="img" aria-label="시스템 파이프라인">
+    <defs>
+      <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#6b7482"/></marker>
+    </defs>
+    <!-- nodes column -->
+    <rect x="20" y="40" width="240" height="170" rx="14" fill="#1e222b" stroke="#12CBC4"/>
+    <text x="140" y="70" text-anchor="middle" fill="#b9f2f0" font-size="17" font-weight="700">환경 노드 × 8</text>
+    <text x="140" y="96" text-anchor="middle" fill="#aab2bd" font-size="13">SEN55 (PM·VOC·NOx)</text>
+    <text x="140" y="116" text-anchor="middle" fill="#aab2bd" font-size="13">SCD30 (CO₂·온습도)</text>
+    <text x="140" y="142" text-anchor="middle" fill="#6b7482" font-size="12" class="mono">11개 원시 변수 / 교실</text>
+    <g>
+      <circle cx="60" cy="176" r="7" fill="#FF5CA8"/><circle cx="83" cy="176" r="7" fill="#8B7CFF"/><circle cx="106" cy="176" r="7" fill="#00E5B0"/><circle cx="129" cy="176" r="7" fill="#FFB300"/>
+      <circle cx="152" cy="176" r="7" fill="#4DD2FF"/><circle cx="175" cy="176" r="7" fill="#C4FF4D"/><circle cx="198" cy="176" r="7" fill="#FF8A5C"/><circle cx="221" cy="176" r="7" fill="#EAEAEA"/>
+    </g>
+    <rect x="20" y="240" width="240" height="150" rx="14" fill="#1e222b" stroke="#FFB300"/>
+    <text x="140" y="272" text-anchor="middle" fill="#FFB300" font-size="17" font-weight="700">비전 노드 × 5</text>
+    <text x="140" y="298" text-anchor="middle" fill="#aab2bd" font-size="13">Nicla Vision · FOMO 사람 탐지</text>
+    <text x="140" y="318" text-anchor="middle" fill="#aab2bd" font-size="13">온디바이스 추론</text>
+    <text x="140" y="344" text-anchor="middle" fill="#8de5a1" font-size="12.5" font-weight="600">영상 미전송 · 좌표만 발행 🔒</text>
+    <!-- mqtt -->
+    <line x1="260" y1="125" x2="380" y2="195" stroke="#6b7482" stroke-width="2" marker-end="url(#ah)"/>
+    <line x1="260" y1="315" x2="380" y2="235" stroke="#6b7482" stroke-width="2" marker-end="url(#ah)"/>
+    <rect x="385" y="165" width="190" height="100" rx="14" fill="#1e222b" stroke="#a1c9f4"/>
+    <text x="480" y="203" text-anchor="middle" fill="#a1c9f4" font-size="16" font-weight="700">MQTT 브로커</text>
+    <text x="480" y="226" text-anchor="middle" fill="#aab2bd" font-size="12.5">HiveMQ Cloud · TLS 8883</text>
+    <text x="480" y="246" text-anchor="middle" fill="#6b7482" font-size="11.5" class="mono">multinode_aq/+/env·occ</text>
+    <!-- hub -->
+    <line x1="575" y1="215" x2="665" y2="215" stroke="#6b7482" stroke-width="2" marker-end="url(#ah)"/>
+    <rect x="670" y="60" width="290" height="330" rx="16" fill="#242832" stroke="#3a414e"/>
+    <text x="815" y="92" text-anchor="middle" fill="#e6e8ec" font-size="17" font-weight="700">허브 · Arduino UNO Q</text>
+    <text x="815" y="112" text-anchor="middle" fill="#6b7482" font-size="12" class="mono">Debian · systemd 24/7</text>
+    <rect x="695" y="130" width="240" height="64" rx="10" fill="#1e222b" stroke="#12CBC4"/>
+    <text x="815" y="156" text-anchor="middle" fill="#b9f2f0" font-size="14.5" font-weight="600">hub.py — 수집기</text>
+    <text x="815" y="177" text-anchor="middle" fill="#aab2bd" font-size="12">구독 → 검증 → 5분 버킷 적재</text>
+    <rect x="695" y="206" width="240" height="64" rx="10" fill="#1e222b" stroke="#a1c9f4"/>
+    <text x="815" y="232" text-anchor="middle" fill="#a1c9f4" font-size="14.5" font-weight="600">SQLite (WAL)</text>
+    <text x="815" y="253" text-anchor="middle" fill="#aab2bd" font-size="12">readings · occupancy · analysis</text>
+    <rect x="695" y="282" width="240" height="88" rx="10" fill="#1e222b" stroke="#d0bbff"/>
+    <text x="815" y="308" text-anchor="middle" fill="#d0bbff" font-size="14.5" font-weight="600">analyst.py — 추론기</text>
+    <text x="815" y="329" text-anchor="middle" fill="#aab2bd" font-size="12">hourly 레짐·행동 / daily 밴드·전이</text>
+    <text x="815" y="348" text-anchor="middle" fill="#aab2bd" font-size="12">weekly 모델 재학습·승격 심사</text>
+    <!-- web -->
+    <line x1="960" y1="215" x2="1050" y2="215" stroke="#6b7482" stroke-width="2" marker-end="url(#ah)"/>
+    <rect x="1055" y="120" width="230" height="200" rx="14" fill="#1e222b" stroke="#8de5a1"/>
+    <text x="1170" y="152" text-anchor="middle" fill="#8de5a1" font-size="16" font-weight="700">webapp.py</text>
+    <text x="1170" y="174" text-anchor="middle" fill="#aab2bd" font-size="12.5">JSON API + SPA 대시보드</text>
+    <text x="1170" y="200" text-anchor="middle" fill="#aab2bd" font-size="12.5">60초 폴 &lt; 50 KB</text>
+    <text x="1170" y="222" text-anchor="middle" fill="#aab2bd" font-size="12.5">변경 시에만 재렌더</text>
+    <text x="1170" y="252" text-anchor="middle" fill="#6b7482" font-size="11.5" class="mono">8501 관리자 / 8502 공개</text>
+    <text x="1170" y="272" text-anchor="middle" fill="#6b7482" font-size="11.5" class="mono">Tailscale Funnel</text>
+    <!-- users -->
+    <line x1="1285" y1="180" x2="1370" y2="150" stroke="#6b7482" stroke-width="2" marker-end="url(#ah)"/>
+    <line x1="1285" y1="250" x2="1370" y2="280" stroke="#6b7482" stroke-width="2" marker-end="url(#ah)"/>
+    <rect x="1375" y="110" width="165" height="76" rx="12" fill="#1e222b" stroke="#3a414e"/>
+    <text x="1457" y="142" text-anchor="middle" fill="#e6e8ec" font-size="14.5" font-weight="600">학생 · 교사</text>
+    <text x="1457" y="164" text-anchor="middle" fill="#aab2bd" font-size="12">모바일 · 공개 화면</text>
+    <rect x="1375" y="246" width="165" height="76" rx="12" fill="#1e222b" stroke="#3a414e"/>
+    <text x="1457" y="278" text-anchor="middle" fill="#e6e8ec" font-size="14.5" font-weight="600">관리자</text>
+    <text x="1457" y="300" text-anchor="middle" fill="#aab2bd" font-size="12">기록·내보내기·이력</text>
+    <!-- future actuator -->
+    <line x1="815" y1="390" x2="815" y2="428" stroke="#6b7482" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ah)"/>
+    <rect x="640" y="432" width="350" height="34" rx="10" fill="none" stroke="#ffb482" stroke-dasharray="6 5"/>
+    <text x="815" y="454" text-anchor="middle" fill="#ffb482" font-size="13.5">다음 단계: 환풍기·공기청정기 자동 제어 (스마트플러그)</text>
+    <!-- flow labels -->
+    <text x="320" y="150" text-anchor="middle" fill="#6b7482" font-size="12" class="mono">5분 주기 발행</text>
+    <text x="1005" y="200" text-anchor="middle" fill="#6b7482" font-size="12" class="mono">집계본만</text>
+  </svg>
+  </div>
+  <p class="caption">한 문장 요약: <b class="hl">측정(노드) → 이동(MQTT) → 축적(SQLite) → 추론(analyst) → 소통(웹)</b> — 각 단계가 독립 서비스라 하나가 죽어도 전체는 산다.</p>
+</section>
+
+<!-- ========== 3 하드웨어 ========== -->
+<section class="view" data-c="orange">
+  <div class="eyebrow">03 · HARDWARE</div>
+  <h1>하드웨어 — 교실을 재는 13개의 눈</h1>
+  <p class="lead">기성품이 아니라, 센서 선정부터 배치까지 직접 설계한 노드들.</p>
+  <div class="grid g3" style="margin-top:26px">
+    <div class="panel">
+      <div class="tt" style="color:var(--cyan)">환경 노드 × 8 (교실별 1대)</div>
+      <div class="big" style="margin-top:6px">11개 변수<br><small>/ 노드 / 5분</small></div>
+      <ul class="pts" style="--pc:var(--cyan)">
+        <li><b>SEN55</b> — PM1.0/2.5/4.0/10 · VOC · NOx · 온습도</li>
+        <li><b>SCD30</b> — CO₂ (NDIR) · 온습도 (대표값)</li>
+        <li>Arduino 보드 + WiFi → MQTT TLS 발행</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <div class="tt" style="color:var(--acc)">비전 노드 × 5</div>
+      <div class="big" style="margin-top:6px">재실 인원<br><small>온디바이스 AI</small></div>
+      <ul class="pts" style="--pc:var(--acc)">
+        <li><b>Nicla Vision</b> + Edge Impulse <b>FOMO</b> 사람 탐지</li>
+        <li>추론은 카메라 안에서 — <b>영상은 밖으로 안 나감</b></li>
+        <li>인원 수 + 좌표만 발행 → 프라이버시 by design</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <div class="tt" style="color:var(--purple)">허브 × 1</div>
+      <div class="big" style="margin-top:6px">Arduino<br><small>UNO Q · Debian</small></div>
+      <ul class="pts" style="--pc:var(--purple)">
+        <li>수집·DB·추론·웹서버를 한 보드에서</li>
+        <li>systemd 상시 서비스 · 자동 재시작</li>
+        <li>Tailscale로 외부 안전 접속</li>
+      </ul>
+    </div>
+  </div>
+  <div class="grid g4" style="margin-top:18px">
+    <div class="panel" style="text-align:center"><div class="big hl">13</div><div class="tt">총 노드 수</div></div>
+    <div class="panel" style="text-align:center"><div class="big hl">60일+</div><div class="tt">무중단 수집</div></div>
+    <div class="panel" style="text-align:center"><div class="big hl">127k+</div><div class="tt">누적 측정 행</div></div>
+    <div class="panel" style="text-align:center"><div class="big hl">0장</div><div class="tt">전송된 영상 수</div></div>
+  </div>
+</section>
+
+<!-- ========== 4 소프트웨어 ========== -->
+<section class="view" data-c="blue">
+  <div class="eyebrow">04 · SOFTWARE</div>
+  <h1>소프트웨어 — 역할이 분리된 3개의 서비스</h1>
+  <p class="lead">"수집은 절대 멈추지 않는다"를 최우선 원칙으로 한 계층 설계.</p>
+  <div class="panel" style="margin-top:24px;padding:28px">
+  <svg viewBox="0 0 1500 330" style="width:100%;height:auto">
+    <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#6b7482"/></marker></defs>
+    <rect x="20" y="40" width="440" height="240" rx="14" fill="#1e222b" stroke="#12CBC4" stroke-width="2"/>
+    <text x="240" y="78" text-anchor="middle" fill="#b9f2f0" font-size="19" font-weight="700">hub.py — 수집 계층</text>
+    <text x="240" y="112" text-anchor="middle" fill="#aab2bd" font-size="14">MQTT 구독 → 형 검증 → 적재</text>
+    <text x="240" y="138" text-anchor="middle" fill="#aab2bd" font-size="14">시간 규칙: 모든 값은 5분 floor 버킷</text>
+    <text x="240" y="176" text-anchor="middle" fill="#8de5a1" font-size="14.5" font-weight="600">원칙 ① 쓰기 경로는 신성불가침</text>
+    <text x="240" y="200" text-anchor="middle" fill="#8de5a1" font-size="14.5" font-weight="600">원칙 ② 분석이 죽어도 수집은 산다</text>
+    <text x="240" y="240" text-anchor="middle" fill="#6b7482" font-size="12.5" class="mono">readings · occupancy 테이블 소유</text>
+    <line x1="460" y1="160" x2="520" y2="160" stroke="#6b7482" stroke-width="2" marker-end="url(#ah2)"/>
+    <rect x="525" y="40" width="440" height="240" rx="14" fill="#1e222b" stroke="#d0bbff" stroke-width="2"/>
+    <text x="745" y="78" text-anchor="middle" fill="#d0bbff" font-size="19" font-weight="700">analyst.py — 추론 계층</text>
+    <text x="745" y="112" text-anchor="middle" fill="#aab2bd" font-size="14">hourly: QC → 레짐 판정 → 행동·예측</text>
+    <text x="745" y="138" text-anchor="middle" fill="#aab2bd" font-size="14">daily: 스위칭 밴드·전이·탐색 집계</text>
+    <text x="745" y="164" text-anchor="middle" fill="#aab2bd" font-size="14">weekly: 재학습 → 승격 심사 (거버넌스)</text>
+    <text x="745" y="202" text-anchor="middle" fill="#8de5a1" font-size="14.5" font-weight="600">결과는 analysis 테이블에만 기록</text>
+    <text x="745" y="240" text-anchor="middle" fill="#6b7482" font-size="12.5" class="mono">읽기: readings — 쓰기: analysis</text>
+    <line x1="965" y1="160" x2="1025" y2="160" stroke="#6b7482" stroke-width="2" marker-end="url(#ah2)"/>
+    <rect x="1030" y="40" width="440" height="240" rx="14" fill="#1e222b" stroke="#8de5a1" stroke-width="2"/>
+    <text x="1250" y="78" text-anchor="middle" fill="#8de5a1" font-size="19" font-weight="700">webapp.py — 소통 계층</text>
+    <text x="1250" y="112" text-anchor="middle" fill="#aab2bd" font-size="14">표준 라이브러리 HTTP + 바닐라 JS SPA</text>
+    <text x="1250" y="138" text-anchor="middle" fill="#aab2bd" font-size="14">서버 집계본만 전송 — 원시 테이블 금지</text>
+    <text x="1250" y="164" text-anchor="middle" fill="#aab2bd" font-size="14">데이터 버전이 바뀔 때만 다시 그림</text>
+    <text x="1250" y="202" text-anchor="middle" fill="#8de5a1" font-size="14.5" font-weight="600">모바일 dock UI · 관리자/공개 분리</text>
+    <text x="1250" y="240" text-anchor="middle" fill="#6b7482" font-size="12.5" class="mono">60s 폴 &lt;50KB · 응답 7–16ms</text>
+    <text x="745" y="316" text-anchor="middle" fill="#6b7482" font-size="13.5">경계는 DB 테이블 소유권으로 강제 — CI가 위반을 검사</text>
+  </svg>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+    <span class="kchip">Python <b>3.13</b> · pandas · scikit-learn</span>
+    <span class="kchip">프런트 <b>프레임워크 0개</b> — 순수 SVG 차트 14종 자작</span>
+    <span class="kchip">테스트 <b>pytest</b> 파이프라인 전 구간</span>
+    <span class="kchip">배포 <b>git pull</b> 단일 경로</span>
+  </div>
+</section>
+
+<!-- ========== 5 데이터 엔지니어링 ========== -->
+<section class="view" data-c="yellow">
+  <div class="eyebrow">05 · DATA ENGINEERING</div>
+  <h1>데이터 엔지니어링 — 믿을 수 있는 데이터 만들기</h1>
+  <p class="lead">모델보다 먼저, "이 데이터를 믿어도 되는가"에 답하는 4단계 관문.</p>
+  <div class="panel" style="margin-top:24px;padding:28px">
+  <svg viewBox="0 0 1500 300" style="width:100%;height:auto">
+    <defs><marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#6b7482"/></marker></defs>
+    <g>
+      <rect x="20" y="50" width="330" height="180" rx="14" fill="#1e222b" stroke="#8de5a1" stroke-width="2"/>
+      <text x="185" y="86" text-anchor="middle" fill="#8de5a1" font-size="18" font-weight="700">① 수집 · 정렬</text>
+      <text x="185" y="120" text-anchor="middle" fill="#aab2bd" font-size="13.5">모든 행 = (교실, 5분 버킷)</text>
+      <text x="185" y="144" text-anchor="middle" fill="#aab2bd" font-size="13.5">환경×비전 조인 키 통일</text>
+      <text x="185" y="178" text-anchor="middle" fill="#6b7482" font-size="12" class="mono">시간 규칙은 코드 한 곳에만</text>
+    </g>
+    <line x1="350" y1="140" x2="400" y2="140" stroke="#6b7482" stroke-width="2" marker-end="url(#ah3)"/>
+    <g>
+      <rect x="405" y="50" width="330" height="180" rx="14" fill="#1e222b" stroke="#fffea3" stroke-width="2"/>
+      <text x="570" y="86" text-anchor="middle" fill="#fffea3" font-size="18" font-weight="700">② 범위 검증</text>
+      <text x="570" y="120" text-anchor="middle" fill="#aab2bd" font-size="13.5">물리적 불가능 값 → NaN</text>
+      <text x="570" y="144" text-anchor="middle" fill="#aab2bd" font-size="13.5">CO₂ 350–5000 · 습도 0–100 …</text>
+      <text x="570" y="178" text-anchor="middle" fill="#ff9f9b" font-size="13" font-weight="600">보간 금지 — 없는 값은 없는 값</text>
+    </g>
+    <line x1="735" y1="140" x2="785" y2="140" stroke="#6b7482" stroke-width="2" marker-end="url(#ah3)"/>
+    <g>
+      <rect x="790" y="50" width="330" height="180" rx="14" fill="#1e222b" stroke="#ff9f9b" stroke-width="2"/>
+      <text x="955" y="86" text-anchor="middle" fill="#ff9f9b" font-size="18" font-weight="700">③ QC 게이트</text>
+      <text x="955" y="120" text-anchor="middle" fill="#aab2bd" font-size="13.5">노드×일 CO₂ 유효율 ≥ 95%</text>
+      <text x="955" y="144" text-anchor="middle" fill="#aab2bd" font-size="13.5">미달 → 그 날 판정에서 제외</text>
+      <text x="955" y="178" text-anchor="middle" fill="#6b7482" font-size="12" class="mono">"판정 보류"로 정직하게 표시</text>
+    </g>
+    <line x1="1120" y1="140" x2="1170" y2="140" stroke="#6b7482" stroke-width="2" marker-end="url(#ah3)"/>
+    <g>
+      <rect x="1175" y="50" width="310" height="180" rx="14" fill="#1e222b" stroke="#b9f2f0" stroke-width="2"/>
+      <text x="1330" y="86" text-anchor="middle" fill="#b9f2f0" font-size="18" font-weight="700">④ 서버 집계</text>
+      <text x="1330" y="120" text-anchor="middle" fill="#aab2bd" font-size="13.5">분위수·히스토그램·전이 카운트</text>
+      <text x="1330" y="144" text-anchor="middle" fill="#aab2bd" font-size="13.5">브라우저엔 숫자 몇 개만</text>
+      <text x="1330" y="178" text-anchor="middle" fill="#6b7482" font-size="12" class="mono">분석 69KB → gzip 6.6KB</text>
+    </g>
+  </svg>
+  </div>
+  <div class="grid g2" style="margin-top:18px">
+    <div class="panel">
+      <h2 style="color:var(--yellow)">왜 보간하지 않는가</h2>
+      <p class="dimtx" style="font-size:16px;margin-top:8px">결측을 그럴듯한 값으로 메우면 "판단 보류"가 "잘못된 확신"이 된다.
+      이 시스템의 모든 화면은 <b style="color:var(--ink)">모르는 것을 모른다고 표시</b>한다 — 회색 결측 칸, 제외 칩, ≥ 기호(관측 하한).</p>
+    </div>
+    <div class="panel">
+      <h2 style="color:var(--yellow)">비전 데이터의 원칙</h2>
+      <p class="dimtx" style="font-size:16px;margin-top:8px">카메라 노드는 5분 버킷의 <b style="color:var(--ink)">평균·중앙값·최대 인원과 좌표</b>만 남긴다.
+      영상 프레임은 저장도 전송도 하지 않는다 — 교실에 놓아도 되는 AI의 조건.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 6 추론 모델 ========== -->
+<section class="view" data-c="purple">
+  <div class="eyebrow">06 · INFERENCE MODEL</div>
+  <h1>추론 모델 — 왜 GMM인가, 왜 하이브리드인가</h1>
+  <p class="lead">발생원이 다른 두 축(CO₂=사람, VOC=물질)을 4개의 "레짐"으로 읽고, 규칙이 최종 행동을 결정한다.</p>
+  <div class="grid" style="grid-template-columns: 560px minmax(0,1fr); margin-top:22px">
+    <div class="panel" style="padding:22px">
+      <div class="tt" style="margin-bottom:8px">고정 스케일 CO₂×VOC 평면 · GMM 4성분</div>
+      <svg viewBox="0 0 480 400" style="width:100%;height:auto">
+        <rect x="60" y="20" width="190" height="170" fill="#FFC31218"/><rect x="250" y="20" width="190" height="170" fill="#ED4C6718"/>
+        <rect x="60" y="190" width="190" height="170" fill="#12CBC418"/><rect x="250" y="190" width="190" height="170" fill="#9980FA18"/>
+        <line x1="60" y1="20" x2="60" y2="360" stroke="#3a414e"/><line x1="60" y1="360" x2="440" y2="360" stroke="#3a414e"/>
+        <line x1="250" y1="20" x2="250" y2="360" stroke="#6b7482" stroke-dasharray="5 4"/>
+        <line x1="60" y1="190" x2="440" y2="190" stroke="#6b7482" stroke-dasharray="5 4"/>
+        <text x="150" y="48" text-anchor="middle" fill="#FFC312" font-size="15" font-weight="700">물질 matter</text>
+        <text x="345" y="48" text-anchor="middle" fill="#ED4C67" font-size="15" font-weight="700">복합 mixed</text>
+        <text x="150" y="340" text-anchor="middle" fill="#12CBC4" font-size="15" font-weight="700">청정 clean</text>
+        <text x="345" y="340" text-anchor="middle" fill="#9980FA" font-size="15" font-weight="700">인체 human</text>
+        <circle cx="140" cy="280" r="6" fill="#12CBC4"/><circle cx="118" cy="300" r="6" fill="#12CBC4"/><circle cx="165" cy="292" r="6" fill="#12CBC4"/>
+        <circle cx="150" cy="120" r="6" fill="#FFC312"/><circle cx="130" cy="95" r="6" fill="#FFC312"/>
+        <circle cx="330" cy="270" r="6" fill="#9980FA"/><circle cx="360" cy="295" r="6" fill="#9980FA"/><circle cx="310" cy="245" r="6" fill="#9980FA"/>
+        <circle cx="350" cy="100" r="6" fill="#ED4C67"/><circle cx="380" cy="130" r="6" fill="#ED4C67"/>
+        <text x="250" y="390" text-anchor="middle" fill="#aab2bd" font-size="13">CO₂ ÷ 400 (외기 기준)</text>
+        <text x="24" y="190" text-anchor="middle" fill="#aab2bd" font-size="13" transform="rotate(-90 24 190)">VOC ÷ 100</text>
+      </svg>
+      <p class="caption">축이 <b>물리 상수로 고정</b> — 재학습해도 4분면 의미가 안 변해 "지난주와 비교"가 성립.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="panel" style="border-left:4px solid var(--purple)">
+        <h2>모델 선택 근거 3가지</h2>
+        <ul class="pts" style="--pc:var(--purple);font-size:16px">
+          <li><b>비지도</b> — "나쁨"의 정답 라벨이 없는 문제. 상태(레짐)를 스스로 발견해야 함</li>
+          <li><b>확률 소속</b> — 경계값을 단칼에 자르지 않고 부드럽게 (K-means 대비 장점)</li>
+          <li><b>해석 가능</b> — 4개 성분 = 발생원 조합(사람×물질)과 1:1 대응, 심사·검증 가능</li>
+        </ul>
+      </div>
+      <div class="panel" style="border-left:4px solid var(--red)">
+        <h2>ML을 그대로 믿지 않는다 — 3층 하이브리드</h2>
+        <ul class="pts" style="--pc:var(--red);font-size:16px">
+          <li><b>층1 탐색</b> RobustScaling 상대 레짐 — 보는 도구, 판정 금지</li>
+          <li><b>층2 진단</b> 고정 스케일 GMM + 45분 평활 — "지금 어떤 상태인가"</li>
+          <li><b>층3 행동</b> 임계 규칙 + 히스테리시스(ON 1000/OFF 700) + 최소 가동 10분 — 떨림 방지, 검증 가능한 최종 결정</li>
+        </ul>
+      </div>
+      <div class="panel" style="border-left:4px solid var(--acc)">
+        <h2>모델도 심사를 받는다 (거버넌스)</h2>
+        <p class="dimtx" style="font-size:15.5px;margin-top:6px">매주 재학습 후보를 만들고 <b style="color:var(--ink)">4분면 구분 유지 ∧ (로그우도 +2% ∨ 중심 이동 ≥0.25)</b>를 통과해야 승격.
+        모든 결정은 모델 이력으로 기록 — <span class="mono" style="font-size:13px">gmm_v1 → …</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 7 운용 & 인사이트 ========== -->
+<section class="view" data-c="red">
+  <div class="eyebrow">07 · OPERATION & INSIGHT</div>
+  <h1>모델 운용 — 숫자가 행동이 되기까지</h1>
+  <p class="lead">추론 결과는 매시간 대시보드로 흘러, 네 가지 질문에 답한다.</p>
+  <div class="grid g2" style="margin-top:22px">
+    <div class="panel">
+      <div class="tt" style="color:var(--cyan)">① 지금 무슨 상황인가 — 레짐 스위칭 밴드</div>
+      <svg viewBox="0 0 640 120" style="width:100%;height:auto;margin-top:10px">
+        <g font-size="12" fill="#aab2bd">
+          <text x="4" y="30">CLASS_02</text><text x="4" y="62">CLASS_04</text><text x="4" y="94">CLASS_06</text>
+        </g>
+        <g>
+          <rect x="80" y="16" width="150" height="20" rx="3" fill="#12CBC4"/><rect x="230" y="16" width="60" height="20" fill="#9980FA"/><rect x="290" y="16" width="40" height="20" fill="#ED4C67"/><rect x="330" y="16" width="90" height="20" fill="#9980FA"/><rect x="420" y="16" width="200" height="20" rx="3" fill="#12CBC4"/>
+          <rect x="80" y="48" width="100" height="20" rx="3" fill="#12CBC4"/><rect x="180" y="48" width="70" height="20" fill="#FFC312"/><rect x="250" y="48" width="170" height="20" fill="#9980FA"/><rect x="420" y="48" width="200" height="20" rx="3" fill="#12CBC4"/>
+          <rect x="80" y="80" width="240" height="20" rx="3" fill="#12CBC4"/><rect x="320" y="80" width="60" height="20" fill="#3a414e"/><rect x="380" y="80" width="240" height="20" rx="3" fill="#12CBC4"/>
+        </g>
+        <text x="350" y="116" text-anchor="middle" fill="#6b7482" font-size="11" class="mono">08:00 — 수업 리듬이 색으로 보인다 — 16:00 (회색 = 결측을 결측으로)</text>
+      </svg>
+      <p class="caption">"몇 교시에, 어느 교실이, 왜 나빠지는가"가 한눈에 — 시간표와 겹쳐 읽는 순간 심사위원의 "아하".</p>
+    </div>
+    <div class="panel">
+      <div class="tt" style="color:var(--red)">② 무엇을 해야 하는가 — 행동지침 + 히스테리시스</div>
+      <div style="display:flex;gap:14px;align-items:center;margin-top:14px">
+        <span class="regime" style="--rc:var(--rg-human);font-size:16px">인체</span>
+        <span style="font-size:22px;color:var(--foot)">→</span>
+        <span class="kchip" style="font-size:15px"><b>환기 필요</b> · CO₂ 1,129 ppm</span>
+      </div>
+      <svg viewBox="0 0 640 80" style="width:100%;height:auto;margin-top:14px">
+        <rect x="20" y="28" width="240" height="18" rx="4" fill="#12CBC466"/>
+        <rect x="260" y="28" width="140" height="18" fill="#3a414e"/>
+        <rect x="400" y="28" width="220" height="18" rx="4" fill="#ED4C6766"/>
+        <text x="140" y="66" text-anchor="middle" fill="#aab2bd" font-size="12">OFF 구간 (&lt;700)</text>
+        <text x="330" y="66" text-anchor="middle" fill="#aab2bd" font-size="12">유지 밴드</text>
+        <text x="510" y="66" text-anchor="middle" fill="#aab2bd" font-size="12">ON 구간 (&gt;1000)</text>
+        <circle cx="470" cy="37" r="8" fill="#FFB300" stroke="#1a1d24" stroke-width="2"/>
+      </svg>
+      <p class="caption">레짐(ML)이 게이트를 열고, 임계(규칙)가 방아쇠 — 껐다켰다 떨림은 밴드가 막는다.</p>
+    </div>
+    <div class="panel">
+      <div class="tt" style="color:var(--purple)">③ 앞으로 어떻게 되는가 — 30분 예측 경보</div>
+      <div style="display:flex;gap:16px;margin-top:14px;align-items:baseline">
+        <div class="big">748 <small>ppm 지금</small></div>
+        <span style="font-size:24px;color:var(--foot)">→</span>
+        <div class="big" style="color:var(--orange)">1,040 <small>ppm +30분</small></div>
+      </div>
+      <p class="caption" style="margin-top:12px">Ridge 회귀가 "나빠지기 전"에 알려준다 — <b style="color:var(--orange)">⚠ 임계 초과 예상</b> → 쉬는 시간에 미리 환기.</p>
+    </div>
+    <div class="panel">
+      <div class="tt" style="color:var(--acc)">④ 이 판단을 믿어도 되는가 — 검증 루프</div>
+      <ul class="pts" style="--pc:var(--acc);font-size:15.5px">
+        <li>재실 인원 × CO₂ <b>Spearman ρ ≈ 0.5+</b> — 비전·환경 두 센서가 서로를 교차 검증</li>
+        <li>유효 범위 화면 — 오늘 판정이 성립하는 조건을 항상 공개</li>
+        <li>QC 탈락 교실은 "판정 보류" — 모르면 모른다고 말하는 시스템</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 8 여정 ========== -->
+<section class="view" data-c="blue">
+  <div class="eyebrow">08 · JOURNEY</div>
+  <h1>60일의 발전 — 문제를 만나며 진화한 시스템</h1>
+  <p class="lead">한 번에 완성된 게 아니라, 운영하며 부딪힌 문제가 다음 설계를 낳았다.</p>
+  <div class="panel" style="margin-top:24px;padding:30px 26px">
+  <svg viewBox="0 0 1520 300" style="width:100%;height:auto">
+    <line x1="40" y1="60" x2="1490" y2="60" stroke="#3a414e" stroke-width="2"/>
+    <g>
+      <circle cx="90" cy="60" r="9" fill="#8de5a1"/>
+      <text x="90" y="34" text-anchor="middle" fill="#8de5a1" font-size="14" font-weight="700">7월 초</text>
+      <text x="90" y="96" text-anchor="middle" fill="#e6e8ec" font-size="14" font-weight="600">노드 제작 · 수집 시작</text>
+      <text x="90" y="118" text-anchor="middle" fill="#aab2bd" font-size="12">13개 노드 MQTT 합류</text>
+    </g>
+    <g>
+      <circle cx="360" cy="60" r="9" fill="#b9f2f0"/>
+      <text x="360" y="34" text-anchor="middle" fill="#b9f2f0" font-size="14" font-weight="700">7–8월</text>
+      <text x="360" y="96" text-anchor="middle" fill="#e6e8ec" font-size="14" font-weight="600">1차 대시보드 운영</text>
+      <text x="360" y="118" text-anchor="middle" fill="#aab2bd" font-size="12">문제 발견: 무거운 갱신·뒤엉킨 코드</text>
+    </g>
+    <g>
+      <circle cx="650" cy="60" r="9" fill="#fffea3"/>
+      <text x="650" y="34" text-anchor="middle" fill="#fffea3" font-size="14" font-weight="700">8월 말</text>
+      <text x="650" y="96" text-anchor="middle" fill="#e6e8ec" font-size="14" font-weight="600">재설계 — 계층 분리</text>
+      <text x="650" y="118" text-anchor="middle" fill="#aab2bd" font-size="12">불변조건 문서화 · git/CI · 성능 계약</text>
+      <text x="650" y="138" text-anchor="middle" fill="#aab2bd" font-size="12">(유휴 &lt;0.5s · 전송 &lt;200KB)</text>
+    </g>
+    <g>
+      <circle cx="940" cy="60" r="9" fill="#d0bbff"/>
+      <text x="940" y="34" text-anchor="middle" fill="#d0bbff" font-size="14" font-weight="700">8월 말–9월</text>
+      <text x="940" y="96" text-anchor="middle" fill="#e6e8ec" font-size="14" font-weight="600">추론 계층 완성</text>
+      <text x="940" y="118" text-anchor="middle" fill="#aab2bd" font-size="12">QC·GMM 레짐·행동 규칙·예측·거버넌스</text>
+    </g>
+    <g>
+      <circle cx="1210" cy="60" r="9" fill="#ffb482"/>
+      <text x="1210" y="34" text-anchor="middle" fill="#ffb482" font-size="14" font-weight="700">9월</text>
+      <text x="1210" y="96" text-anchor="middle" fill="#e6e8ec" font-size="14" font-weight="600">웹 SPA · 모바일</text>
+      <text x="1210" y="118" text-anchor="middle" fill="#aab2bd" font-size="12">프레임워크 없는 자작 프런트</text>
+      <text x="1210" y="138" text-anchor="middle" fill="#aab2bd" font-size="12">공개/관리자 분리 배포</text>
+    </g>
+    <g>
+      <circle cx="1440" cy="60" r="9" fill="none" stroke="#ff9f9b" stroke-width="2" stroke-dasharray="4 3"/>
+      <text x="1440" y="34" text-anchor="middle" fill="#ff9f9b" font-size="14" font-weight="700">다음</text>
+      <text x="1440" y="96" text-anchor="middle" fill="#e6e8ec" font-size="14" font-weight="600">자동 제어</text>
+      <text x="1440" y="118" text-anchor="middle" fill="#aab2bd" font-size="12">환풍기·공청기</text>
+    </g>
+    <text x="760" y="210" text-anchor="middle" fill="#aab2bd" font-size="15">배운 것: <tspan fill="#e6e8ec" font-weight="600">"돌아가는 것"과 "운영되는 것"은 다르다</tspan> — 성능 측정, 실패 기록(DRIFT 문서), 재현 가능한 배포가 두 번째를 만든다.</text>
+    <text x="760" y="240" text-anchor="middle" fill="#6b7482" font-size="13" class="mono">모든 결정과 시행착오는 git 히스토리 + 계획/드리프트 문서로 추적 가능</text>
+  </svg>
+  </div>
+</section>
+
+<!-- ========== 9 임팩트 ========== -->
+<section class="view" data-c="green">
+  <div class="eyebrow">09 · IMPACT & NEXT</div>
+  <h1>그래서, 무엇이 달라지는가</h1>
+  <p class="lead">이 시스템이 학교에 남기는 것 — 그리고 어디까지 갈 수 있는가.</p>
+  <div class="grid g3" style="margin-top:26px">
+    <div class="panel" style="border-top:3px solid var(--green)">
+      <div class="tt">지금 주는 가치</div>
+      <ul class="pts" style="--pc:var(--green);font-size:16px">
+        <li>모든 구성원이 <b>근거를 보고</b> 환기한다 — 느낌 → 데이터</li>
+        <li>교실별 맞춤 대응 — "3반은 물질형, 5반은 인체형"</li>
+        <li>예측 경보로 <b>나빠지기 전에</b> 움직인다</li>
+      </ul>
+    </div>
+    <div class="panel" style="border-top:3px solid var(--cyan)">
+      <div class="tt">연구로서의 가치</div>
+      <ul class="pts" style="--pc:var(--cyan);font-size:16px">
+        <li>재실×CO₂ 상관 — 두 센서계의 교차 검증 방법론</li>
+        <li>고정 스케일 레짐 — 재학습에도 비교 가능한 좌표계</li>
+        <li>60일 실운영 데이터셋 + 전 과정 공개 코드</li>
+      </ul>
+    </div>
+    <div class="panel" style="border-top:3px solid var(--orange)">
+      <div class="tt">다음 단계</div>
+      <ul class="pts" style="--pc:var(--orange);font-size:16px">
+        <li>스마트플러그로 환풍기·공청기 <b>자동 제어</b> — 제안을 실행으로</li>
+        <li>제어 전후 효과 측정 (개입 실험)</li>
+        <li>노드 키트화 → 다른 교실·학교로 확산</li>
+      </ul>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:20px;text-align:center;padding:34px">
+    <div style="font-size:26px;font-weight:700;line-height:1.5">
+      측정하지 않으면 관리할 수 없고, <span class="hl">해석하지 못하면 바꿀 수 없다.</span><br>
+      <span class="dimtx" style="font-size:19px;font-weight:500">이 시스템은 교실 공기를 "관리되고 해석되는 대상"으로 바꿨습니다.</span>
+    </div>
+    <div style="margin-top:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <span class="kchip">라이브 데모 가능 — 지금도 수집 중</span>
+      <span class="kchip">감사합니다 · Q&A</span>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+<script>
+"use strict";
+(() => {
+  const STAGES = [
+    ["표지", "0", "cyan"],
+    ["동기 — 왜 이 프로젝트", "1", "green"],
+    ["시스템 큰 그림", "2", "cyan"],
+    ["하드웨어 구성", "3", "orange"],
+    ["소프트웨어 구성", "4", "blue"],
+    ["데이터 엔지니어링", "5", "yellow"],
+    ["추론 모델", "6", "purple"],
+    ["운용 & 인사이트", "7", "red"],
+    ["60일의 여정", "8", "blue"],
+    ["임팩트 & 다음", "9", "green"],
+  ];
+  const views = [...document.querySelectorAll(".view")];
+  const nav = document.getElementById("nav");
+  let cur = 0;
+  nav.innerHTML = STAGES.map(([label, n, c], i) =>
+    `<a data-i="${i}" style="--pc:var(--${c})"><span class="n">${n}</span>${label}</a>`).join("");
+  const links = [...nav.querySelectorAll("a")];
+  function go(i) {
+    cur = Math.max(0, Math.min(views.length - 1, i));
+    views.forEach((v, j) => v.classList.toggle("on", j === cur));
+    links.forEach((a, j) => a.classList.toggle("on", j === cur));
+    const v = views[cur];
+    v.scrollTop = 0;
+    let pn = v.querySelector(".pageno");
+    if (!pn) { pn = document.createElement("div"); pn.className = "pageno"; v.appendChild(pn); }
+    pn.textContent = `${cur + 1} / ${views.length}`;
+  }
+  links.forEach((a) => a.addEventListener("click", () => go(+a.dataset.i)));
+  addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") { e.preventDefault(); go(cur + 1); }
+    else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); go(cur - 1); }
+    else if (e.key >= "1" && e.key <= "9") go(+e.key - 1);
+    else if (e.key === "0") go(9);
+    else if (e.key.toLowerCase() === "f") { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); }
+  });
+  go(0);
+})();
+</script>
+</body>
+</html>
