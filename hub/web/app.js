@@ -125,6 +125,13 @@ const AQ = (() => {
       return () => { f.subs.delete(cb); if (!f.subs.size && f.timer) { clearInterval(f.timer); f.timer = null; } };
     },
     get: (url) => (feeds[url] || {}).data,
+    prime(url) {                      // one-shot warm: fetch into the cache, no interval
+      const f = feeds[url] || (feeds[url] = { subs: new Set(), data: null, timer: null, inflight: false });
+      if (f.data || f.inflight || document.hidden) return;
+      f.inflight = true;
+      getJSON(url).then((d) => { f.data = d; f.subs.forEach((cb) => cb(d)); })
+        .catch((e) => console.warn(e)).finally(() => { f.inflight = false; });
+    },
     refresh(url) { const f = feeds[url]; if (f) { f.data = null; return pull(url); } },
   };
   // a tab restored from background: fetch everything subscribers are waiting for

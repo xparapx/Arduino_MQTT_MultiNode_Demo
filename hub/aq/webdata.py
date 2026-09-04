@@ -218,8 +218,8 @@ class WebData:
         def build():
             if not self._has_db():
                 return {"version": bucket, "days": days, "box": {}, "by_node": {}}
-            sql = ("SELECT node, ts, " + ", ".join(GAUGE_KEYS) + " FROM readings "
-                   "WHERE ts >= datetime('now', ?)")
+            sql = ("SELECT node, date(ts, '+9 hours') AS d, " + ", ".join(GAUGE_KEYS)
+                   + " FROM readings WHERE ts >= datetime('now', ?)")
             with closing(self._ro()) as con:
                 if "readings" not in self._tables(con):
                     return {"version": bucket, "days": days, "box": {}, "by_node": {}}
@@ -240,7 +240,6 @@ class WebData:
                               for n, v in g.items()]
             # daily q1/med/q3 per target (KST day) and ON-threshold exceedance per node --
             # server aggregates only, a few hundred numbers for the whole window
-            dfa["_day"] = (pd.to_datetime(dfa["ts"]) + KST).dt.strftime("%Y-%m-%d")
             daily, exceed = {}, {}
             for k in TARGET_KEYS:
                 v = dfa.dropna(subset=[k])
@@ -248,7 +247,7 @@ class WebData:
                     daily[k] = {"days": [], "q1": [], "med": [], "q3": []}
                     exceed[k] = []
                     continue
-                q = v.groupby("_day")[k].quantile([0.25, 0.5, 0.75]).unstack().sort_index()
+                q = v.groupby("d")[k].quantile([0.25, 0.5, 0.75]).unstack().sort_index()
                 daily[k] = {"days": list(q.index),
                             "q1": [round(float(x), 1) for x in q[0.25]],
                             "med": [round(float(x), 1) for x in q[0.5]],

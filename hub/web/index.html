@@ -47,6 +47,7 @@
 AQ.initTheme(); AQ.initTip();
 AQ.initSidebar(() => AQ.router.refresh());
 AQ.router.start();
+setTimeout(() => AQ.store.prime("/api/stats"), 2500);
 </script>
 </body>
 </html>
