@@ -4,7 +4,7 @@
    renderer split apart, HTML unchanged. */
 "use strict";
 (() => {
-  const { $, esc, css, num, dash, sec, dot, regime, chip, actionChip, table, store } = AQ;
+  const { $, esc, css, num, dash, sec, secMeta, dot, regime, chip, actionChip, table, store } = AQ;
   let A = null, within = null;
   const pct = (v) => v === null || v === undefined ? "—" : `${Number(v).toFixed(1)}%`;
   const kstRange = (w) => w ? `${w.start.slice(5, 10)} → ${w.end.slice(5, 10)}` : "—";
@@ -19,7 +19,7 @@
     const cfg = A.cfg, run = cfg.run;
     const meta = A.model.meta, tr = A.transition;
     const judged = A.rooms.filter((x) => x.judged).length, held = A.rooms.length - judged;
-    let h = sec("shield", "cyan", "유효 범위", `해석 성립 조건 · daily 06:00 UTC · ${run.daily_window_days}일 창 · hourly ${run.hourly_window_hours}h`)
+    let h = secMeta(`해석 성립 조건 · daily 06:00 UTC · ${run.daily_window_days}일 창 · hourly ${run.hourly_window_hours}h`)
       + `<div class="panel"><div class="grid g4" style="gap:10px">`
       + metric("daily 분석 창", kstRange(A.daily_window), A.run_at.daily_kst ? `daily ${esc(A.run_at.daily_kst)} KST` : "daily 미실행")
       + metric("진단 모델", esc(A.model.ver || "—"), meta ? `${num(meta.rows)}행 · ${meta.window_days}d 학습` : "")
@@ -139,7 +139,7 @@
   // ---- I: 모델 이력 ------------------------------------------------------------------
   function secI() {
     const g = A.cfg.governance;
-    return sec("history", "purple", "모델 이력", `weekly · refit → 비교 → 조건부 승격: 4분면 상이 ∧ (로그우도 +${Math.round(g.loglik_gain_min * 100)}% ∨ 중심 이동 ≥ ${g.centroid_shift_min}) ∨ 학사 경계일 · 학습 창 ${g.train_window_days}d`)
+    return secMeta(`weekly · refit → 비교 → 조건부 승격: 4분면 상이 ∧ (로그우도 +${Math.round(g.loglik_gain_min * 100)}% ∨ 중심 이동 ≥ ${g.centroid_shift_min}) ∨ 학사 경계일 · 학습 창 ${g.train_window_days}d`)
       + `<div class="panel"><div style="font-size:13px;margin-bottom:8px">저장된 버전: ${A.model.versions.length ? A.model.versions.map(esc).join(", ") : "없음"} · current <b>${esc(A.model.current || "없음")}</b></div>`
       + (A.model_events.length ? table(["run_at (KST)", "후보", "결정", "학습 창", "행 수", "중심 이동", "로그우도 Δ", "current", "사유"], A.model_events.map((e) => ({ cells: [esc(e.run_at_kst), esc(e.candidate_ver || "—"), chip(e.decision || "—", e.decision === "promote" ? "ok" : e.decision === "reject" ? "ex" : ""), esc(e.window || "—"), num(e.rows), dash(e.centroid_shift), dash(e.loglik_delta), esc(e.current_after || "—"), esc(e.reason)], txt: [8] })))
          : '<div class="info">weekly 실행 후 표시됩니다.</div>') + "</div>";
