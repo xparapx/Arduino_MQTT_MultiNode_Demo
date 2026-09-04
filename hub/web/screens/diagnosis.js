@@ -39,7 +39,7 @@
     const cfg = A.cfg, meta = A.model.meta;
     const BH = 470;
     const brows = A.rooms.map((x) => ({ cls: x.judged ? "" : "dim", cells: [nm(x), regime(x.regime), num(x.co2), num(x.voc), x.judged ? `${x.dwell_censored ? "≥" : ""}${num(x.dwell_min)}` : "—", actionChip(x.action.kind, x.action.word)], txt: [5] }));
-    return sec("plane", "cyan", "현재 레짐 — 고정 스케일 CO₂×VOC 평면", `hourly · ${esc(A.model.ver || "—")} predict · ${cfg.regime.smooth_window * cfg.regime.bucket_minutes}분 평활 · CO₂÷${cfg.regime.co2_scale} · VOC÷${cfg.regime.voc_scale}`)
+    return sec("plane", "cyan", "현재 레짐 (FixedScaling)", `hourly · ${esc(A.model.ver || "—")} predict · ${cfg.regime.smooth_window * cfg.regime.bucket_minutes}분 평활 · CO₂÷${cfg.regime.co2_scale} · VOC÷${cfg.regime.voc_scale}`)
       + `<div class="grid g5" style="align-items:stretch"><div class="span3 panel" style="height:${BH}px">${CH.plane(A.rooms, cfg, meta, BH - 30)}</div>`
       + `<div class="span2 panel" style="height:${BH}px;display:flex;flex-direction:column">${table(["교실", "레짐", "CO₂", "VOC", "체류(min)", "행동"], brows)}<p class="note" style="margin-top:auto">체류 = 현재 레짐에 머문 시간(관측 하한). 축은 외기 기준 고정 — 재학습해도 4분면 위치가 유지되어 지난주와 비교 가능. 제외 = QC 게이트 미달 — 평면에 별 없음.</p></div></div>`;
   }
@@ -47,7 +47,7 @@
   // ---- C: 스위칭 밴드 ----------------------------------------------------------------
   function secC() {
     const run = A.cfg.run;
-    let h = sec("band", "orange", `레짐 스위칭 밴드 — ${run.daily_window_days}일 × 교실`, "daily · 시간 단위 mode · 회색 = 결측 / 게이트 탈락");
+    let h = sec("band", "orange", "레짐 스위칭 밴드", `${run.daily_window_days}일 × 교실 · daily · 시간 단위 mode · 회색 = 결측 / 게이트 탈락`);
     if (A.band) {
       const sh = A.band.share;
       const legend = A.regimes.map((k) => `<span><i style="--sw:${AQ.regimeColor(k)}"></i>${AQ.REGIME_KO[k]} ${pct(sh[k] || 0)}</span>`).join("") + (sh.missing ? `<span><i style="--sw:${css("--grid")}"></i>결측 ${pct(sh.missing)}</span>` : "");
@@ -70,7 +70,7 @@
   // ---- E: 행동지침 -------------------------------------------------------------------
   function secE() {
     const r = A.cfg.rules;
-    return sec("action", "red", "행동지침 — 레짐(ML) × 임계(규칙) × 히스테리시스", `hourly · 환풍기 ON CO₂&gt;${r.fan.on_co2} / OFF &lt;${r.fan.off_co2} · 공청기 ON VOC&gt;${r.purifier.on_voc} / OFF &lt;${r.purifier.off_voc} · 최소 ${r.min_run_minutes}분`)
+    return sec("action", "red", "행동지침 (하이브리드모델)", `hourly · 환풍기 ON CO₂&gt;${r.fan.on_co2} / OFF &lt;${r.fan.off_co2} · 공청기 ON VOC&gt;${r.purifier.on_voc} / OFF &lt;${r.purifier.off_voc} · 최소 ${r.min_run_minutes}분`)
       + `<div class="panel howto"><div><span class="sw z-off"></span>OFF 구간 — 하한 미만, 끔</div><div><span class="sw z-band"></span>밴드 — 하한~상한, 이전 상태 유지</div><div><span class="sw z-on"></span>ON 구간 — 상한 초과, 레짐 게이트 열리면 켬</div>`
       + `<div><span class="sw mk"></span>현재값 (hourly ${esc(A.action_run_at_kst || "—")} KST 판정) · 스트립 끝 = 최신 수신</div><div><span class="sw trk"></span>장치 ON 이력</div><div><span class="sw hat"></span>QC 탈락 — 규칙 미평가, 상태 유지</div></div>`
       + `<div class="acts">${A.rooms.map((x) => actionCard(x, r)).join("")}</div>`;
@@ -96,7 +96,7 @@
 
   // ---- F: 예측 · 경보 ----------------------------------------------------------------
   function secF() {
-    let h = sec("forecast", "purple", "예측 · 경보 — 30분 후 CO₂ · VOC", "hourly · 다중출력 회귀(StandardScaler → Ridge) · 타깃 = 미래 실측값 · 경보 = 예측값이 ON 임계 초과");
+    let h = sec("forecast", "purple", "예측 · 경보 (30분 후)", "hourly · 다중출력 회귀(StandardScaler → Ridge) · 타깃 = 미래 실측값 · 경보 = 예측값이 ON 임계 초과");
     if (A.forecast.length) {
       const hz = A.forecast[0].horizon_min;
       h += `<div class="panel">${table(["교실", "CO₂ now", `CO₂ +${hz}min`, "VOC now", `VOC +${hz}min`, "경보", "학습 행"], A.forecast.map((f) => ({ cells: [nm(f), num(f.co2_now), num(f.co2_pred), num(f.voc_now), num(f.voc_pred), f.alert ? `<span style="color:var(--orange)">⚠ 임계 초과 예상</span>` : "—", num(f.train_rows)], txt: [5] })))}</div>`;
@@ -107,7 +107,7 @@
   // ---- G: 재실 × CO₂ -----------------------------------------------------------------
   function secG() {
     const cfg = A.cfg, run = cfg.run;
-    let h = sec("people", "orange", "재실 × CO₂ — 비전 노드 조인", `daily · (교실, ${cfg.regime.bucket_minutes}분 버킷) 정확 조인 · occ n ≥ ${cfg.occ_co2.min_occ_n} · ρ는 포화형 관계라 Spearman`);
+    let h = sec("people", "orange", "재실 × CO₂", `daily · (교실, ${cfg.regime.bucket_minutes}분 버킷) 정확 조인 · occ n ≥ ${cfg.occ_co2.min_occ_n} · ρ는 포화형 관계라 Spearman`);
     const oc = A.occ_co2;
     if (oc) {
       const grows = oc.by_room.map((x) => ({ cells: [esc(x.room), num(x.n), x.rho === null ? "—" : x.rho.toFixed(4), x.slope === null ? "—" : num(x.slope, 1), x.last_bucket_kst ? `${esc(x.last_bucket_kst)}${x.stopped ? ` ${chip("중단", "warn")}` : ""}` : "—"] }));
@@ -120,7 +120,7 @@
   // ---- H: 탐색 시각화 ----------------------------------------------------------------
   function secH() {
     const run = A.cfg.run;
-    let h = sec("explore", "gray", "탐색 시각화 — 상관 · 상대 레짐 (RobustScaling)", `daily · 판정에 쓰지 않음 · 서버 집계본(${A.explore ? A.explore.pooled.bins : 24}×${A.explore ? A.explore.pooled.bins : 24})`);
+    let h = sec("explore", "gray", "상대 레짐 (RobustScaling)", `daily · 판정에 쓰지 않음 · 서버 집계본(${A.explore ? A.explore.pooled.bins : 24}×${A.explore ? A.explore.pooled.bins : 24})`);
     if (A.explore) {
       const ex = A.explore, p = ex.pooled;
       const cur = A.rooms.filter((x) => x.co2 !== null && x.voc !== null).map((x) => ({ label: x.label, color: x.color, x: CH.rc(x.co2, p.co2_med, p.co2_iqr), y: CH.rc(x.voc, p.voc_med, p.voc_iqr) }));

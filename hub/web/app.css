@@ -123,7 +123,9 @@ select, input[type="date"], input[type="time"] { background: var(--panel2); colo
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .metric { background: var(--panel2); border-radius: 8px; padding: 10px 12px; }
 .metric .l { font-size: 11px; color: var(--dim); }
-.metric .v { font-family: "IBM Plex Mono", monospace; font-size: 20px; font-weight: 600; margin: 2px 0; }
+.metric .v { font-family: "IBM Plex Sans KR", system-ui, sans-serif; font-size: 20px; font-weight: 700; margin: 2px 0; }
+.metric.mc { border-left: 3px solid var(--mc); }
+.metric.mc .v { color: var(--mc); }
 .metric .d { font-size: 11px; color: var(--dim); }
 .info { background: var(--panel2); border-left: 3px solid var(--blue); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: var(--dim); }
 .empty { text-align: center; color: var(--dim); padding: 30px 10px; font-size: 13px; }

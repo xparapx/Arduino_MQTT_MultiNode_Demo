@@ -24,17 +24,17 @@
   // ---- 실시간상태: radar grid (+ 단일 class 상세: #mon-live/<node>) -------------------
   function renderLive(el, node) {
     const d = S.live;
-    if (!d || !d.nodes.length) { el.innerHTML = sec("radar", "cyan", "노드별 실시간 상태 — 레이더 (6변수 정규화)", "") + '<div class="panel empty">데이터가 아직 없습니다 — hub.py와 노드 발행을 확인하세요.</div>'; return; }
+    if (!d || !d.nodes.length) { el.innerHTML = sec("radar", "cyan", "실시간 상태(Radar)", "") + '<div class="panel empty">데이터가 아직 없습니다 — hub.py와 노드 발행을 확인하세요.</div>'; return; }
     $("#sub").textContent = `${d.nodes.length} nodes: ${d.nodes.map((n) => n.label).join(", ")} · ${num(d.rows)} rows — last seen ${d.last_seen_kst} (KST) · 온습도 대표값 SCD30 · 데이터가 바뀔 때만 다시 그림`;
     const one = node ? d.nodes.find((n) => n.node === node) : null;
     if (one) {
-      el.innerHTML = sec("radar", "cyan", `실시간 상태 — ${esc(one.label)} (${esc(one.node)})`, "60 s 갱신 · ★ = ML 타깃")
+      el.innerHTML = sec("radar", "cyan", `실시간 상태(Radar) — ${esc(one.label)}`, "60 s 갱신 · ★ = ML 타깃")
         + `<div class="row" style="margin-bottom:10px"><a class="btn" data-go="mon-live" href="#mon-live">← 전체 레이더</a></div>`
         + `<div class="panel"><div class="radar-card one${one.down ? " down" : ""}"><div class="h">${dot(one.color)}${esc(one.label)}</div>${one.down ? `<div class="dn">${one.recv_time ? `지연 ${fmtAge(one.age_min)} · 마지막 ${esc(one.recv_time.slice(5, 16))}` : "수신 없음"}</div>` : ""}${CH.radar(one)}</div></div>`;
       return;
     }
     const cards = d.nodes.map((n) => `<div class="radar-card${n.down ? " down" : ""}" data-go="mon-live/${esc(n.node)}"><div class="h">${dot(n.color)}${esc(n.label)}</div>${n.down ? `<div class="dn">${n.recv_time ? `지연 ${fmtAge(n.age_min)} · 마지막 ${esc(n.recv_time.slice(5, 16))}` : "수신 없음"}</div>` : ""}${CH.radar(n)}</div>`).join("");
-    el.innerHTML = sec("radar", "cyan", "노드별 실시간 상태 — 레이더 (6변수 정규화)", "60 s 갱신 · 이름표 숫자순 · ★ = ML 타깃 · 카드 탭 = 확대")
+    el.innerHTML = sec("radar", "cyan", "실시간 상태(Radar)", "6변수 정규화 · 60 s 갱신 · 이름표 숫자순 · ★ = ML 타깃 · 카드 탭 = 확대")
       + `<div class="panel"><div class="radar-grid">${cards}</div></div>`;
   }
 
