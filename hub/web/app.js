@@ -92,6 +92,7 @@ const AQ = (() => {
     gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/>',
     pulse: '<polyline points="3,12 8,12 10,7 13,17 15,12 21,12"/>',
   };
+  const secMeta = (meta) => `<div class="sec"><div class="meta">${meta || ""}</div></div>`;
   function sec(icon, color, title, meta) {
     return `<div class="sec"><div class="chip" style="--c: var(--${color})"><svg viewBox="0 0 24 24">${ICONS[icon]}</svg><h2>${esc(title)}</h2></div><div class="meta">${meta || ""}</div></div>`;
   }
@@ -171,6 +172,6 @@ const AQ = (() => {
     }, 60000);
   }
 
-  return { $, esc, css, num, dash, theme, setTheme, initTheme, onTheme, getJSON, poll, initTip, toast, sec, dot,
+  return { $, esc, css, num, dash, theme, setTheme, initTheme, onTheme, getJSON, poll, initTip, toast, sec, secMeta, dot,
            regime, chip, actionChip, regimeColor, REGIME_KO, table, initSidebar, mode, store, onStatus, icons: ICONS };
 })();

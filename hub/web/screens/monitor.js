@@ -3,7 +3,7 @@
    (version-gated, active screen only). Export/reset moved to screens/admin.js. */
 "use strict";
 (() => {
-  const { $, esc, css, num, sec, dot, getJSON, table, store } = AQ;
+  const { $, esc, css, num, sec, secMeta, dot, getJSON, table, store } = AQ;
   const S = { live: null, stats: null, series: null, seriesKey: null, node: null };
   try { S.node = localStorage.getItem("aq-node"); } catch (e) { /* ignore */ }
 
@@ -24,7 +24,7 @@
   // ---- 실시간상태: radar grid (+ 단일 class 상세: #mon-live/<node>) -------------------
   function renderLive(el, node) {
     const d = S.live;
-    if (!d || !d.nodes.length) { el.innerHTML = sec("radar", "cyan", "실시간 상태(Radar)", "") + '<div class="panel empty">데이터가 아직 없습니다 — hub.py와 노드 발행을 확인하세요.</div>'; return; }
+    if (!d || !d.nodes.length) { el.innerHTML = secMeta("") + '<div class="panel empty">데이터가 아직 없습니다 — hub.py와 노드 발행을 확인하세요.</div>'; return; }
     $("#sub").textContent = `${d.nodes.length} nodes: ${d.nodes.map((n) => n.label).join(", ")} · ${num(d.rows)} rows — last seen ${d.last_seen_kst} (KST) · 온습도 대표값 SCD30 · 데이터가 바뀔 때만 다시 그림`;
     const one = node ? d.nodes.find((n) => n.node === node) : null;
     if (one) {
@@ -34,18 +34,18 @@
       return;
     }
     const cards = d.nodes.map((n) => `<div class="radar-card${n.down ? " down" : ""}" data-go="mon-live/${esc(n.node)}"><div class="h">${dot(n.color)}${esc(n.label)}</div>${n.down ? `<div class="dn">${n.recv_time ? `지연 ${fmtAge(n.age_min)} · 마지막 ${esc(n.recv_time.slice(5, 16))}` : "수신 없음"}</div>` : ""}${CH.radar(n)}</div>`).join("");
-    el.innerHTML = sec("radar", "cyan", "실시간 상태(Radar)", "6변수 정규화 · 60 s 갱신 · 이름표 숫자순 · ★ = ML 타깃 · 카드 탭 = 확대")
+    el.innerHTML = secMeta("6변수 정규화 · 60 s 갱신 · 이름표 숫자순 · ★ = ML 타깃 · 카드 탭 = 확대")
       + `<div class="panel"><div class="radar-grid">${cards}</div></div>`;
   }
 
   // ---- 전체통계: 28-day stats (추세 → 초과율 순위 → 분포) ----------------------------
   function renderStats(el) {
     const d = S.stats;
-    if (!d || !Object.keys(d.box).length) { el.innerHTML = sec("stats", "orange", "전체 통계 — 최근 28일", "") + '<div class="panel empty">통계 없음</div>'; return; }
+    if (!d || !Object.keys(d.box).length) { el.innerHTML = secMeta("") + '<div class="panel empty">통계 없음</div>'; return; }
     const colors = { pm2p5: "--orange", pm10p0: "--red", scd_temp: "--yellow", scd_hum: "--blue", co2: "--cyan", voc: "--green" };
     const thr = d.thr || { co2: 1000, voc: 200 };
     const TITLE = { co2: "CO₂", voc: "VOC" }, UNIT = { co2: "ppm", voc: "idx" };
-    let h = sec("stats", "orange", `전체 통계 — 최근 ${d.days}일`, `5 min 갱신 · 서버 집계본만 전송 (q1 · median · q3) · ${num(d.rows)} 행`);
+    let h = secMeta(`최근 ${d.days}일 · 5 min 갱신 · 서버 집계본만 전송 (q1 · median · q3) · ${num(d.rows)} 행`);
     if (d.daily) {
       const tpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${TITLE[k]} 일별 추이 ★ <span style="opacity:.7">(전 교실 중앙값 · q1–q3 밴드 · 빨간선 = ON 임계 ${num(thr[k])})</span></div>${CH.trend(d.daily[k], css(col), { threshold: thr[k], unit: UNIT[k] })}</div>`;
       h += `<div class="grid g2">${tpanel("co2", "--cyan")}${tpanel("voc", "--green")}</div>`;
@@ -63,12 +63,12 @@
   // ---- 시계열&비전 -------------------------------------------------------------------
   function renderSeries(el) {
     const d = S.series;
-    if (!d) { el.innerHTML = sec("series", "blue", "노드별 시계열 + 재실 탐지", "") + '<div class="panel empty">데이터가 아직 없습니다.</div>'; return; }
+    if (!d) { el.innerHTML = secMeta("") + '<div class="panel empty">데이터가 아직 없습니다.</div>'; return; }
     const opts = (S.live ? S.live.nodes : []).map((n) => `<option value="${esc(n.node)}"${n.node === d.node ? " selected" : ""}>${esc(n.label)} (${esc(n.node)})</option>`).join("");
     const colors = { pm2p5: "--orange", pm10p0: "--red", scd_temp: "--yellow", scd_hum: "--blue", co2: "--cyan", voc: "--green" };
     const thr = { co2: 1000, voc: 200 };
     const charts = Object.entries(d.series).map(([k, vals]) => { const m = d.metrics[k]; return `<div><div class="tt" style="${m.target ? `color:${css(colors[k])}` : ""}">${esc(m.label)} (${esc(m.unit)})${m.target ? " ★" : ""}</div>${CH.line(d.times, vals, css(colors[k]), { threshold: thr[k], unit: m.unit, target: m.target })}</div>`; }).join("");
-    el.innerHTML = sec("series", "blue", "노드별 시계열 + 재실 탐지", "60 s 갱신 · 선택 상태 유지 · 최근 60 버킷 = 5시간")
+    el.innerHTML = secMeta("재실 탐지 포함 · 60 s 갱신 · 선택 상태 유지 · 최근 60 버킷 = 5시간")
       + `<div class="panel"><div class="row" style="margin-bottom:10px"><span class="tt">노드 선택</span><select id="node-sel">${opts}</select><span class="tt">최근 ${d.times.length} 버킷</span></div>`
       + (d.times.length ? `<div class="grid g6">${charts}</div>` : '<div class="empty">이 노드의 행이 없습니다</div>')
       + `<div style="margin-top:12px">${visionPanel(d.occupancy, d.label)}</div>`
@@ -96,10 +96,10 @@
   // ---- 최근기록 (admin) --------------------------------------------------------------
   function renderRecords(el) {
     const d = S.series;
-    if (!d) { el.innerHTML = sec("records", "blue", "최근 기록", "") + '<div class="panel empty">데이터가 아직 없습니다.</div>'; return; }
+    if (!d) { el.innerHTML = secMeta("") + '<div class="panel empty">데이터가 아직 없습니다.</div>'; return; }
     const head = ["recv_time (KST)", ...d.record_keys];
     const rows = d.records.map((r) => ({ cells: [esc(r.recv_time), ...d.record_keys.map((k) => num(r[k], ["voc", "nox", "co2"].includes(k) ? 0 : 1))] }));
-    el.innerHTML = sec("records", "blue", `최근 기록 — ${esc(d.label)}`, "60 s 갱신 · 최신 5행 · 11개 원시 변수") + `<div class="panel">${table(head, rows)}</div>`;
+    el.innerHTML = secMeta(`${esc(d.label)} · 60 s 갱신 · 최신 5행 · 11개 원시 변수`) + `<div class="panel">${table(head, rows)}</div>`;
   }
 
   // ---- screens -----------------------------------------------------------------------
@@ -116,7 +116,7 @@
   AQ.router.register({
     name: "mon-stats", group: "mon", label: "전체통계", icon: "stats", color: "orange",
     activate() {
-      if (!S.stats && !this.el.innerHTML) this.el.innerHTML = sec("stats", "orange", "전체 통계 — 최근 28일", "") + '<div class="panel empty">서버 집계 계산 중…</div>';
+      if (!S.stats && !this.el.innerHTML) this.el.innerHTML = secMeta("") + '<div class="panel empty">서버 집계 계산 중…</div>';
       this.un = store.sub("/api/stats", 300000, (d) => { S.stats = d; renderStats(this.el); });
     },
     deactivate() { if (this.un) { this.un(); this.un = null; } },
