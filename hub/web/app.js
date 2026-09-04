@@ -145,6 +145,8 @@ const AQ = (() => {
   // ---- sidebar -----------------------------------------------------------------------
   function renderSidebar(s) {
     const set = (id, html, cls) => { const el = $(id); if (!el) return; el.innerHTML = html; el.className = "v " + (cls || ""); };
+    const sub = $("#sub");
+    if (sub) sub.textContent = `${num(s.readings_rows)} rows — last seen ${s.hub_last_kst || "—"} (KST), 데이터 변경시 재반영`;
     set("#st-hub", s.fresh ? "● 수집 중" : "● 수신 지연", s.fresh ? "ok" : "bad");
     set("#st-last", s.hub_last_kst ? `${s.hub_last_kst} KST` : "—");
     set("#st-env", `${s.env_active} / ${s.env_total} 활성`, s.env_active < s.env_total ? "warn" : "");
