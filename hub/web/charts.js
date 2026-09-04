@@ -31,23 +31,73 @@ const CH = (() => {
   }
 
   function box(st, color) {
-    const vals = [st.lowerfence, st.upperfence, ...(st.outliers || [])];
+    const cap = st.p99 !== undefined ? Math.max(st.p99, st.upperfence) : Infinity;
+    const shown = (st.outliers || []).filter((v) => v <= cap);
+    const cut = (st.outliers || []).length - shown.length;
+    const vals = [st.lowerfence, st.upperfence, ...shown];
     let lo = Math.min(...vals), hi = Math.max(...vals);
     if (hi === lo) { hi = lo + 1; }
     const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
     const H = 130, T = 6, B = 6, X = 60;
     const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
     const ink = css("--ink"), dim = css("--dim"), grid = css("--grid");
-    const tipBox = `q1 ${num(st.q1, 1)} · 중앙 ${num(st.median, 1)} · q3 ${num(st.q3, 1)}\n평균 ${num(st.mean, 1)} · n ${num(st.n)}`;
+    const tipBox = `q1 ${num(st.q1, 1)} · 중앙 ${num(st.median, 1)} · q3 ${num(st.q3, 1)}\n평균 ${num(st.mean, 1)} · n ${num(st.n)}${st.out_n ? `\n이상치 ${num(st.out_n)}개 · 최대 ${num(st.out_max, 1)}` : ""}`;
     let s = `<svg class="chart" viewBox="0 0 100 ${H}">`;
-    for (const v of [st.lowerfence, st.median, st.upperfence]) s += `<text x="36" y="${f1(y(v) + 3)}" font-size="7" fill="${dim}" text-anchor="end">${num(v, v < 100 ? 1 : 0)}</text>`;
+    const my = y(st.median);
+    for (const v of [st.lowerfence, st.median, st.upperfence]) {
+      if (v !== st.median && Math.abs(y(v) - my) < 9) continue;      // don't collide with the median label
+      s += `<text x="36" y="${f1(y(v) + 3)}" font-size="7" fill="${v === st.median ? ink : dim}" text-anchor="end">${num(v, v < 100 ? 1 : 0)}</text>`;
+    }
     s += `<line x1="${X}" y1="${f1(y(st.upperfence))}" x2="${X}" y2="${f1(y(st.lowerfence))}" stroke="${color}" stroke-width="1.5"/>`;
     s += `<rect x="${X - 16}" y="${f1(y(st.q3))}" width="32" height="${f1(Math.max(1, y(st.q1) - y(st.q3)))}" fill="${color}" opacity="${st.target ? 0.6 : 0.3}" stroke="${color}" data-tip="${esc(tipBox)}"/>`;
     s += `<line x1="${X - 16}" y1="${f1(y(st.median))}" x2="${X + 16}" y2="${f1(y(st.median))}" stroke="${ink}" stroke-width="2.5"/>`;
     s += `<line x1="${X - 8}" y1="${f1(y(st.upperfence))}" x2="${X + 8}" y2="${f1(y(st.upperfence))}" stroke="${color}"/>`;
     s += `<line x1="${X - 8}" y1="${f1(y(st.lowerfence))}" x2="${X + 8}" y2="${f1(y(st.lowerfence))}" stroke="${color}"/>`;
-    (st.outliers || []).forEach((v) => { s += `<circle cx="${X + ((v * 7) % 9) - 4}" cy="${f1(y(v))}" r="1.3" fill="${color}" opacity="0.6"/>`; });
-    if ((st.outliers || []).length) s += `<text x="${X + 22}" y="${H - 2}" font-size="7" fill="${grid}"></text>`;
+    shown.forEach((v) => { s += `<circle cx="${X + ((v * 7) % 9) - 4}" cy="${f1(y(v))}" r="1.3" fill="${color}" opacity="0.6"/>`; });
+    if (cut > 0) s += `<text x="${X}" y="${T + 5}" font-size="5.5" fill="${dim}" text-anchor="middle" data-tip="p99 초과 이상치 ${cut}개 생략\n최대 ${num(st.out_max, 1)}">▲${num(cut)} · max ${num(st.out_max)}</text>`;
+    return s + "</svg>";
+  }
+
+  // 28-day daily trend: q1-q3 band + median line + ON-threshold reference
+  function trend(dl, color, opts = {}) {
+    const W = 660, H = 150, L = 46, R = 10, T = 10, B = 20;
+    const n = (dl.days || []).length;
+    if (!n) return `<svg class="chart" viewBox="0 0 ${W} ${H}"><text x="${W / 2}" y="${H / 2}" font-size="11" fill="${css("--dim")}" text-anchor="middle">no data</text></svg>`;
+    const dim = css("--dim"), grid = css("--grid"), red = css("--red");
+    let lo = Math.min(...dl.q1, opts.threshold ?? Infinity), hi = Math.max(...dl.q3, opts.threshold ?? -Infinity);
+    if (hi === lo) hi = lo + 1;
+    const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+    const x = (i) => L + (n === 1 ? 0 : i / (n - 1) * (W - L - R));
+    const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+    let s = `<svg class="chart" viewBox="0 0 ${W} ${H}">`;
+    for (const v of [lo + pad, (lo + hi) / 2, hi - pad]) s += `<line x1="${L}" y1="${f1(y(v))}" x2="${W - R}" y2="${f1(y(v))}" stroke="${grid}"/><text x="${L - 4}" y="${f1(y(v) + 3)}" font-size="9" fill="${dim}" text-anchor="end">${num(v)}</text>`;
+    let band = "";
+    dl.q3.forEach((v, i) => { band += `${i ? "L" : "M"}${f1(x(i))},${f1(y(v))}`; });
+    for (let i = n - 1; i >= 0; i--) band += `L${f1(x(i))},${f1(y(dl.q1[i]))}`;
+    s += `<path d="${band}Z" fill="${color}" opacity="0.18"/>`;
+    if (opts.threshold !== undefined) s += `<line x1="${L}" y1="${f1(y(opts.threshold))}" x2="${W - R}" y2="${f1(y(opts.threshold))}" stroke="${red}" stroke-dasharray="4 3" opacity="0.8"/><text x="${W - R}" y="${f1(y(opts.threshold) - 3)}" font-size="8" fill="${red}" text-anchor="end">${num(opts.threshold)}</text>`;
+    let d = "";
+    dl.med.forEach((v, i) => { d += `${i ? "L" : "M"}${f1(x(i))},${f1(y(v))}`; });
+    s += `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2"/>`;
+    dl.med.forEach((v, i) => { s += `<circle cx="${f1(x(i))}" cy="${f1(y(v))}" r="2.6" fill="${color}" data-tip="${esc(dl.days[i])}\n중앙 ${num(v, 1)} ${esc(opts.unit || "")} · q1 ${num(dl.q1[i], 1)} · q3 ${num(dl.q3[i], 1)}"/>`; });
+    [0, Math.floor((n - 1) / 2), n - 1].filter((v, i, a) => a.indexOf(v) === i)
+      .forEach((i) => { s += `<text x="${f1(x(i))}" y="${H - 6}" font-size="9" fill="${dim}" text-anchor="${i === 0 ? "start" : i === n - 1 ? "end" : "middle"}">${esc((dl.days[i] || "").slice(5))}</text>`; });
+    return s + "</svg>";
+  }
+
+  // per-node ON-threshold exceedance: % of rows above the rules-layer threshold
+  function pbars(rows, color) {
+    const ink = css("--ink"), dim = css("--dim");
+    const mx = Math.max(1, ...rows.map((r) => r.pct));
+    const H = 8 + rows.length * 29 + 4;
+    let s = `<svg class="chart" viewBox="0 0 400 ${H}">`;
+    rows.forEach((r, i) => {
+      const y = 8 + i * 29, w = Math.max(1, r.pct / mx * 280);
+      const op = 0.35 + 0.6 * (i === 0 ? 1 : (rows.length - i) / rows.length);
+      s += `<text x="72" y="${y + 14}" font-size="11" fill="${ink}" text-anchor="end">${esc(r.label)}</text>`
+         + `<rect x="80" y="${y}" width="${f1(w)}" height="20" rx="3" fill="${color}" opacity="${f1(op)}" data-tip="${esc(r.label)} 초과율 ${num(r.pct, 1)}%\n28일 중앙값 ${num(r.med, 1)}"/>`
+         + `<text x="${f1(84 + w)}" y="${y + 14}" font-size="10" fill="${dim}">${num(r.pct, 1)}%</text>`;
+    });
     return s + "</svg>";
   }
 
@@ -307,5 +357,5 @@ const CH = (() => {
     return s + "</svg>";
   }
 
-  return { radar, box, hbars, line, occBars, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO };
+  return { radar, box, hbars, trend, pbars, line, occBars, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO };
 })();
