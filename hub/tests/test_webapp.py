@@ -79,6 +79,15 @@ def test_live_and_stats(site):
     assert co2["q1"] <= co2["median"] <= co2["q3"]
     assert len(co2["outliers"]) <= webdata.BOX_MAX_OUTLIERS
     assert st["by_node"]["co2"] == sorted(st["by_node"]["co2"], key=lambda r: -r["mean"])
+    assert co2["p99"] <= co2["out_max"] and co2["out_n"] >= len(co2["outliers"])
+    assert set(st["daily"]) == set(webdata.TARGET_KEYS)             # 28d daily quantile bands
+    dl = st["daily"]["co2"]
+    assert len(dl["days"]) >= 1 and len(dl["q1"]) == len(dl["med"]) == len(dl["q3"]) == len(dl["days"])
+    assert all(a <= b <= c for a, b, c in zip(dl["q1"], dl["med"], dl["q3"]))
+    ex = st["exceed"]["co2"]                                        # ON-threshold exceedance, sorted desc
+    assert all(0.0 <= r["pct"] <= 100.0 for r in ex)
+    assert [r["pct"] for r in ex] == sorted((r["pct"] for r in ex), reverse=True)
+    assert st["thr"] == webdata.EXCEED_THR
     assert w.stats() is st                                          # memoised on the bucket
 
 

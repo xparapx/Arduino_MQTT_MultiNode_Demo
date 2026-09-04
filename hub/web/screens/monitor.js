@@ -38,16 +38,26 @@
       + `<div class="panel"><div class="radar-grid">${cards}</div></div>`;
   }
 
-  // ---- 전체통계: 28-day stats --------------------------------------------------------
+  // ---- 전체통계: 28-day stats (추세 → 초과율 순위 → 분포) ----------------------------
   function renderStats(el) {
     const d = S.stats;
     if (!d || !Object.keys(d.box).length) { el.innerHTML = sec("stats", "orange", "전체 통계 — 최근 28일", "") + '<div class="panel empty">통계 없음</div>'; return; }
     const colors = { pm2p5: "--orange", pm10p0: "--red", scd_temp: "--yellow", scd_hum: "--blue", co2: "--cyan", voc: "--green" };
+    const thr = d.thr || { co2: 1000, voc: 200 };
+    const TITLE = { co2: "CO₂", voc: "VOC" }, UNIT = { co2: "ppm", voc: "idx" };
+    let h = sec("stats", "orange", `전체 통계 — 최근 ${d.days}일`, `5 min 갱신 · 서버 집계본만 전송 (q1 · median · q3) · ${num(d.rows)} 행`);
+    if (d.daily) {
+      const tpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${TITLE[k]} 일별 추이 ★ <span style="opacity:.7">(전 교실 중앙값 · q1–q3 밴드 · 빨간선 = ON 임계 ${num(thr[k])})</span></div>${CH.trend(d.daily[k], css(col), { threshold: thr[k], unit: UNIT[k] })}</div>`;
+      h += `<div class="grid g2">${tpanel("co2", "--cyan")}${tpanel("voc", "--green")}</div>`;
+      const xpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${TITLE[k]} 임계 초과율 by 교실 ★ <span style="opacity:.7">(&gt;${num(thr[k])} ${UNIT[k]} 인 시간 비율)</span></div>${CH.pbars(d.exceed[k] || [], css(col))}</div>`;
+      h += `<div class="grid g2" style="margin-top:12px">${xpanel("co2", "--cyan")}${xpanel("voc", "--green")}</div>`;
+    } else {
+      const bars = (k, col, unit) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${TITLE[k]} mean by node (${unit}) ★</div>${CH.hbars(d.by_node[k] || [], css(col), unit)}</div>`;
+      h += `<div class="grid g2">${bars("co2", "--cyan", "ppm")}${bars("voc", "--green", "idx")}</div>`;
+    }
     const boxes = Object.entries(d.box).map(([k, st]) => `<div class="panel" style="padding:10px"><div class="tt" style="margin-bottom:4px;${st.target ? `color:${css(colors[k])}` : ""}">${esc(st.label)}${st.target ? " ★" : ""} <span style="opacity:.7">(${esc(st.unit)})</span></div>${CH.box(st, css(colors[k] || "--blue"))}</div>`).join("");
-    const bars = (k, col, unit) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${k === "co2" ? "CO₂" : "VOC"} mean by node (${unit}) ★</div>${CH.hbars(d.by_node[k] || [], css(col), unit)}</div>`;
-    el.innerHTML = sec("stats", "orange", `전체 통계 — 최근 ${d.days}일`, `5 min 갱신 · 서버 집계본만 전송 (q1 · median · q3) · ${num(d.rows)} 행`)
-      + `<div class="grid g6">${boxes}</div><div class="grid g2" style="margin-top:12px">${bars("co2", "--cyan", "ppm")}${bars("voc", "--green", "idx")}</div>`
-      + '<p class="note">상관 히트맵 · CO₂-VOC 레짐 산점도(pooled / 노드별)는 <b>진단 &amp; 추론</b>으로 이동. 이 화면은 "지금 상태"만.</p>';
+    el.innerHTML = h + `<div class="grid g6" style="margin-top:12px">${boxes}</div>`
+      + '<p class="note">분포 박스는 p99에서 축을 자르고 생략된 극단 이상치는 ▲로 표기. 초과율 임계 = 행동지침 규칙 계층의 ON 임계와 동일. 상관 히트맵 · 레짐 산점도는 <b>진단 &amp; 추론</b>에서.</p>';
   }
 
   // ---- 시계열&비전 -------------------------------------------------------------------

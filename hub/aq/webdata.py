@@ -36,6 +36,7 @@ KST = timedelta(hours=9)
 DB_TIMEOUT_S = 5
 ROW_LIMIT = 5000              # recent rows behind the live sections (as page 1)
 STATS_DAYS = 28
+EXCEED_THR = {"co2": 1000.0, "voc": 200.0}   # = rules layer ON thresholds (fan.on_co2 / purifier.on_voc)
 BOX_MAX_OUTLIERS = 300
 SERIES_BUCKETS = 60
 RECORDS_N = 5
@@ -217,7 +218,7 @@ class WebData:
         def build():
             if not self._has_db():
                 return {"version": bucket, "days": days, "box": {}, "by_node": {}}
-            sql = ("SELECT node, " + ", ".join(GAUGE_KEYS) + " FROM readings "
+            sql = ("SELECT node, ts, " + ", ".join(GAUGE_KEYS) + " FROM readings "
                    "WHERE ts >= datetime('now', ?)")
             with closing(self._ro()) as con:
                 if "readings" not in self._tables(con):
@@ -237,8 +238,29 @@ class WebData:
                 g = dfa.groupby("node")[k].mean().dropna().sort_values(ascending=False)
                 by_node[k] = [{**self.node_info(n, colors), "mean": round(float(v), 1)}
                               for n, v in g.items()]
+            # daily q1/med/q3 per target (KST day) and ON-threshold exceedance per node --
+            # server aggregates only, a few hundred numbers for the whole window
+            dfa["_day"] = (pd.to_datetime(dfa["ts"]) + KST).dt.strftime("%Y-%m-%d")
+            daily, exceed = {}, {}
+            for k in TARGET_KEYS:
+                v = dfa.dropna(subset=[k])
+                if v.empty:
+                    daily[k] = {"days": [], "q1": [], "med": [], "q3": []}
+                    exceed[k] = []
+                    continue
+                q = v.groupby("_day")[k].quantile([0.25, 0.5, 0.75]).unstack().sort_index()
+                daily[k] = {"days": list(q.index),
+                            "q1": [round(float(x), 1) for x in q[0.25]],
+                            "med": [round(float(x), 1) for x in q[0.5]],
+                            "q3": [round(float(x), 1) for x in q[0.75]]}
+                grp = v.groupby("node")[k]
+                pct = grp.apply(lambda x: float((x > EXCEED_THR[k]).mean() * 100.0))
+                med = grp.median()
+                exceed[k] = [{**self.node_info(n, colors), "pct": round(float(p), 1),
+                              "med": round(float(med[n]), 1)}
+                             for n, p in pct.sort_values(ascending=False).items()]
             return {"version": bucket, "days": days, "rows": int(len(dfa)), "box": box,
-                    "by_node": by_node}
+                    "by_node": by_node, "thr": EXCEED_THR, "daily": daily, "exceed": exceed}
         return self._memo("stats", bucket, build)
 
     def series(self, node: str) -> dict:
@@ -712,4 +734,6 @@ def box_stats(s: pd.Series) -> dict | None:
             "lowerfence": float(inside.min()) if len(inside) else q1,
             "upperfence": float(inside.max()) if len(inside) else q3,
             "mean": float(s.mean()), "n": int(len(s)),
+            "p99": float(s.quantile(0.99)), "out_n": int((~s.between(lo_f, hi_f)).sum()),
+            "out_max": float(s.max()),
             "outliers": [round(float(v), 2) for v in out]}

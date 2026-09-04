@@ -262,6 +262,7 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
   .g4, .radar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }   /* 레이더 2열 × 4행 */
   .span2, .span3 { grid-column: auto; }
   .g6 > .panel { padding: 8px; }
+  .g6 > .panel svg.chart { max-width: 220px; margin: 0 auto; display: block; }
   .metric .v { font-size: 17px; }
   .tbl th, .tbl td { padding: 6px 6px; font-size: 11px; }
   .vp .maprow { flex-direction: column; }
