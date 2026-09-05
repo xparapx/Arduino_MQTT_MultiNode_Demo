@@ -415,7 +415,7 @@ const CH = (() => {
 
   function bandStrip(c, b, dev, devKo) {
     const data = dev === "fan" ? b.co2 : b.voc, n = data.length, hours = b.hours || 24;
-    const W = 320, H = 58, top = 2, plotH = 36, trkY = top + plotH + 4, trkH = 5, axisY = H - 1;
+    const W = 320, H = 61, top = 2, plotH = 36, trkY = top + plotH + 4, trkH = 8, axisY = H - 1;
     const ink = css("--ink"), foot = css("--foot"), grid = css("--grid"), plot = css("--plot"), panel = css("--panel");
     const y = (v) => top + plotH - bandFrac(c, v) * plotH, x = (i) => (i / (n - 1)) * W, xh = (h) => (h / hours) * W;
     const uid = `h${Math.random().toString(36).slice(2, 7)}`;
@@ -429,7 +429,7 @@ const CH = (() => {
               + `<path d="${d.trim()}" fill="none" stroke="${css("--chart-ink") || ink}" stroke-width="2.2" stroke-linejoin="round"/>`;   // 패널색 케이싱 — 배경 위 라인 확보
     // ON history track + unjudged (QC-excluded) hours
     s += `<rect x="0" y="${trkY}" width="${W}" height="${trkH}" fill="${plot}" stroke="${grid}" stroke-width="1"/>`;
-    for (const [a, z] of (b.on || {})[dev] || []) s += `<rect x="${f1(xh(a))}" y="${trkY}" width="${f1(Math.max(0, xh(z) - xh(a)))}" height="${trkH}" fill="${css("--track-on")}"/>`;
+    for (const [a, z] of (b.on || {})[dev] || []) s += `<rect x="${f1(xh(a))}" y="${trkY}" width="${f1(Math.max(0, xh(z) - xh(a)))}" height="${trkH}" fill="${css("--green")}"/>`;
     for (const [a, z] of b.unjudged || []) s += `<rect x="${f1(xh(a))}" y="${trkY}" width="${f1(Math.max(0, xh(z) - xh(a)))}" height="${trkH}" fill="url(#${uid})"/>`;
     // hourly hover columns
     const per = n / hours;
