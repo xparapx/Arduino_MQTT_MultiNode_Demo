@@ -46,10 +46,9 @@ html, body { margin: 0; background: var(--bg); color: var(--ink);
 a { color: var(--blue); } a:hover { color: var(--cyan); }
 h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
 .sub { color: var(--dim); font-size: 13px; margin: 0 0 16px; }
-/* 헤더(제목·메타)는 Home 화면에서만 — 나머지 탭은 화면 이름이 곧 제목 */
+/* 메인 헤더(제목·메타)는 기본 숨김 — 데스크톱은 사이드바 브랜드가 제목 역할(이중 라벨 방지),
+   모바일 Home에서만 h1 노출 (아래 미디어 블록) */
 main > h1, main > .sub { display: none; }
-:root[data-screen="home"] main > h1 { display: block; }
-:root[data-screen="home"] main > .sub { display: block; }
 .app { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100vh; }
 main { padding: 22px 28px 60px; min-width: 0; max-width: 1500px; }
 
@@ -276,7 +275,7 @@ svg.chart .hb-over { animation: hb-blink 2.2s ease-in-out infinite; }
   .side { display: none; }              /* 상태 요약은 Home · 시스템 상세는 관리 화면에서 */
   main { padding: 12px 12px calc(70px + env(safe-area-inset-bottom)); max-width: none; }
   h1 { font-size: 17px; } .sub { font-size: 12px; }
-  :root[data-screen="home"] main > .sub { display: none; }   /* 모바일 Home: 제목만, 메타 삭제 */
+  :root[data-screen="home"] main > h1 { display: block; }   /* 모바일 Home: 제목만 (메타 없음) */
   .dock { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
     height: calc(56px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
     background: var(--side); border-top: 1px solid var(--grid); }
