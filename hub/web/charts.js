@@ -141,20 +141,25 @@ const CH = (() => {
     return s + "</svg>";
   }
 
-  // per-node ON-threshold exceedance: % of rows above the rules-layer threshold
+  // per-node ON-threshold exceedance: % of rows above the rules-layer threshold.
+  // 막대 = 컬러맵 진행 그라디언트(밝은 시작 → 값 위치의 진한 끝): 짙은 끝색이 다크 배경에
+  // 묻지 않도록 본체는 밝게, 정의는 중앙값 색 외곽선 + (다크 한정) 네온 글로우가 잡는다.
   function pbars(rows, key) {
     const ink = css("--ink"), dim = css("--dim");
     const mx = Math.max(1, ...rows.map((r) => r.pct));
+    const map = cmap(key), mid = cvar(key);
+    const uid = `pb${Math.random().toString(36).slice(2, 7)}`;
     const H = 8 + rows.length * 29 + 4;
-    let s = `<svg class="chart" viewBox="0 0 400 ${H}">`;
+    let defs = "", body = "";
     rows.forEach((r, i) => {
       const y = 8 + i * 29, w = Math.max(1, r.pct / mx * 280);
-      const t = 0.25 + 0.75 * (r.pct / mx);
-      s += `<text x="72" y="${y + 14}" font-size="11" fill="${ink}" text-anchor="end">${esc(r.label)}</text>`
-         + `<rect x="80" y="${y}" width="${f1(w)}" height="20" rx="3" fill="rgb(${cmapAt(cmap(key), t)})" opacity="0.9" data-tip="${esc(r.label)} 초과율 ${num(r.pct, 1)}%\n28일 중앙값 ${num(r.med, 1)}"/>`
+      const tEnd = 0.25 + 0.75 * (r.pct / mx);
+      defs += `<linearGradient id="${uid}${i}" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="rgb(${cmapAt(map, 0.08)})"/><stop offset="100%" stop-color="rgb(${cmapAt(map, tEnd)})"/></linearGradient>`;
+      body += `<text x="72" y="${y + 14}" font-size="11" fill="${ink}" text-anchor="end">${esc(r.label)}</text>`
+         + `<rect x="80" y="${y}" width="${f1(w)}" height="20" rx="3" fill="url(#${uid}${i})" stroke="${mid}" stroke-opacity="0.55" stroke-width="1"${glow(mid, true)} data-tip="${esc(r.label)} 초과율 ${num(r.pct, 1)}%\n28일 중앙값 ${num(r.med, 1)}"/>`
          + `<text x="${f1(84 + w)}" y="${y + 14}" font-size="10" fill="${dim}">${num(r.pct, 1)}%</text>`;
     });
-    return s + "</svg>";
+    return `<svg class="chart" viewBox="0 0 400 ${H}"><defs>${defs}</defs>${body}</svg>`;
   }
 
   function hbars(rows, color, unit) {
