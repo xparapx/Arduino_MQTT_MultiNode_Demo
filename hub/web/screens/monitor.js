@@ -55,7 +55,7 @@
       h += `<div class="grid g2">${bars("co2", "--cyan", "ppm")}${bars("voc", "--green", "idx")}</div>`;
     }
     const boxes = Object.entries(d.box).map(([k, st]) => `<div class="bx"><div class="tt" style="margin-bottom:4px;${st.target ? `color:${css(colors[k])}` : ""}">${esc(st.label)}${st.target ? " ★" : ""} <span style="opacity:.7">(${esc(st.unit)})</span></div>${CH.box(st, css(colors[k] || "--blue"))}</div>`).join("");
-    el.innerHTML = h + `<div class="panel" style="margin-top:12px"><div class="tt" style="margin-bottom:8px">변수별 분포 — ${d.days}일 전체</div><div class="boxrow">${boxes}</div></div>`
+    el.innerHTML = h + `<div class="panel" style="margin-top:12px"><div class="tt" style="margin-bottom:8px">변수별 분포 — 최근 ${d.box_days || d.days}일</div><div class="boxrow">${boxes}</div></div>`
       + '<p class="note">분포 박스는 p99에서 축을 자르고 생략된 극단 이상치는 ▲로 표기. 초과율 임계 = 행동지침 규칙 계층의 ON 임계와 동일. 상관 히트맵 · 레짐 산점도는 <b>진단 &amp; 추론</b>에서.</p>';
   }
 
@@ -113,7 +113,7 @@
     repaint() { renderLive(this.el, this.p); },
   });
   AQ.router.register({
-    name: "mon-stats", group: "mon", label: "전체통계", icon: "stats", color: "orange",
+    name: "mon-stats", group: "mon", label: "통계", icon: "stats", color: "orange",
     activate() {
       if (!S.stats && !this.el.innerHTML) this.el.innerHTML = secMeta("") + '<div class="panel empty">서버 집계 계산 중…</div>';
       this.un = store.sub("/api/stats", 300000, (d) => { S.stats = d; renderStats(this.el); });

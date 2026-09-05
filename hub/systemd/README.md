@@ -6,7 +6,7 @@
 | `multinode_aq_dashboard.service` | Streamlit dashboard :8501 | boot, `Restart=always` |
 | `multinode_aq_analyst_hourly.timer` → `.service` | `analyst.py run --mode hourly` | every hour at :05 UTC |
 | `multinode_aq_analyst_daily.timer` → `.service` | `analyst.py run --mode daily` | 06:00 UTC daily |
-| `multinode_aq_analyst_weekly.timer` → `.service` | `analyst.py run --mode weekly` | Sunday 06:30 UTC |
+| `multinode_aq_analyst_weekly.timer` → `.service` | `analyst.py run --mode weekly` | 1st/3rd Sunday 06:30 UTC (biweekly, user decision 2026-09-05) |
 
 The analyst units are `Type=oneshot`, `TimeoutStartSec=300`, `Nice=10`, no
 `EnvironmentFile` (no broker credentials needed). They read `readings` /

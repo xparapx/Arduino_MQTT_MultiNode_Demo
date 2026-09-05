@@ -285,7 +285,7 @@ ul.pts li::before{content:"";position:absolute;left:2px;top:9px;width:9px;height
     <text x="745" y="78" text-anchor="middle" fill="#d0bbff" font-size="19" font-weight="700">analyst.py — 추론 계층</text>
     <text x="745" y="112" text-anchor="middle" fill="#aab2bd" font-size="14">hourly: QC → 레짐 판정 → 행동·예측</text>
     <text x="745" y="138" text-anchor="middle" fill="#aab2bd" font-size="14">daily: 스위칭 밴드·전이·탐색 집계</text>
-    <text x="745" y="164" text-anchor="middle" fill="#aab2bd" font-size="14">weekly: 재학습 → 승격 심사 (거버넌스)</text>
+    <text x="745" y="164" text-anchor="middle" fill="#aab2bd" font-size="14">격주: 재학습 → 승격 심사 (거버넌스)</text>
     <text x="745" y="202" text-anchor="middle" fill="#8de5a1" font-size="14.5" font-weight="600">결과는 analysis 테이블에만 기록</text>
     <text x="745" y="240" text-anchor="middle" fill="#6b7482" font-size="12.5" class="mono">읽기: readings — 쓰기: analysis</text>
     <line x1="965" y1="160" x2="1025" y2="160" stroke="#6b7482" stroke-width="2" marker-end="url(#ah2)"/>
@@ -408,7 +408,7 @@ ul.pts li::before{content:"";position:absolute;left:2px;top:9px;width:9px;height
       </div>
       <div class="panel" style="border-left:4px solid var(--acc)">
         <h2>모델도 심사를 받는다 (거버넌스)</h2>
-        <p class="dimtx" style="font-size:15.5px;margin-top:6px">매주 재학습 후보를 만들고 <b style="color:var(--ink)">4분면 구분 유지 ∧ (로그우도 +2% ∨ 중심 이동 ≥0.25)</b>를 통과해야 승격.
+        <p class="dimtx" style="font-size:15.5px;margin-top:6px">격주(2주)마다 재학습 후보를 만들고 <b style="color:var(--ink)">4분면 구분 유지 ∧ (로그우도 +2% ∨ 중심 이동 ≥0.25)</b>를 통과해야 승격.
         모든 결정은 모델 이력으로 기록 — <span class="mono" style="font-size:13px">gmm_v1 → …</span></p>
       </div>
     </div>

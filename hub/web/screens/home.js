@@ -31,10 +31,10 @@
   function alertsCard() {
     const items = [];
     if (A && !A.empty) {
-      (A.forecast || []).filter((f) => f.alert).forEach((f) => items.push(`<div class="row" style="gap:8px">${chip("경보", "warn")}<span>${nm(f)} — +${f.horizon_min}분 후 임계 초과 예상 (CO₂ ${num(f.co2_pred)} · VOC ${num(f.voc_pred)})</span></div>`));
-      (A.qc || []).filter((q) => !q.passed).forEach((q) => items.push(`<div class="row" style="gap:8px">${chip("QC 제외", "ex")}<span>${nm(q)} — ${esc(q.reason || "유효율 미달")} · 판정 보류</span></div>`));
+      (A.forecast || []).filter((f) => f.alert).forEach((f) => items.push(`<div class="row alertrow" style="gap:8px">${chip("경보", "warn")}<span>${nm(f)} — +${f.horizon_min}분 후 임계 초과 예상 (CO₂ ${num(f.co2_pred)} · VOC ${num(f.voc_pred)})</span></div>`));
+      (A.qc || []).filter((q) => !q.passed).forEach((q) => items.push(`<div class="row alertrow" style="gap:8px">${chip("QC 제외", "ex")}<span>${nm(q)} — ${esc(q.reason || "유효율 미달")} · 판정 보류</span></div>`));
     }
-    if (L) L.nodes.filter((n) => n.down).forEach((n) => items.push(`<div class="row" style="gap:8px">${chip("수신 지연", "warn")}<span>${dot(n.color)}${esc(n.label)} — ${n.recv_time ? `마지막 ${esc(n.recv_time.slice(5, 16))}` : "수신 없음"}</span></div>`));
+    if (L) L.nodes.filter((n) => n.down).forEach((n) => items.push(`<div class="row alertrow" style="gap:8px">${chip("수신 지연", "warn")}<span>${dot(n.color)}${esc(n.label)} — ${n.recv_time ? `마지막 ${esc(n.recv_time.slice(5, 16))}` : "수신 없음"}</span></div>`));
     return sec("forecast", "orange", "경보 · 이상 요약", `${items.length ? items.length + "건" : ""}`)
       + `<div class="panel">${items.length ? `<div style="display:flex;flex-direction:column;gap:8px;font-size:13px">${items.join("")}</div>` : '<div class="empty" style="padding:12px 0">현재 경보·이상 없음 — 모든 판정 노드 정상 범위</div>'}</div>`;
   }

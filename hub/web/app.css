@@ -122,9 +122,12 @@ main { padding: 22px 28px 60px; min-width: 0; max-width: 1500px; }
 select, input[type="date"], input[type="time"] { background: var(--panel2); color: var(--ink); border: 1px solid var(--grid);
   border-radius: 7px; padding: 6px 10px; font-size: 12px; font-family: inherit; color-scheme: inherit; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.alertrow { flex-wrap: nowrap; align-items: flex-start; }
+.alertrow .chipx { flex: 0 0 auto; margin-top: 1px; }
+.alertrow > span:last-child { min-width: 0; }
 .metric { background: var(--panel2); border-radius: 8px; padding: 10px 12px; }
 .metric .l { font-size: 11px; color: var(--dim); }
-.metric .v { font-family: "IBM Plex Sans KR", system-ui, sans-serif; font-size: 20px; font-weight: 700; margin: 2px 0; }
+.metric .v { font-family: "IBM Plex Sans KR", system-ui, sans-serif; font-size: 18px; font-weight: 700; margin: 2px 0; }
 .metric.mc { border-left: 3px solid var(--mc); }
 .metric.mc .v { color: var(--mc); }
 .metric .d { font-size: 11px; color: var(--dim); }
@@ -281,7 +284,7 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
   .subtabs a span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .boxrow { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .boxrow .bx { flex: 0 0 108px; }
-  .metric .v { font-size: 17px; }
+  .metric .v { font-size: 15px; }
   .tbl th, .tbl td { padding: 6px 6px; font-size: 11px; }
   .vp .maprow { flex-direction: column; }
   .vp .map { flex: 0 0 auto; width: 100%; height: auto; }

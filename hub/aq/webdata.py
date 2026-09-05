@@ -36,6 +36,7 @@ KST = timedelta(hours=9)
 DB_TIMEOUT_S = 5
 ROW_LIMIT = 5000              # recent rows behind the live sections (as page 1)
 STATS_DAYS = 28
+BOX_DAYS = 7                  # distribution boxes: recent week (trend/exceed stay on the full window)
 EXCEED_THR = {"co2": 1000.0, "voc": 200.0}   # = rules layer ON thresholds (fan.on_co2 / purifier.on_voc)
 BOX_MAX_OUTLIERS = 300
 SERIES_BUCKETS = 60
@@ -226,9 +227,11 @@ class WebData:
                 dfa = pd.read_sql_query(sql, con, params=(f"-{days} days",))
             if dfa.empty:
                 return {"version": bucket, "days": days, "box": {}, "by_node": {}}
+            day_list = sorted(dfa["d"].unique())
+            rec = dfa[dfa["d"] >= day_list[max(0, len(day_list) - BOX_DAYS)]]
             box = {}
             for k in GAUGE_KEYS:
-                bs = box_stats(dfa[k])
+                bs = box_stats(rec[k])
                 if bs:
                     label, unit, _, _ = METRICS[k]
                     box[k] = {"label": label, "unit": unit, "target": k in TARGET_KEYS, **bs}
@@ -259,7 +262,8 @@ class WebData:
                               "med": round(float(med[n]), 1)}
                              for n, p in pct.sort_values(ascending=False).items()]
             return {"version": bucket, "days": days, "rows": int(len(dfa)), "box": box,
-                    "by_node": by_node, "thr": EXCEED_THR, "daily": daily, "exceed": exceed}
+                    "box_days": BOX_DAYS, "by_node": by_node, "thr": EXCEED_THR,
+                    "daily": daily, "exceed": exceed}
         return self._memo("stats", bucket, build)
 
     def series(self, node: str) -> dict:
