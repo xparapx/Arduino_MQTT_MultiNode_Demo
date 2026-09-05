@@ -176,6 +176,8 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .howto { display: flex; flex-wrap: wrap; gap: 6px 26px; font-size: 12px; color: var(--dim); padding: 10px 16px; margin-bottom: 12px; }
 .howto div { display: flex; gap: 7px; align-items: center; }
 .howto .sw { display: inline-block; width: 22px; height: 11px; border-radius: 2px; flex: none; }
+.howto .sw.jet { background: linear-gradient(90deg, rgb(0,0,131), rgb(0,60,170) 12%, rgb(5,255,255) 37%, rgb(255,255,0) 62%, rgb(250,0,0) 87%, rgb(128,0,0)); opacity: 0.75; }
+.howto .sw.thr { background: transparent; border-top: 2px dashed var(--foot); height: 0; border-radius: 0; }
 .howto .sw.trk { background: var(--track-on); height: 5px; }
 .howto .sw.hat { background: repeating-linear-gradient(45deg, var(--foot) 0 1px, transparent 1px 4px); height: 5px; }
 .howto .sw.mk { width: 9px; height: 9px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 2px var(--panel); margin: 0 6px; }

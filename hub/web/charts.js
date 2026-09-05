@@ -351,14 +351,20 @@ const CH = (() => {
   const mix = (a, b, p) => "#" + hex(a).map((v, i) => Math.round(v * p + hex(b)[i] * (1 - p)).toString(16).padStart(2, "0")).join("");
   // zone fills = regime palette (off → 청정, band → 인체, on → 복합) mixed toward the panel, as app.css --zone-*
   const zoneFill = (k) => mix(css({ off: "--rg-clean", band: "--rg-human", on: "--rg-mixed" }[k]), css("--panel"), parseFloat(css("--zone-mix")) / 100);
+  // plotly "jet" stops -- continuous value axis for the hysteresis gauge/strip
+  const JET = [[0, "0,0,131"], [0.125, "0,60,170"], [0.375, "5,255,255"], [0.625, "255,255,0"], [0.875, "250,0,0"], [1, "128,0,0"]];
+  function jetDef(id, vertical, op) {
+    const stops = JET.map(([o, c]) => `<stop offset="${o * 100}%" stop-color="rgb(${c})" stop-opacity="${op}"/>`).join("");
+    return `<linearGradient id="${id}" x1="0" y1="${vertical ? 1 : 0}" x2="${vertical ? 0 : 1}" y2="0">${stops}</linearGradient>`;
+  }
   const ZONE_KO = { off: "OFF 구간", band: "밴드", on: "ON 구간" };
 
   function bandGauge(c, v) {
     const W = 320, H = 14, barY = 1, barH = 12, x = (val) => bandFrac(c, val) * W;
-    let s = `<svg class="chart gauge" viewBox="0 0 ${W} ${H}">`;
-    s += `<rect x="0" y="${barY}" width="${f1(x(c.off) - 1)}" height="${barH}" rx="3" fill="${zoneFill("off")}"/>`;
-    s += `<rect x="${f1(x(c.off) + 1)}" y="${barY}" width="${f1(x(c.on) - x(c.off) - 2)}" height="${barH}" fill="${zoneFill("band")}"/>`;
-    s += `<rect x="${f1(x(c.on) + 1)}" y="${barY}" width="${f1(W - x(c.on) - 1)}" height="${barH}" rx="3" fill="${zoneFill("on")}"/>`;
+    const uid = `jg${Math.random().toString(36).slice(2, 7)}`;
+    let s = `<svg class="chart gauge" viewBox="0 0 ${W} ${H}"><defs>${jetDef(uid, false, 0.55)}</defs>`;
+    s += `<rect x="0" y="${barY}" width="${W}" height="${barH}" rx="3" fill="url(#${uid})"/>`;
+    for (const t of [c.off, c.on]) s += `<line x1="${f1(x(t))}" x2="${f1(x(t))}" y1="${barY - 1}" y2="${barY + barH + 1}" stroke="${css("--panel")}" stroke-width="2" stroke-dasharray="2 2"/>`;
     if (v !== null && v !== undefined) {
       const cx = Math.min(Math.max(x(v), 5), W - 5), z = bandZone(c, v);
       s += `<g data-tip="${c.var} ${num(v)} ${c.unit} · ${ZONE_KO[z]}\n하한 ${c.off} · 상한 ${c.on}"><line x1="${f1(cx)}" x2="${f1(cx)}" y1="${barY - 1}" y2="${barY + barH + 1}" stroke="${css("--ink")}" stroke-width="2"/>`
@@ -373,10 +379,9 @@ const CH = (() => {
     const ink = css("--ink"), foot = css("--foot"), grid = css("--grid"), plot = css("--plot"), panel = css("--panel");
     const y = (v) => top + plotH - bandFrac(c, v) * plotH, x = (i) => (i / (n - 1)) * W, xh = (h) => (h / hours) * W;
     const uid = `h${Math.random().toString(36).slice(2, 7)}`;
-    let s = `<svg class="chart strip" viewBox="0 0 ${W} ${H}"><defs><pattern id="${uid}" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="${foot}" stroke-width="1"/></pattern></defs>`;
-    s += `<rect x="0" y="${top}" width="${W}" height="${f1(y(c.on) - top)}" fill="${zoneFill("on")}"/>`
-       + `<rect x="0" y="${f1(y(c.on))}" width="${W}" height="${f1(y(c.off) - y(c.on))}" fill="${zoneFill("band")}"/>`
-       + `<rect x="0" y="${f1(y(c.off))}" width="${W}" height="${f1(top + plotH - y(c.off))}" fill="${zoneFill("off")}"/>`;
+    let s = `<svg class="chart strip" viewBox="0 0 ${W} ${H}"><defs>${jetDef(uid + "g", true, 0.32)}<pattern id="${uid}" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="${foot}" stroke-width="1"/></pattern></defs>`;
+    s += `<rect x="0" y="${top}" width="${W}" height="${plotH}" fill="url(#${uid}g)"/>`;
+    for (const t of [c.off, c.on]) s += `<line x1="0" x2="${W}" y1="${f1(y(t))}" y2="${f1(y(t))}" stroke="${foot}" stroke-width="1" stroke-dasharray="3 3" opacity="0.85"/>`;
     // value trace: one path per run of non-null buckets
     let d = "", pen = false;
     data.forEach((v, i) => { if (v === null) { pen = false; return; } d += `${pen ? "L" : "M"}${f1(x(i))} ${f1(y(v))} `; pen = true; });
