@@ -139,7 +139,7 @@ select, input[type="date"], input[type="time"] { background: var(--panel2); colo
 svg.chart { width: 100%; height: auto; display: block; }
 svg.chart text { font-family: "IBM Plex Mono", monospace; }
 svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
-.radar-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.radar-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 36px 8px; }
 .radar-card { display: flex; flex-direction: column; gap: 2px; }
 .radar-card .h { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 600; }
 .radar-card .dn { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--red); text-align: center; }
