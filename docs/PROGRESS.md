@@ -169,3 +169,11 @@ Phase 6 후 화면 검토에서 합의한 항목. Phase 번호 없음(태그 없
 ## 핵심 변수 컬러맵 개편 — CO₂ = YlOrRd · VOC = matter (2026-09-05, 사용자 확정)
 
 turbo 단일맵 → plotly 기준 변수별 시퀀셜 맵으로 교체(값 크기 매핑 전 지점): charts.js `CMAPS{co2,voc}` + `cmapDef`(그라디언트)/`cmapAt`(보간 샘플러). 적용: ① 제어 판단 게이지(0.55)·24h 스트립(0.32) — bandCfg에 key 추가 ② 요일×시간 히트맵 셀(투명도 램프 → 컬러맵, 0.92) ③ 임계 초과율 막대(pct/max → 컬러맵, 바닥 0.25) ④ howto 범례 스와치 2종(.sw.ylorrd/.sw.matter). 레짐 밴드(범주형 팔레트)는 불변. 10 passed, webtest로 stats·dx-action 확인. 정적 파일만 — 재시작 불요.
+
+## 분포 boxen 전환 + 표시 계층 물리범위 필터 + 모바일 라이트 디폴트 (2026-09-05, 사용자 확정)
+
+- **boxen(letter-value)**: 변수별 분포의 Tukey 박스+이상치 점 구름 → 중앙 50% 상자 + 75/87.5/93.75% 꼬리 세그먼트. webdata `box_stats`에 `lv`(4쌍)·`beyond_n` 추가(기존 키 유지 — 호환), charts `box(st, key)` 재작성: co2/voc 세그먼트 색 = 컬러맵의 구간 위치(값 클수록 깊은 색 — 게이지·히트맵과 문법 통일), 보조 변수 = 대표색 불투명도 단계. ▲n·max 주석 유지.
+- **PLAUSIBLE 필터**: stats() 집계 한정, pm2.5<1000·pm10<2000·co2 300–5000·voc 1–500·temp/hum 물리범위 밖 → NaN (펌웨어 v2 필터 이전 적재분 오염 차단, mon-series 원시 뷰는 유지). PM 로그 축은 boxen 결과 보고 재판단.
+- **변수 대표색 단일화**: charts `varColor(key)` (핵심=컬러맵 중앙값·보조=plotly 초이스) — monitor의 색 맵 제거.
+- **모바일(<900px) 테마 디폴트 = 라이트** (저장된 선택 우선, 데스크톱 다크 유지) — index.html 프리페인트 + initTheme.
+- 11 passed(단언 추가). **webdata.py 변경 → 웹 서비스 재시작 필요**.

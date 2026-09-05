@@ -80,6 +80,11 @@ def test_live_and_stats(site):
     assert len(co2["outliers"]) <= webdata.BOX_MAX_OUTLIERS
     assert st["by_node"]["co2"] == sorted(st["by_node"]["co2"], key=lambda r: -r["mean"])
     assert co2["p99"] <= co2["out_max"] and co2["out_n"] >= len(co2["outliers"])
+    lv = co2["lv"]                                                  # boxen letter values, inner → outer
+    assert len(lv) == 4 and all(a <= b for a, b in lv)
+    assert all(lv[i + 1][0] <= lv[i][0] and lv[i][1] <= lv[i + 1][1] for i in range(3))
+    assert lv[0][0] <= co2["median"] <= lv[0][1] and co2["beyond_n"] >= 0
+    assert co2["out_max"] <= webdata.PLAUSIBLE["co2"][1]            # 표시 계층 물리범위 필터
     assert set(st["daily"]) == set(webdata.TARGET_KEYS)             # 28d daily quantile bands
     dl = st["daily"]["co2"]
     assert len(dl["days"]) >= 1 and len(dl["q1"]) == len(dl["med"]) == len(dl["q3"]) == len(dl["days"])

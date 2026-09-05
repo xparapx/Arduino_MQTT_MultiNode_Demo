@@ -60,6 +60,10 @@ METRICS = {
 }
 ALL_KEYS = list(METRICS)
 GAUGE_KEYS = ["pm2p5", "pm10p0", "scd_temp", "scd_hum", "co2", "voc"]
+# 표시 계층 물리범위 (펌웨어 v2 필터 이전에 적재된 센서 동결 쓰레기 값을 통계에서 배제 —
+# "불가능 값 = 무효 측정". stats() 집계에만 적용, 시계열(mon-series) 원시 뷰는 그대로)
+PLAUSIBLE = {"pm2p5": (0, 1000), "pm10p0": (0, 2000), "co2": (300, 5000),
+             "voc": (1, 500), "scd_temp": (-20, 60), "scd_hum": (0, 100)}
 TARGET_KEYS = ["co2", "voc"]
 NODE_PALETTE = ["#FF5CA8", "#8B7CFF", "#00E5B0", "#FFB300",
                 "#4DD2FF", "#C4FF4D", "#FF8A5C", "#EAEAEA"]
@@ -230,6 +234,9 @@ class WebData:
                 dfa = pd.read_sql_query(sql, con, params=(f"-{days} days",))
             if dfa.empty:
                 return {"version": bucket, "days": days, "box": {}, "by_node": {}}
+            for k, (lo_p, hi_p) in PLAUSIBLE.items():           # 물리적 불가능 값 → NaN
+                if k in dfa.columns:
+                    dfa.loc[~dfa[k].between(lo_p, hi_p), k] = np.nan
             day_list = sorted(dfa["d"].unique())
             rec = dfa[dfa["d"] >= day_list[max(0, len(day_list) - BOX_DAYS)]]
             box = {}
@@ -744,11 +751,16 @@ def _parse(r) -> dict:
 
 def box_stats(s: pd.Series) -> dict | None:
     """Tukey box statistics (as aq.ui_common.box_stats): five numbers + a bounded
-    outlier sample instead of the whole column."""
+    outlier sample instead of the whole column. Adds letter-value pairs (lv,
+    innermost 50 % box outward to 93.75 % coverage) for the boxen renderer."""
     s = s.dropna()
     if s.empty:
         return None
     q1, med, q3 = (float(v) for v in s.quantile([0.25, 0.5, 0.75]))
+    qs = s.quantile([0.03125, 0.0625, 0.125, 0.25, 0.75, 0.875, 0.9375, 0.96875])
+    lv = [[round(float(qs[a]), 2), round(float(qs[b]), 2)]
+          for a, b in [(0.25, 0.75), (0.125, 0.875), (0.0625, 0.9375), (0.03125, 0.96875)]]
+    beyond = int(((s < lv[-1][0]) | (s > lv[-1][1])).sum())
     lo_f, hi_f = q1 - 1.5 * (q3 - q1), q3 + 1.5 * (q3 - q1)
     inside = s[(s >= lo_f) & (s <= hi_f)]
     out = s[(s < lo_f) | (s > hi_f)].sort_values()
@@ -760,4 +772,5 @@ def box_stats(s: pd.Series) -> dict | None:
             "mean": float(s.mean()), "n": int(len(s)),
             "p99": float(s.quantile(0.99)), "out_n": int((~s.between(lo_f, hi_f)).sum()),
             "out_max": float(s.max()),
+            "lv": lv, "beyond_n": beyond,
             "outliers": [round(float(v), 2) for v in out]}

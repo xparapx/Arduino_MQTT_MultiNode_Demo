@@ -30,31 +30,38 @@ const CH = (() => {
     return s + "</svg>";
   }
 
-  function box(st, color) {
-    const cap = st.p99 !== undefined ? Math.max(st.p99, st.upperfence) : Infinity;
-    const shown = (st.outliers || []).filter((v) => v <= cap);
-    const cut = (st.outliers || []).length - shown.length;
-    const vals = [st.lowerfence, st.upperfence, ...shown];
-    let lo = Math.min(...vals), hi = Math.max(...vals);
+  // boxen(letter-value): 중앙 50% 상자 + 75/87.5/93.75% 꼬리 세그먼트 — 이상치 점 구름 대체.
+  // 핵심 변수(co2/voc)는 세그먼트 색 = 해당 컬러맵의 구간 중앙값 위치, 보조 변수는 단색 불투명도 단계.
+  function box(st, key) {
+    const lv = st.lv || [];
+    if (!lv.length) return "";
+    const outer = lv[lv.length - 1];
+    let lo = outer[0], hi = outer[1];
     if (hi === lo) { hi = lo + 1; }
     const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
-    const H = 130, T = 6, B = 6, X = 60;
+    const H = 130, T = 12, B = 6, X = 60;
     const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
-    const ink = css("--ink"), dim = css("--dim"), grid = css("--grid");
-    const tipBox = `q1 ${num(st.q1, 1)} · 중앙 ${num(st.median, 1)} · q3 ${num(st.q3, 1)}\n평균 ${num(st.mean, 1)} · n ${num(st.n)}${st.out_n ? `\n이상치 ${num(st.out_n)}개 · 최대 ${num(st.out_max, 1)}` : ""}`;
+    const ink = css("--ink"), dim = css("--dim");
+    const core = key === "co2" || key === "voc", col = varColor(key);
+    const W4 = [34, 22, 14, 8], OP = [0.8, 0.55, 0.36, 0.22], COV = [50, 75, 87.5, 93.75];
+    const segFill = (a, b, i) => core
+      ? `fill="rgb(${cmapAt(cmap(key), ((a + b) / 2 - lo) / (hi - lo))})" fill-opacity="0.9"`
+      : `fill="${col}" fill-opacity="${OP[i]}"`;
     let s = `<svg class="chart" viewBox="0 0 100 ${H}">`;
+    const seg = (a, b, i) => {
+      if (!(b > a)) return;
+      const w = W4[i];
+      s += `<rect x="${X - w / 2}" y="${f1(y(b))}" width="${w}" height="${f1(Math.max(1, y(a) - y(b)))}" rx="1.5" ${segFill(a, b, i)} data-tip="${esc(`중앙 ${COV[i]}% 단계\n${num(a, 1)} – ${num(b, 1)}`)}"/>`;
+    };
+    for (let i = lv.length - 1; i >= 1; i--) { seg(lv[i][0], lv[i - 1][0], i); seg(lv[i - 1][1], lv[i][1], i); }
+    seg(lv[0][0], lv[0][1], 0);
+    s += `<line x1="${X - 19}" y1="${f1(y(st.median))}" x2="${X + 19}" y2="${f1(y(st.median))}" stroke="${ink}" stroke-width="2.5" data-tip="${esc(`중앙 ${num(st.median, 1)} · 평균 ${num(st.mean, 1)} · n ${num(st.n)}`)}"/>`;
     const my = y(st.median);
-    for (const v of [st.lowerfence, st.median, st.upperfence]) {
+    for (const v of [outer[0], st.median, outer[1]]) {
       if (v !== st.median && Math.abs(y(v) - my) < 9) continue;      // don't collide with the median label
-      s += `<text x="36" y="${f1(y(v) + 3)}" font-size="7" fill="${v === st.median ? ink : dim}" text-anchor="end">${num(v, v < 100 ? 1 : 0)}</text>`;
+      s += `<text x="36" y="${f1(y(v) + 3)}" font-size="7" fill="${v === st.median ? ink : dim}" text-anchor="end">${num(v, Math.abs(v) < 100 ? 1 : 0)}</text>`;
     }
-    s += `<line x1="${X}" y1="${f1(y(st.upperfence))}" x2="${X}" y2="${f1(y(st.lowerfence))}" stroke="${color}" stroke-width="1.5"/>`;
-    s += `<rect x="${X - 16}" y="${f1(y(st.q3))}" width="32" height="${f1(Math.max(1, y(st.q1) - y(st.q3)))}" fill="${color}" opacity="${st.target ? 0.6 : 0.3}" stroke="${color}" data-tip="${esc(tipBox)}"/>`;
-    s += `<line x1="${X - 16}" y1="${f1(y(st.median))}" x2="${X + 16}" y2="${f1(y(st.median))}" stroke="${ink}" stroke-width="2.5"/>`;
-    s += `<line x1="${X - 8}" y1="${f1(y(st.upperfence))}" x2="${X + 8}" y2="${f1(y(st.upperfence))}" stroke="${color}"/>`;
-    s += `<line x1="${X - 8}" y1="${f1(y(st.lowerfence))}" x2="${X + 8}" y2="${f1(y(st.lowerfence))}" stroke="${color}"/>`;
-    shown.forEach((v) => { s += `<circle cx="${X + ((v * 7) % 9) - 4}" cy="${f1(y(v))}" r="1.3" fill="${color}" opacity="0.6"/>`; });
-    if (cut > 0) s += `<text x="${X}" y="${T + 5}" font-size="5.5" fill="${dim}" text-anchor="middle" data-tip="p99 초과 이상치 ${cut}개 생략\n최대 ${num(st.out_max, 1)}">▲${num(cut)} · max ${num(st.out_max)}</text>`;
+    if (st.beyond_n) s += `<text x="${X}" y="${T - 5}" font-size="5.5" fill="${dim}" text-anchor="middle" data-tip="바깥 단계(93.75%) 밖 ${num(st.beyond_n)}개 생략\n최대 ${num(st.out_max, 1)}">▲${num(st.beyond_n)} · max ${num(st.out_max)}</text>`;
     return s + "</svg>";
   }
 
@@ -361,6 +368,10 @@ const CH = (() => {
   };
   const cmap = (key) => CMAPS[key] || CMAPS.co2;
   const cvar = (key) => `rgb(${cmapAt(cmap(key), 0.5)})`;   // 단일 색이 필요한 차트용 중앙값 색
+  // 변수 대표색: 핵심 = 컬러맵 중앙값, 보조 = plotly 불연속 초이스 (붉은·주황 회피)
+  const PALETTE = { pm2p5: "#636EFA", pm10p0: "#AB63FA", scd_temp: "#00CC96", scd_hum: "#19D3F3" };
+  const varColor = (key, fb) => key === "co2" || key === "voc" ? cvar(key)
+    : PALETTE[key] || (fb && fb.startsWith("--") ? css(fb) : fb) || css("--blue");
   // 다크 테마에서 핵심 변수 라인 가독성 보강용 네온 글로우 (라이트 테마는 무효과)
   const glow = (color, on) => on && document.documentElement.getAttribute("data-theme") !== "light" ? ` style="filter:drop-shadow(0 0 3px ${color})"` : "";
   function cmapDef(map, id, vertical, op) {
@@ -426,5 +437,5 @@ const CH = (() => {
     return s + "</svg>";
   }
 
-  return { radar, box, hbars, trend, pbars, dowheat, weekbars, line, occBars, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO, cvar };
+  return { radar, box, hbars, trend, pbars, dowheat, weekbars, line, occBars, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO, cvar, varColor };
 })();
