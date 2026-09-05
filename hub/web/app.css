@@ -124,7 +124,7 @@ select, input[type="date"], input[type="time"] { background: var(--panel2); colo
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .alertrow { flex-wrap: nowrap; align-items: flex-start; }
 .alertrow .chipx { flex: 0 0 auto; margin-top: 1px; }
-.alertrow > span:last-child { min-width: 0; }
+.alertrow > span:last-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .metric { background: var(--panel2); border-radius: 8px; padding: 10px 12px; }
 .metric .l { font-size: 11px; color: var(--dim); }
 .metric .v { font-family: "IBM Plex Sans KR", system-ui, sans-serif; font-size: 18px; font-weight: 700; margin: 2px 0; }

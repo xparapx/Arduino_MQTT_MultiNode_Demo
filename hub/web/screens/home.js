@@ -31,8 +31,14 @@
   function alertsCard() {
     const items = [];
     if (A && !A.empty) {
-      (A.forecast || []).filter((f) => f.alert).forEach((f) => items.push(`<div class="row alertrow" style="gap:8px">${chip("경보", "warn")}<span>${nm(f)} — +${f.horizon_min}분 후 임계 초과 예상 (CO₂ ${num(f.co2_pred)} · VOC ${num(f.voc_pred)})</span></div>`));
-      (A.qc || []).filter((q) => !q.passed).forEach((q) => items.push(`<div class="row alertrow" style="gap:8px">${chip("QC 제외", "ex")}<span>${nm(q)} — ${esc(q.reason || "유효율 미달")} · 판정 보류</span></div>`));
+      const qmin = (A.cfg && A.cfg.qc) ? A.cfg.qc.daily_valid_pct_min : 95;
+      (A.forecast || []).filter((f) => f.alert).forEach((f) => items.push(`<div class="row alertrow" style="gap:8px" data-tip="예측: CO₂ ${num(f.co2_pred)} ppm · VOC ${num(f.voc_pred)} idx (+${f.horizon_min}분)">${chip("경보", "warn")}<span>${nm(f)} — ${f.horizon_min}분 후 임계 초과 예상</span></div>`));
+      (A.qc || []).filter((q) => !q.passed).forEach((q) => {
+        const why = q.valid_co2_pct !== null && q.valid_co2_pct !== undefined
+          ? `CO₂ 정상 측정 ${Number(q.valid_co2_pct).toFixed(1)}%`
+          : (q.reason === "no rows" ? "당일 수신 없음" : esc(q.reason || "기준 미달"));
+        items.push(`<div class="row alertrow" style="gap:8px" data-tip="QC 기준 ${qmin}% 미달 → 오늘 판정에서 제외 (하루 CO₂ 유효 측정 비율)">${chip("QC 제외", "ex")}<span>${nm(q)} — ${why}</span></div>`);
+      });
     }
     if (L) L.nodes.filter((n) => n.down).forEach((n) => items.push(`<div class="row alertrow" style="gap:8px">${chip("수신 지연", "warn")}<span>${dot(n.color)}${esc(n.label)} — ${n.recv_time ? `마지막 ${esc(n.recv_time.slice(5, 16))}` : "수신 없음"}</span></div>`));
     return sec("forecast", "orange", "경보 · 이상 요약", `${items.length ? items.length + "건" : ""}`)
