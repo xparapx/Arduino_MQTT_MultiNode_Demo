@@ -275,7 +275,10 @@ svg.chart .hb-over { animation: hb-blink 2.2s ease-in-out infinite; }
   .side { display: none; }              /* 상태 요약은 Home · 시스템 상세는 관리 화면에서 */
   main { padding: 12px 12px calc(70px + env(safe-area-inset-bottom)); max-width: none; }
   h1 { font-size: 17px; } .sub { font-size: 12px; }
-  :root[data-screen="home"] main > h1 { display: block; }   /* 모바일 Home: 제목만 (메타 없음) */
+  /* 모바일 Home: 좌우 꽉 찬 상단 밴드 안에 중앙 정렬 제목 (메타 없음) */
+  :root[data-screen="home"] main > h1 { display: block; text-align: center;
+    margin: -12px -12px 12px; padding: 13px 12px; font-size: 16px;
+    background: var(--panel); border-bottom: 1px solid var(--grid); }
   .dock { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
     height: calc(56px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
     background: var(--side); border-top: 1px solid var(--grid); }
