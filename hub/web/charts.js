@@ -58,7 +58,7 @@ const CH = (() => {
     };
     for (let i = lv.length - 1; i >= 1; i--) { seg(lv[i][0], lv[i - 1][0], i); seg(lv[i - 1][1], lv[i][1], i); }
     seg(lv[0][0], lv[0][1], 0);
-    s += `<line x1="${X - 12}" y1="${f1(y(st.median))}" x2="${X + 12}" y2="${f1(y(st.median))}" stroke="${ink}" stroke-width="2.5" data-tip="${esc(`중앙 ${num(st.median, 1)} · 평균 ${num(st.mean, 1)} · n ${num(st.n)}`)}"/>`;
+    s += `<line x1="${X - 12}" y1="${f1(y(st.median))}" x2="${X + 12}" y2="${f1(y(st.median))}" stroke="${css("--chart-ink") || ink}" stroke-width="2.5" data-tip="${esc(`중앙 ${num(st.median, 1)} · 평균 ${num(st.mean, 1)} · n ${num(st.n)}`)}"/>`;
     const my = y(st.median);
     for (const v of [outer[0], st.median, outer[1]]) {
       if (v !== st.median && Math.abs(y(v) - my) < 9) continue;      // don't collide with the median label
@@ -111,7 +111,7 @@ const CH = (() => {
       s += `<text x="${L - 10}" y="${y + 4}" font-size="11" fill="${ink}" text-anchor="end">${esc(r.start)}–${esc(r.end)}</text>`
          + `<line x1="${L}" y1="${y}" x2="${W - R}" y2="${y}" stroke="${grid}" stroke-width="1"/>`
          + `<rect x="${f1(x(r.q1))}" y="${y - 7}" width="${f1(Math.max(2, x(r.q3) - x(r.q1)))}" height="14" rx="4" fill="${color}" opacity="${i === rows.length - 1 ? 0.75 : 0.4}" data-tip="${esc(r.start)}–${esc(r.end)}\nq1 ${num(r.q1)} · 중앙 ${num(r.med)} · q3 ${num(r.q3)} ${esc(unit || "")}"/>`
-         + `<line x1="${f1(x(r.med))}" y1="${y - 10}" x2="${f1(x(r.med))}" y2="${y + 10}" stroke="${ink}" stroke-width="2.4"/>`
+         + `<line x1="${f1(x(r.med))}" y1="${y - 10}" x2="${f1(x(r.med))}" y2="${y + 10}" stroke="${css("--chart-ink") || ink}" stroke-width="2.4"/>`
          + `<text x="${f1(x(r.q3)) + 8}" y="${y + 4}" font-size="10" fill="${dim}">${num(r.med)}</text>`;
     });
     return s + "</svg>";
@@ -402,13 +402,13 @@ const CH = (() => {
   function bandGauge(c, v) {
     const W = 320, H = 14, barY = 1, barH = 12, x = (val) => bandFrac(c, val) * W;
     const uid = `jg${Math.random().toString(36).slice(2, 7)}`;
-    let s = `<svg class="chart gauge" viewBox="0 0 ${W} ${H}"><defs>${cmapDef(cmap(c.key), uid, false, 0.55)}</defs>`;
+    let s = `<svg class="chart gauge" viewBox="0 0 ${W} ${H}"><defs>${cmapDef(cmap(c.key), uid, false, 1)}</defs>`;
     s += `<rect x="0" y="${barY}" width="${W}" height="${barH}" rx="3" fill="url(#${uid})"/>`;
     for (const t of [c.off, c.on]) s += `<line x1="${f1(x(t))}" x2="${f1(x(t))}" y1="${barY - 1}" y2="${barY + barH + 1}" stroke="${css("--panel")}" stroke-width="2" stroke-dasharray="2 2"/>`;
     if (v !== null && v !== undefined) {
       const cx = Math.min(Math.max(x(v), 5), W - 5), z = bandZone(c, v);
-      s += `<g data-tip="${c.var} ${num(v)} ${c.unit} · ${ZONE_KO[z]}\n하한 ${c.off} · 상한 ${c.on}"><line x1="${f1(cx)}" x2="${f1(cx)}" y1="${barY - 1}" y2="${barY + barH + 1}" stroke="${css("--ink")}" stroke-width="2"/>`
-         + `<circle cx="${f1(cx)}" cy="${barY + barH / 2}" r="4.5" fill="${css("--ink")}" stroke="${css("--panel")}" stroke-width="2"/></g>`;
+      s += `<g data-tip="${c.var} ${num(v)} ${c.unit} · ${ZONE_KO[z]}\n하한 ${c.off} · 상한 ${c.on}"><line x1="${f1(cx)}" x2="${f1(cx)}" y1="${barY - 1}" y2="${barY + barH + 1}" stroke="${css("--chart-ink") || css("--ink")}" stroke-width="2"/>`
+         + `<circle cx="${f1(cx)}" cy="${barY + barH / 2}" r="4.5" fill="${css("--chart-ink") || css("--ink")}" stroke="${css("--panel")}" stroke-width="2"/></g>`;
     }
     return s + "</svg>";
   }
@@ -419,13 +419,14 @@ const CH = (() => {
     const ink = css("--ink"), foot = css("--foot"), grid = css("--grid"), plot = css("--plot"), panel = css("--panel");
     const y = (v) => top + plotH - bandFrac(c, v) * plotH, x = (i) => (i / (n - 1)) * W, xh = (h) => (h / hours) * W;
     const uid = `h${Math.random().toString(36).slice(2, 7)}`;
-    let s = `<svg class="chart strip" viewBox="0 0 ${W} ${H}"><defs>${cmapDef(cmap(c.key), uid + "g", true, 0.32)}<pattern id="${uid}" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="${foot}" stroke-width="1"/></pattern></defs>`;
+    let s = `<svg class="chart strip" viewBox="0 0 ${W} ${H}"><defs>${cmapDef(cmap(c.key), uid + "g", true, 1)}<pattern id="${uid}" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="${foot}" stroke-width="1"/></pattern></defs>`;
     s += `<rect x="0" y="${top}" width="${W}" height="${plotH}" fill="url(#${uid}g)"/>`;
-    for (const t of [c.off, c.on]) s += `<line x1="0" x2="${W}" y1="${f1(y(t))}" y2="${f1(y(t))}" stroke="${foot}" stroke-width="1" stroke-dasharray="3 3" opacity="0.85"/>`;
+    for (const t of [c.off, c.on]) s += `<line x1="0" x2="${W}" y1="${f1(y(t))}" y2="${f1(y(t))}" stroke="${panel}" stroke-width="1.4" stroke-dasharray="3 3" opacity="0.9"/>`;
     // value trace: one path per run of non-null buckets
     let d = "", pen = false;
     data.forEach((v, i) => { if (v === null) { pen = false; return; } d += `${pen ? "L" : "M"}${f1(x(i))} ${f1(y(v))} `; pen = true; });
-    if (d) s += `<path d="${d.trim()}" fill="none" stroke="${ink}" stroke-width="1.5" stroke-linejoin="round"/>`;
+    if (d) s += `<path d="${d.trim()}" fill="none" stroke="${panel}" stroke-width="3.2" stroke-linejoin="round" opacity="0.75"/>`
+              + `<path d="${d.trim()}" fill="none" stroke="${css("--chart-ink") || ink}" stroke-width="1.5" stroke-linejoin="round"/>`;   // 패널색 케이싱 — 불투명 배경 위 라인 확보
     // ON history track + unjudged (QC-excluded) hours
     s += `<rect x="0" y="${trkY}" width="${W}" height="${trkH}" fill="${plot}" stroke="${grid}" stroke-width="1"/>`;
     for (const [a, z] of (b.on || {})[dev] || []) s += `<rect x="${f1(xh(a))}" y="${trkY}" width="${f1(Math.max(0, xh(z) - xh(a)))}" height="${trkH}" fill="${css("--track-on")}"/>`;
@@ -444,7 +445,7 @@ const CH = (() => {
     s += `<text x="${W}" y="${axisY}" text-anchor="end" font-size="9" fill="${foot}">지금</text>`;
     let last = n - 1;
     while (last >= 0 && data[last] === null) last--;
-    if (last >= 0) s += `<circle cx="${f1(x(last))}" cy="${f1(y(data[last]))}" r="4" fill="${ink}" stroke="${panel}" stroke-width="2" pointer-events="none"/>`;
+    if (last >= 0) s += `<circle cx="${f1(x(last))}" cy="${f1(y(data[last]))}" r="4" fill="${css("--chart-ink") || ink}" stroke="${panel}" stroke-width="2" pointer-events="none"/>`;
     return s + "</svg>";
   }
 

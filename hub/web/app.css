@@ -14,6 +14,7 @@
   --track-on: #cfd6e0;
   --chip-ok: #3b6b4c; --chip-ex: #7a3f3f; --chip-warn: #7a5a3f;
   --acc: #FFB300; --map-bg: #161a22; --map-line: #2a3140; --bar: #3d4c60;
+  --chart-ink: #e6e8ec;         /* 차트 잉크 라인 (중앙값·트레이스·마커) */
   --chip2-bg: #1a1f29; --chip2-bd: #333b49;
   --dens: 120,170,255; --corr-pos: 161,201,244; --corr-neg: 255,159,155; --corr-ink: #2a2d34;
   --n1: #FF5CA8; --n2: #8B7CFF; --n3: #00E5B0; --n4: #FFB300; --n5: #4DD2FF; --n6: #C4FF4D; --n7: #FF8A5C; --n8: #EAEAEA;
@@ -31,6 +32,7 @@
   --track-on: #3d4c60;
   --chip-ok: #9fd3b1; --chip-ex: #f0b4b1; --chip-warn: #f0cba8;
   --acc: #b87a00; --map-bg: #f3f5f8; --map-line: #dfe3ea; --bar: #b9c4d3;
+  --chart-ink: #3d434d;         /* 라이트: 완전 블랙 대신 진한 차콜 */
   --chip2-bg: #f7f8fa; --chip2-bd: #dfe3ea;
   --dens: 61,124,201; --corr-pos: 61,124,201; --corr-neg: 217,83,79; --corr-ink: #1a1d24;
   --n1: #d6338a; --n2: #6a5bd9; --n3: #00a67f; --n4: #cc8f00; --n5: #1e9fd6; --n6: #5a9e2f; --n7: #c2410c; --n8: #4f6d9e;
