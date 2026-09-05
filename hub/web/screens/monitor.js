@@ -54,7 +54,7 @@
         h += `<div class="grid g2" style="margin-top:12px">${kpanel("co2", "--cyan")}${kpanel("voc", "--green")}</div>`;
       }
       if (d.dow) {
-        const wpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${cc(k, col)}">${TITLE[k]} 요일 × 시간 리듬 <span style="opacity:.7">(${d.days}일 중앙값 · 빨간 테두리 = 임계 초과)</span></div><div class="scrollx">${CH.dowheat(d.dow[k], thr[k], k, UNIT[k])}</div></div>`;
+        const wpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${cc(k, col)}">${TITLE[k]} 요일 × 시간 리듬 <span style="opacity:.7">(${d.days}일 중앙값 · 빨간 테두리 = 임계 초과)</span></div>${CH.dowheat(d.dow[k], thr[k], k, UNIT[k])}</div>`;
         h += `<div class="grid g2" style="margin-top:12px">${wpanel("co2", "--cyan")}${wpanel("voc", "--green")}</div>`;
       }
       const xpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${cc(k, col)}">${TITLE[k]} 임계 초과율 by 교실 ★ <span style="opacity:.7">(&gt;${num(thr[k])} ${UNIT[k]} 인 시간 비율)</span></div>${CH.pbars(d.exceed[k] || [], k)}</div>`;

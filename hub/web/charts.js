@@ -120,22 +120,25 @@ const CH = (() => {
   // day-of-week x hour rhythm: 7x24 median heatmap (rows Mon..Sun, KST)
   function dowheat(grid, thr, key, unit) {
     const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
-    const L = 34, T = 22, CW = 25, CH_ = 22, GAP = 2;
-    const W = L + 24 * CW + 6, H = T + 7 * CH_ + 6;
+    // 모바일: 슬라이더 없이 한 화면 — 컴팩트 지오메트리로 다시 그려 글자 크기를 지킨다
+    const M = matchMedia("(max-width: 899.98px)").matches;
+    const L = M ? 20 : 34, T = M ? 17 : 22, CW = M ? 12.5 : 25, CH_ = M ? 13 : 22, GAP = M ? 1 : 2;
+    const FH = M ? 7 : 9, FD = M ? 7.5 : 10, RX = M ? 2 : 3, SW = M ? 1.1 : 1.6;
+    const W = L + 24 * CW + (M ? 4 : 6), H = T + 7 * CH_ + (M ? 4 : 6);
     const dim = css("--dim"), red = css("--red"), plot = css("--plot");
     const vals = grid.flat().filter((v) => v !== null && v !== undefined);
     if (!vals.length) return `<svg class="chart" viewBox="0 0 ${W} ${H}"><text x="${W / 2}" y="${H / 2}" font-size="11" fill="${dim}" text-anchor="middle">no data</text></svg>`;
     const lo = Math.min(...vals), hi = Math.max(...vals);
     let s = `<svg class="chart" viewBox="0 0 ${W} ${H}">`;
-    for (let h = 0; h < 24; h += 4) s += `<text x="${L + h * CW + CW / 2}" y="${T - 8}" font-size="9" fill="${dim}" text-anchor="middle">${String(h).padStart(2, "0")}</text>`;
+    for (let h = 0; h < 24; h += 4) s += `<text x="${L + h * CW + CW / 2}" y="${T - (M ? 6 : 8)}" font-size="${FH}" fill="${dim}" text-anchor="middle">${String(h).padStart(2, "0")}</text>`;
     grid.forEach((row, di) => {
-      s += `<text x="${L - 8}" y="${T + di * CH_ + CH_ / 2 + 3.5}" font-size="10" fill="${di >= 5 ? red : dim}" text-anchor="end">${DAYS[di]}</text>`;
+      s += `<text x="${L - (M ? 5 : 8)}" y="${T + di * CH_ + CH_ / 2 + 3}" font-size="${FD}" fill="${di >= 5 ? red : dim}" text-anchor="end">${DAYS[di]}</text>`;
       row.forEach((v, h) => {
         const x = L + h * CW, y = T + di * CH_;
-        if (v === null || v === undefined) { s += `<rect x="${x}" y="${y}" width="${CW - GAP}" height="${CH_ - GAP}" rx="3" fill="${plot}"/>`; return; }
+        if (v === null || v === undefined) { s += `<rect x="${x}" y="${y}" width="${CW - GAP}" height="${CH_ - GAP}" rx="${RX}" fill="${plot}"/>`; return; }
         const t = hi === lo ? 0.5 : (v - lo) / (hi - lo);
         const over = thr !== undefined && v > thr;
-        s += `<rect x="${x}" y="${y}" width="${CW - GAP}" height="${CH_ - GAP}" rx="3" fill="rgb(${cmapAt(cmap(key), t)})" fill-opacity="0.92"${over ? ` class="hb-over" stroke="${red}" stroke-width="1.6"` : ""} data-tip="${DAYS[di]} ${String(h).padStart(2, "0")}:00–${String(h).padStart(2, "0")}:59\n중앙 ${num(v)} ${esc(unit || "")}${over ? `\n⚠ 임계 초과` : ""}"/>`;
+        s += `<rect x="${x}" y="${y}" width="${CW - GAP}" height="${CH_ - GAP}" rx="${RX}" fill="rgb(${cmapAt(cmap(key), t)})" fill-opacity="0.92"${over ? ` class="hb-over" stroke="${red}" stroke-width="${SW}"` : ""} data-tip="${DAYS[di]} ${String(h).padStart(2, "0")}:00–${String(h).padStart(2, "0")}:59\n중앙 ${num(v)} ${esc(unit || "")}${over ? `\n⚠ 임계 초과` : ""}"/>`;
       });
     });
     return s + "</svg>";
