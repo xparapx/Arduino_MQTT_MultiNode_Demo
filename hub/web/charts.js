@@ -402,7 +402,7 @@ const CH = (() => {
   function bandGauge(c, v) {
     const W = 320, H = 14, barY = 1, barH = 12, x = (val) => bandFrac(c, val) * W;
     const uid = `jg${Math.random().toString(36).slice(2, 7)}`;
-    let s = `<svg class="chart gauge" viewBox="0 0 ${W} ${H}"><defs>${cmapDef(cmap(c.key), uid, false, 1)}</defs>`;
+    let s = `<svg class="chart gauge" viewBox="0 0 ${W} ${H}"><defs>${cmapDef(cmap(c.key), uid, false, 0.75)}</defs>`;
     s += `<rect x="0" y="${barY}" width="${W}" height="${barH}" rx="3" fill="url(#${uid})"/>`;
     for (const t of [c.off, c.on]) s += `<line x1="${f1(x(t))}" x2="${f1(x(t))}" y1="${barY - 1}" y2="${barY + barH + 1}" stroke="${css("--panel")}" stroke-width="2" stroke-dasharray="2 2"/>`;
     if (v !== null && v !== undefined) {
@@ -419,14 +419,14 @@ const CH = (() => {
     const ink = css("--ink"), foot = css("--foot"), grid = css("--grid"), plot = css("--plot"), panel = css("--panel");
     const y = (v) => top + plotH - bandFrac(c, v) * plotH, x = (i) => (i / (n - 1)) * W, xh = (h) => (h / hours) * W;
     const uid = `h${Math.random().toString(36).slice(2, 7)}`;
-    let s = `<svg class="chart strip" viewBox="0 0 ${W} ${H}"><defs>${cmapDef(cmap(c.key), uid + "g", true, 1)}<pattern id="${uid}" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="${foot}" stroke-width="1"/></pattern></defs>`;
+    let s = `<svg class="chart strip" viewBox="0 0 ${W} ${H}"><defs>${cmapDef(cmap(c.key), uid + "g", true, 0.75)}<pattern id="${uid}" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="${foot}" stroke-width="1"/></pattern></defs>`;
     s += `<rect x="0" y="${top}" width="${W}" height="${plotH}" fill="url(#${uid}g)"/>`;
     for (const t of [c.off, c.on]) s += `<line x1="0" x2="${W}" y1="${f1(y(t))}" y2="${f1(y(t))}" stroke="${panel}" stroke-width="1.4" stroke-dasharray="3 3" opacity="0.9"/>`;
     // value trace: one path per run of non-null buckets
     let d = "", pen = false;
     data.forEach((v, i) => { if (v === null) { pen = false; return; } d += `${pen ? "L" : "M"}${f1(x(i))} ${f1(y(v))} `; pen = true; });
-    if (d) s += `<path d="${d.trim()}" fill="none" stroke="${panel}" stroke-width="3.2" stroke-linejoin="round" opacity="0.75"/>`
-              + `<path d="${d.trim()}" fill="none" stroke="${css("--chart-ink") || ink}" stroke-width="1.5" stroke-linejoin="round"/>`;   // 패널색 케이싱 — 불투명 배경 위 라인 확보
+    if (d) s += `<path d="${d.trim()}" fill="none" stroke="${panel}" stroke-width="4" stroke-linejoin="round" opacity="0.75"/>`
+              + `<path d="${d.trim()}" fill="none" stroke="${css("--chart-ink") || ink}" stroke-width="2.2" stroke-linejoin="round"/>`;   // 패널색 케이싱 — 배경 위 라인 확보
     // ON history track + unjudged (QC-excluded) hours
     s += `<rect x="0" y="${trkY}" width="${W}" height="${trkH}" fill="${plot}" stroke="${grid}" stroke-width="1"/>`;
     for (const [a, z] of (b.on || {})[dev] || []) s += `<rect x="${f1(xh(a))}" y="${trkY}" width="${f1(Math.max(0, xh(z) - xh(a)))}" height="${trkH}" fill="${css("--track-on")}"/>`;
