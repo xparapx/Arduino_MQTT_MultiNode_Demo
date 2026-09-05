@@ -134,3 +134,15 @@ Phase 6 후 화면 검토에서 합의한 항목. Phase 번호 없음(태그 없
 
 기타: 발표자료 `docs/pitch/`(deck+script)는 **gitignore·추적 해제**(로컬+바탕화면 사본만, 과거 이력엔 잔존). 테스트 `test_webapp.py` 10 passed 유지(라우트·stats 신규 키 단언 갱신).
 미결: ① weekly 타이머 보드 반영 확인(`systemctl list-timers multinode_aq_analyst_weekly.timer`) ② `/api/status` COUNT(*) 캐시(이전부터) ③ 요일 히트맵/주간비교 실데이터 검토 후 필요 시 학사일정(방학) 마스킹.
+
+## 비전 노드 펌웨어 v3 — 자가 복구 (2026-09-05, main 직접 커밋)
+
+09-01 진단("워치독 없는 무한루프 = 벽돌")의 대책 1계층 구현. `firmware/occ_node_nicla_cloud.ino`(GC2145) + `firmware/occ_node_portenta_cloud.ino`(HM0360) — 종전엔 manual.html 내장 코드만 있었고 firmware/에 occ 파일 자체가 없었음(비대칭 해소). 두 판은 카메라 계층만 다르고 v3 변경은 동일:
+1. **wd.start() = setup() 첫 줄** — cam.begin·관문1을 포함한 모든 초기화가 WDT 보호下. 종전엔 맨 끝이라 초기화 데드엔드 = 영구 다운.
+2. **while(1) 데드엔드 제거** — cam.begin/관문1 실패는 3회 재시도(사이 settle) 후 `NVIC_SystemReset()`. 웜 리셋 대비 부팅 직후 3초 센서 안정화 대기.
+3. **발행 자가 복구** — `endMessage()` 반환값 검사, 3버킷 연속 미전송(≈15분) → 자가 리셋(WiFi/MQTT 드라이버 고착 탈출).
+4. **캡처 자가 복구** — 추론/grabFrame 6회 연속 실패(≈1분) → `cam.begin` 재초기화, 재초기화 2회 무효 → 자가 리셋. (종전엔 카메라 고착 시 s_n=0으로 발행만 조용히 멈추는 좀비 상태)
+5. **NTP 재동기** — 확보 후 6h 주기·미확보 시 10분 재시도(종전 setup 1회뿐 → millis 49.7일 롤오버·표류 노출). 시계 후퇴 시 중복 발행 방지 가드(`bucket > curBucket`만 발행).
+6. **wd.kick 보강**(WiFi 대기·NTP 루프·MQTT 성공 후) + 부팅 시 `mbed::ResetReason` 출력(전원/워치독/자가 리셋 구분 — 현장 시리얼 진단용).
+
+발행 계약(JSON·토픽·버킷)·듀티(10s 단발) 불변 — hub/DB 영향 없음. 대책 2계층(Tapo 플러그 일일 전원 재인가 07:59/08:00 KST)은 별도 진행. 배포는 사용자가 Arduino IDE로 노드별 업로드(더블탭 부트로더), WIFI/MQTT 자격은 업로드 시 기입.
