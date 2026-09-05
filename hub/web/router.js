@@ -64,6 +64,7 @@ AQ.router = (() => {
       current.el.classList.remove("on");
     }
     current = e; curParam = param;
+    document.documentElement.dataset.screen = e.name;   // 헤더(h1·meta)는 Home에서만 노출 (CSS)
     const hash = "#" + e.name + (param ? "/" + param : "");
     if (location.hash !== hash) {
       if (push) location.hash = hash; else history.replaceState(null, "", hash);
