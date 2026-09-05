@@ -112,3 +112,25 @@ Phase 6 후 화면 검토에서 합의한 항목. Phase 번호 없음(태그 없
 - 대책 2계층 (펌웨어 v3는 다음 세션):
   (1) 펌웨어: wd.start()를 setup() 첫 줄로 · 데드엔드 → 재시도 후 NVIC_SystemReset() · 3버킷 연속 발행 실패 시 자가 리셋 · NTP 6h 재동기화 · TLS 구간 wd.kick 보강.
   (2) 하드웨어: 비전 노드 USB 전원을 Tapo 플러그에 물리고 **매일 07:59 OFF / 08:00 KST ON**(카메라 이상은 전원 재인가만 확실). 1단계 = Tapo 앱 자체 스케줄(코드 0줄, 허브 무관), 2단계 = actuator.py + systemd 타이머(23:00 UTC)로 이관.
+
+## SPA 재설계(모바일 dock) + 통계 확장 + "제어 판단" 개편 · (2026-09-04 ~ 09-05, main 직접 커밋 ~40건, 보드 배포·재시작 완료)
+
+웹 전면 재구조 — 2페이지 → 단일 shell SPA (사용자 확정: 해시 라우터 / 인스턴스 분리 유지 / 컬러맵·CH.* 재사용):
+- `web/router.js`(registry·go()·scroll 복원·admin 게이트) + `web/screens/{home,monitor,diagnosis,admin}.js`(page1/2 git mv 후 분할). `/diagnosis`는 302 → `/#dx-regime`. `AQ.store` = URL당 인터벌 1개·활성 화면만 fetch·버전 게이트·visibilitychange 재fetch·prime()(선제 워밍).
+- 화면: #home(시스템상태 4색 카드·레짐/제어 표·경보요약·오늘 한눈에=summary 부활) · #mon-live(+/<node> 확대)·통계·시계열&비전·최근기록(admin) · #dx-regime(B+H+G)·밴드전이(C+D)·제어경보(E+F)·유효범위(A,admin)·모델이력(I,admin) · #admin(내보내기·초기화·상세).
+- 모바일(<900px 단일 브레이크포인트): 하단 dock(56px+safe-area, 그룹 아이콘=격자/돋보기펄스/기어), 서브탭 = 균등폭 둥근사각(활성 폰트 15px + 색 스윕 애니메이션), 레이더 2열, 밴드 .scrollx, 터치 data-tip→toast.
+- 라벨 계층: 탭=제목(단일 섹션 화면은 헤더 삭제, meta만) · 섹션 칩 = 무채색 320px 균일폭 · 해설 텍스트는 manual.html "대시보드 시각자료 해설" 표로 이관.
+- 명명: 현재 레짐→**절대 레짐(FixedScaling)**(상대 레짐과 쌍) · 행동지침→**제어 판단**(스마트플러그 직접 제어 대비, 서브탭 "제어·경보") · 제어 카드 액션워드 행 삭제, 장치 ON/유지 칩 글로우 펄스.
+
+통계 탭("전체통계"→"통계") 5단 재구성 — 전부 서버 집계본(`webdata.stats()`):
+- ① 28일 일별 q1-med-q3 추이 밴드(+ON 임계선) ② 주간 비교(주별 IQR 막대, 월요일 기준) ③ 요일×시간 7×24 중앙값 히트맵(임계 초과 셀 빨간 테두리) ④ ON 임계 초과율 순위(EXCEED_THR=규칙 ON 임계, 평균 막대 대체) ⑤ 분포 박스 = **최근 7일**(BOX_DAYS), p99 축 절단 + ▲생략 주석, 한 카드 1행.
+- 성능: stats 콜드 1.78 s(보드 실측, 5분 버킷마다 재빌드) → KST 일자를 SQL `date(ts,'+9h')`로 이동 + shell 기동 2.5 s 후 `store.prime("/api/stats")` + "계산 중" 플레이스홀더.
+
+시각·정책:
+- 히스테리시스 게이지/스트립 배경 = **turbo** 연속 컬러맵(게이지 가로 0.55 · 스트립 세로 0.32, OFF/ON 임계는 점선 유지). 레짐 스위칭 밴드 셀 불투명도 **0.75**(사용자 튜닝).
+- 모델 거버넌스 **weekly → 격주**(1·3주 일요일 06:30 UTC, 타이머 OnCalendar 변경 — 보드 cp+daemon-reload 필요, §미결).
+- 경보·이상: 문구 직관화("CO₂ 정상 측정 87.5%"), 항목당 1행(nowrap+ellipsis), meta에 판단 주기(경보·QC hourly / 수신 지연 15분 / 60 s).
+- 임계 고정 근거 문답 확정: CO₂ 1000 = 학교 실내공기질 기준(건강 앵커), VOC 200 = 센서 지수 정의(베이스라인 2배) — "규칙은 건강 기준에 앵커, 적응은 ML 게이트·거버넌스가".
+
+기타: 발표자료 `docs/pitch/`(deck+script)는 **gitignore·추적 해제**(로컬+바탕화면 사본만, 과거 이력엔 잔존). 테스트 `test_webapp.py` 10 passed 유지(라우트·stats 신규 키 단언 갱신).
+미결: ① weekly 타이머 보드 반영 확인(`systemctl list-timers multinode_aq_analyst_weekly.timer`) ② `/api/status` COUNT(*) 캐시(이전부터) ③ 요일 히트맵/주간비교 실데이터 검토 후 필요 시 학사일정(방학) 마스킹.
