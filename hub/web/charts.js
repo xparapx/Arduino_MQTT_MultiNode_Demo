@@ -351,8 +351,10 @@ const CH = (() => {
   const mix = (a, b, p) => "#" + hex(a).map((v, i) => Math.round(v * p + hex(b)[i] * (1 - p)).toString(16).padStart(2, "0")).join("");
   // zone fills = regime palette (off → 청정, band → 인체, on → 복합) mixed toward the panel, as app.css --zone-*
   const zoneFill = (k) => mix(css({ off: "--rg-clean", band: "--rg-human", on: "--rg-mixed" }[k]), css("--panel"), parseFloat(css("--zone-mix")) / 100);
-  // plotly "jet" stops -- continuous value axis for the hysteresis gauge/strip
-  const JET = [[0, "0,0,131"], [0.125, "0,60,170"], [0.375, "5,255,255"], [0.625, "255,255,0"], [0.875, "250,0,0"], [1, "128,0,0"]];
+  // plotly "turbo" stops (jet의 지각 균일 개선판) -- continuous value axis for the gauge/strip
+  const JET = [[0, "48,18,59"], [0.071, "65,69,171"], [0.143, "70,117,237"], [0.286, "27,207,212"],
+               [0.429, "97,252,108"], [0.571, "209,232,52"], [0.714, "254,155,45"],
+               [0.857, "217,56,6"], [1, "122,4,2"]];
   function jetDef(id, vertical, op) {
     const stops = JET.map(([o, c]) => `<stop offset="${o * 100}%" stop-color="rgb(${c})" stop-opacity="${op}"/>`).join("");
     return `<linearGradient id="${id}" x1="0" y1="${vertical ? 1 : 0}" x2="${vertical ? 0 : 1}" y2="0">${stops}</linearGradient>`;
