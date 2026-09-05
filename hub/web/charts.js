@@ -252,7 +252,7 @@ const CH = (() => {
       s += `<text x="${L - 10}" y="${f1(y + rowH / 2 + 4)}" font-size="11" fill="${ink}" text-anchor="end">${esc(n.label)}</text>`;
       for (const sl of n.slots) {
         const i = idx.get(sl.bucket_kst), col = sl.regime ? AQ.regimeColor(sl.regime) : grid;
-        s += `<rect x="${f1(L + i * cw)}" y="${y}" width="${f1(cw + 0.4)}" height="${rowH}" fill="${col}" fill-opacity="${sl.regime ? 0.55 : 1}" data-tip="${esc(n.label)} · ${esc(sl.bucket_kst)} KST\n${sl.regime ? AQ.REGIME_KO[sl.regime] : "결측"}"/>`;
+        s += `<rect x="${f1(L + i * cw)}" y="${y}" width="${f1(cw + 0.4)}" height="${rowH}" fill="${col}" fill-opacity="${sl.regime ? 0.75 : 1}" data-tip="${esc(n.label)} · ${esc(sl.bucket_kst)} KST\n${sl.regime ? AQ.REGIME_KO[sl.regime] : "결측"}"/>`;
       }
     });
     buckets.forEach((k, i) => {
