@@ -6,131 +6,178 @@
 <title>멀티노드 환경 센싱 모니터 — 구축 가이드</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+/* ---- tokens: hub/web/app.css light theme (design canvas) + 구판 변수 별칭 ---- */
   :root{
-    --surface:#ffffff; --ink:#2C3E50; --primary:#3498DB; --secondary:#E67E22;
-    --accent:#16A085; --muted:#ECF0F1; --line:#dfe6e9; --warn:#E74C3C;
-    --side:#1f2a37; --side-ink:#aeb9c6; --side-on:#3498DB; --code-bg:#1e2430; --code-ink:#e6edf3;
+    --bg:#f5f6f8; --side:#eaedf1; --panel:#ffffff; --panel2:#eef0f3; --plot:#f3f5f8;
+    --ink:#1a1d24; --dim:#5b6472; --grid:#d9dde3; --rowline:#e6e9ee; --foot:#8a929e;
+    --blue:#3d7cc9; --orange:#d97a2e; --green:#1f9d8a; --red:#d9534f; --purple:#8b6fd6;
+    --yellow:#b8a400; --cyan:#2aa3a0; --gray:#7a7f87; --acc:#b87a00; --badge-ink:#ffffff;
+    --rg-clean:#0fa8a2; --rg-matter:#d39a00; --rg-human:#7a5fe0; --rg-mixed:#d63f5a;
+    --chip2-bg:#f7f8fa; --chip2-bd:#dfe3ea;
+    --n1:#d6338a; --n2:#6a5bd9; --n3:#00a67f; --n4:#cc8f00; --n5:#1e9fd6; --n6:#5a9e2f; --n7:#c2410c; --n8:#4f6d9e;
+    --code-bg:#1e222b; --code-ink:#e6e8ec; --code-bd:#3a414e;
+    /* 구판 변수 별칭 — 본문 인라인 스타일 호환 */
+    --surface:var(--panel); --primary:var(--blue); --secondary:var(--orange);
+    --accent:var(--green); --muted:var(--panel2); --line:var(--grid); --warn:var(--rg-mixed);
+    --code-ink-dim:#aab2bd;
+    --sans:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,"D2Coding",monospace;
+    color-scheme:light;
   }
-  *{box-sizing:border-box;}
-  body{margin:0; background:#d9e0e6; color:var(--ink);
-    font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif; line-height:1.6;}
-  .stage{width:min(95vw,1320px); aspect-ratio:16/9; margin:22px auto; display:flex;
-    background:var(--surface); border-radius:16px; overflow:hidden; box-shadow:0 12px 44px rgba(0,0,0,.18);}
-  .sidebar{flex:0 0 256px; background:var(--side); color:var(--side-ink); overflow-y:auto; padding:18px 0;}
-  .sidebar .brand{padding:6px 20px 16px; border-bottom:1px solid #2c3a49; margin-bottom:10px;}
-  .sidebar .brand b{color:#fff; font-size:15px; display:block;}
-  .sidebar .brand span{font-size:11px; color:#7c8b9c;}
-  .nav-group{font-size:10.5px; letter-spacing:.12em; color:#5f6f7e; text-transform:uppercase; padding:14px 20px 5px;}
-  .nav-item{display:flex; gap:10px; align-items:center; padding:9px 20px; cursor:pointer; font-size:13px; border-left:3px solid transparent; transition:all .12s;}
-  .nav-item:hover{background:#27333f; color:#e7edf3;}
-  .nav-item.on{background:#27333f; color:#fff; border-left-color:var(--side-on);}
-  .nav-item .n{flex:0 0 22px; height:22px; border-radius:50%; background:#34434f; color:#cdd6e0; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;}
-  .nav-item.on .n{background:var(--side-on); color:#fff;}
-  .content{flex:1; overflow-y:auto; padding:30px 38px 24px;}
-  .panel{display:none; animation:fade .25s ease;}
-  .panel.active{display:block;}
-  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
-  h2.title{display:flex; align-items:center; gap:14px; margin:0 0 6px; font-size:22px; font-weight:800;}
-  h2.title .badge{flex:0 0 auto; width:40px; height:40px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800;}
-  .lead{color:#5f6f7e; font-size:14px; margin:0 0 16px 54px;}
-  h3{color:var(--secondary); font-size:15px; margin:20px 0 7px; font-weight:700;}
-  p{margin:9px 0; font-size:14px;}
-  code.in{background:var(--muted); padding:1px 6px; border-radius:5px; font-size:12.5px; font-family:'JetBrains Mono','Consolas','D2Coding',monospace,'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; color:#c0392b;}
-  ul{margin:7px 0; padding-left:20px;} li{margin:4px 0; font-size:13.5px;}
-  pre{position:relative; background:var(--code-bg); color:var(--code-ink); border-radius:9px; padding:14px 16px; overflow-x:auto; font-size:12.2px; line-height:1.55; font-family:'JetBrains Mono','Consolas','D2Coding',monospace,'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; margin:10px 0;}
-  pre .c{color:#7d8aa0;} pre .k{color:#79c0ff;} pre .s{color:#a5d6a4;}
-  .copy-btn{position:absolute; top:6px; right:6px; background:rgba(255,255,255,0.08); color:#cfd3da; border:1px solid rgba(255,255,255,0.18); padding:3px 9px; border-radius:5px; font-size:11px; cursor:pointer; opacity:0; transition:opacity 0.15s, background 0.15s; font-family:inherit; user-select:none;}
-  pre:hover .copy-btn{opacity:0.85;}
-  .copy-btn:hover{opacity:1 !important; background:rgba(255,255,255,0.18);}
-  .copy-btn.copied{background:#27ae60; color:#fff; border-color:#27ae60; opacity:1 !important;}
-  .ftag{display:inline-block; background:var(--accent); color:#fff; font-size:11px; font-weight:700; padding:3px 10px; border-radius:6px 6px 0 0; font-family:'JetBrains Mono','Consolas',monospace,'Pretendard',sans-serif;}
-  .box{border-left:4px solid var(--primary); background:#f1f8fd; padding:11px 14px; border-radius:0 8px 8px 0; margin:12px 0; font-size:13px;}
-  .box .lbl{font-weight:800; display:block; margin-bottom:3px; color:var(--primary);}
-  .box.tip{border-color:var(--accent); background:#effaf6;} .box.tip .lbl{color:var(--accent);}
-  .box.warn{border-color:var(--warn); background:#fdf0ee;} .box.warn .lbl{color:var(--warn);}
-  .box.ok{border-color:#27ae60; background:#eafaf0;} .box.ok .lbl{color:#27ae60;}
-  table{width:100%; border-collapse:collapse; margin:12px 0; font-size:12.5px;}
-  th,td{border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top;}
-  th{background:var(--muted); font-weight:700;}
-  .diagram{display:flex; align-items:stretch; gap:0; flex-wrap:wrap; margin:14px 0;}
-  .dbox{flex:1; min-width:150px; border:2px solid var(--primary); border-radius:11px; padding:11px; text-align:center; background:#f7fbfe;}
-  .dbox.hub{border-color:var(--accent); background:#f1faf7;} .dbox.cloud{border-color:var(--secondary); background:#fef6ef;}
-  .dbox .t{font-weight:800; font-size:13px;} .dbox .d{font-size:11px; color:#5f6f7e; margin-top:3px;}
-  .arrow{flex:0 0 44px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#95a5a6; font-size:10px;}
-  .arrow .a{font-size:18px;}
-  /* 작업 프로세스 플로우차트 */
-  .flow{margin:18px 0; counter-reset:fstep;}
-  .fphase{margin-bottom:6px;}
-  .fphase-h{display:flex; align-items:center; gap:9px; font-weight:800; font-size:14px; color:#fff; padding:8px 14px; border-radius:9px; margin-bottom:0;}
-  .fphase-h .pico{font-size:16px;}
-  .fph-prep .fphase-h{background:#5D6D7E;} .fph-node .fphase-h{background:var(--primary);}
-  .fph-hub .fphase-h{background:var(--accent);} .fph-run .fphase-h{background:var(--secondary);}
-  .fph-end .fphase-h{background:#922B21;}
-  .fsteps{padding:11px 0 4px 16px; margin-left:16px; border-left:2px dashed var(--line); display:flex; flex-direction:column; gap:8px;}
-  .fstep{display:flex; gap:10px; align-items:flex-start; background:#fff; border:1px solid var(--line); border-radius:9px; padding:9px 12px; position:relative;}
-  .fstep::before{counter-increment:fstep; content:counter(fstep); position:absolute; left:-27px; top:9px; width:20px; height:20px; background:var(--ink); color:#fff; border-radius:50%; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;}
-  .fstep .fs-t{font-weight:700; font-size:13px;}
-  .fstep .fs-d{font-size:11.5px; color:#5f6f7e; margin-top:2px;}
-  .fstep .fs-c{font-family:'JetBrains Mono','Consolas',monospace; font-size:11px; background:var(--muted); padding:1px 6px; border-radius:4px; color:var(--ink); white-space:nowrap;}
-  .fconn{text-align:center; color:#b0bcc6; font-size:15px; line-height:1; margin:1px 0;}
-  .fphase-h .pnum{background:rgba(255,255,255,.25); border-radius:6px; padding:1px 8px; font-size:12px;}
-  /* 작업 방식 탭 (순수 CSS 라디오) */
-  .tabs{margin:14px 0;}
-  .tabs input[type=radio]{display:none;}
-  .tab-labels{display:flex; gap:8px; border-bottom:3px solid var(--line); padding-bottom:0;}
-  .tab-labels label{padding:10px 20px; cursor:pointer; font-weight:800; font-size:13.5px; color:#8a98a6; background:#eef2f5; border:2px solid var(--line); border-bottom:none; border-radius:10px 10px 0 0; user-select:none; margin-bottom:-3px; transition:all .12s; display:flex; align-items:center; gap:6px;}
-  .tab-labels label:hover{background:#e2e8ee; color:#5a6878;}
-  /* 선택된 라벨 — 두 번째 input(tabB)이 켜지면 .lab-B, 첫 input(tabA)이면 .lab-A.
-     id 무관하게 작동하도록 :checked 위치로 매칭 */
-  .tabA:checked ~ .tab-labels .lab-A,
-  .tabB:checked ~ .tab-labels .lab-B{color:#fff; border-bottom:3px solid;}
-  /* 로컬(A 라벨)이 선택됐을 때 — 청록 */
-  .tabA:checked ~ .tab-labels .lab-A{background:var(--accent); border-color:var(--accent);}
-  /* 클라우드(B 라벨)가 선택됐을 때 — 보라 */
-  .tabB:checked ~ .tab-labels .lab-B{background:#8e44ad; border-color:#8e44ad;}
-  .tab-body{display:none; padding:16px; border:2px solid var(--line); border-top:none; border-radius:0 0 10px 10px;}
-  /* 탭 바디 배경도 색 구분 — 로컬 청록 틴트 / 클라우드 보라 틴트 */
-  .tabA:checked ~ .tab-bodies .tab-A{display:block; background:#f1faf7; border-color:var(--accent);}
-  .tabB:checked ~ .tab-bodies .tab-B{display:block; background:#f7f0fb; border-color:#8e44ad;}
-  /* 라벨에 색 점 표시 */
-  .lab-A::before{content:""; width:9px; height:9px; border-radius:50%; background:var(--accent); display:inline-block;}
-  .lab-B::before{content:""; width:9px; height:9px; border-radius:50%; background:#8e44ad; display:inline-block;}
-  /* 중립 탭 (로컬/클라우드가 아닌 일반 선택용 — 점 없음, 파랑 계열) */
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14.5px;line-height:1.6}
+  .mono{font-family:var(--mono)}
+  a{color:var(--blue)} a:hover{color:var(--cyan)}
+  :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* ---- shell: sidebar + content (대시보드 골격) ---- */
+  .stage{display:grid;grid-template-columns:264px minmax(0,1fr);height:100vh;background:var(--bg)}
+  .sidebar{background:var(--side);border-right:1px solid var(--grid);overflow-y:auto;padding:18px 12px}
+  .brand{padding:2px 10px 14px;border-bottom:1px solid var(--grid);margin-bottom:8px}
+  .brand b{display:block;color:var(--ink);font-size:15px;font-weight:700;line-height:1.35}
+  .brand span{font-family:var(--mono);font-size:10.5px;color:var(--foot);letter-spacing:.03em}
+  .nav-group{font-family:var(--mono);font-size:10px;color:var(--foot);letter-spacing:.12em;text-transform:uppercase;padding:14px 10px 4px}
+  .nav-item{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--dim);border-left:0;transition:background .12s}
+  .nav-item:hover{background:var(--panel);color:var(--ink)}
+  .nav-item.on{background:var(--panel);color:var(--ink);font-weight:700;box-shadow:inset 0 0 0 1px var(--grid)}
+  .nav-item .n{flex:0 0 22px;height:20px;border-radius:6px;background:var(--grid);color:var(--ink);display:grid;place-items:center;font-family:var(--mono);font-size:10.5px;font-weight:600}
+  .nav-item.on .n{background:var(--blue);color:#fff}
+  .content{overflow-y:auto;padding:28px 42px 40px;min-width:0}
+
+  /* ---- panels & 제목 (섹션 칩 스타일) ---- */
+  .panel{display:none;animation:fade .22s ease;max-width:1140px}
+  .panel.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  h2.title{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-size:19px;font-weight:700}
+  h2.title .badge{flex:0 0 auto;min-width:30px;height:30px;padding:0 7px;border-radius:9px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:var(--mono)}
+  h2.title::after{content:"";flex:1;height:1px;background:var(--grid);margin-left:6px}
+  .lead{color:var(--dim);font-size:13.5px;margin:0 0 16px 42px}
+  h3{color:var(--ink);font-size:15px;margin:22px 0 8px;font-weight:600;padding-left:10px;border-left:3px solid var(--orange)}
+  p{margin:9px 0;font-size:14px}
+  ul{margin:7px 0;padding-left:20px} li{margin:4px 0;font-size:13.5px}
+  code.in{background:var(--chip2-bg);border:1px solid var(--chip2-bd);padding:1px 6px;border-radius:5px;font-size:.86em;font-family:var(--mono);color:var(--cyan);white-space:nowrap}
+  .key{display:inline-block;font-family:var(--mono);font-size:11.5px;background:var(--panel2);border:1px solid var(--grid);border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+  .small{font-size:12.5px;color:var(--dim)}
+  .sw{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+
+  /* ---- 코드 블록: 라이트 페이지 위 다크 터미널 ---- */
+  pre{position:relative;background:var(--code-bg);color:var(--code-ink);border:1px solid var(--code-bd);border-radius:10px;padding:13px 15px;overflow-x:auto;font-size:12.2px;line-height:1.55;font-family:var(--mono);margin:10px 0}
+  pre .c{color:#6b7482} pre .k{color:#d0bbff} pre .s{color:#8de5a1} pre .p{color:#b9f2f0}
+  .copy-btn{position:absolute;top:6px;right:6px;background:rgba(255,255,255,.08);color:#cfd3da;border:1px solid rgba(255,255,255,.18);padding:3px 9px;border-radius:5px;font-size:11px;cursor:pointer;opacity:0;transition:opacity .15s,background .15s;font-family:var(--mono);user-select:none}
+  pre:hover .copy-btn{opacity:.85}
+  .copy-btn:hover{opacity:1 !important;background:rgba(255,255,255,.18)}
+  .copy-btn.copied{background:#27ae60;color:#fff;border-color:#27ae60;opacity:1 !important}
+  .ftag{display:inline-block;background:var(--code-bg);color:#b9f2f0;font-size:11px;font-weight:600;padding:4px 12px;border-radius:8px 8px 0 0;font-family:var(--mono);border:1px solid var(--code-bd);border-bottom:none}
+  .ftag + pre{margin-top:0;border-top-left-radius:0}
+
+  /* ---- 안내 박스: 레짐 팔레트가 박스 종류를 부호화 ---- */
+  .box{border:1px solid var(--rowline);border-left:3px solid var(--bc,var(--blue));background:color-mix(in srgb,var(--bc,var(--blue)) 6%,var(--panel));padding:11px 14px;border-radius:0 10px 10px 0;margin:12px 0;font-size:13px}
+  .box .lbl{font-weight:700;display:block;margin-bottom:3px;color:var(--bc,var(--blue));font-family:var(--mono);font-size:12px;letter-spacing:.03em}
+  .box.tip{--bc:var(--rg-clean)} .box.warn{--bc:var(--rg-mixed)} .box.ok{--bc:var(--green)}
+  .box.why{--bc:var(--rg-human)} .box.ai{--bc:var(--rg-matter)} .box.key{--bc:var(--acc)}
+
+  /* ---- 표 ---- */
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12.8px;background:var(--panel);border:1px solid var(--grid)}
+  th,td{border-bottom:1px solid var(--rowline);border-right:1px solid var(--rowline);padding:7px 10px;text-align:left;vertical-align:top}
+  th:last-child,td:last-child{border-right:none}
+  th{background:var(--panel2);color:var(--dim);font-weight:600;font-size:11.5px;font-family:var(--mono);letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+
+  /* ---- 구조 다이어그램 ---- */
+  .diagram{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin:14px 0}
+  .dbox{flex:1;min-width:150px;border:1px solid var(--blue);border-radius:11px;padding:11px;text-align:center;background:color-mix(in srgb,var(--blue) 6%,var(--panel))}
+  .dbox.hub{border-color:var(--green);background:color-mix(in srgb,var(--green) 6%,var(--panel))}
+  .dbox.cloud{border-color:var(--orange);background:color-mix(in srgb,var(--orange) 6%,var(--panel))}
+  .dbox .t{font-weight:700;font-size:13px} .dbox .d{font-size:11px;color:var(--dim);margin-top:3px}
+  .arrow{flex:0 0 44px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--foot);font-size:10px}
+  .arrow .a{font-size:17px}
+
+  /* ---- 작업 프로세스 플로우차트 ---- */
+  .flow{margin:18px 0;counter-reset:fstep}
+  .fphase{margin-bottom:6px}
+  .fphase-h{display:flex;align-items:center;gap:9px;font-weight:700;font-size:13.5px;color:#fff;padding:8px 14px;border-radius:9px}
+  .fphase-h .pico{font-size:15px}
+  .fph-prep .fphase-h{background:var(--gray)} .fph-node .fphase-h{background:var(--blue)}
+  .fph-hub .fphase-h{background:var(--green)} .fph-run .fphase-h{background:var(--orange)}
+  .fph-end .fphase-h{background:var(--rg-mixed)}
+  .fsteps{padding:11px 0 4px 16px;margin-left:16px;border-left:1px solid var(--grid);display:flex;flex-direction:column;gap:8px}
+  .fstep{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--grid);border-radius:9px;padding:9px 12px;position:relative}
+  .fstep::before{counter-increment:fstep;content:counter(fstep);position:absolute;left:-28px;top:9px;width:21px;height:21px;background:var(--panel2);border:1px solid var(--grid);color:var(--ink);border-radius:7px;font-family:var(--mono);font-size:10.5px;font-weight:600;display:flex;align-items:center;justify-content:center}
+  .fstep .fs-t{font-weight:700;font-size:13px}
+  .fstep .fs-d{font-size:11.5px;color:var(--dim);margin-top:2px}
+  .fstep .fs-c{font-family:var(--mono);font-size:11px;background:var(--chip2-bg);border:1px solid var(--chip2-bd);padding:1px 6px;border-radius:4px;white-space:nowrap}
+  .fconn{text-align:center;color:var(--foot);font-size:15px;line-height:1;margin:1px 0}
+  .fphase-h .pnum{background:rgba(255,255,255,.25);border-radius:6px;padding:1px 8px;font-size:11.5px;font-family:var(--mono)}
+
+  /* ---- 선택 탭 (순수 CSS 라디오) ---- */
+  .tabs{margin:14px 0}
+  .tabs input[type=radio]{display:none}
+  .tab-labels{display:flex;gap:8px;margin-bottom:-1px;flex-wrap:wrap}
+  .tab-labels label{padding:8px 18px;cursor:pointer;font-weight:600;font-size:13px;color:var(--dim);background:var(--panel2);border:1px solid var(--grid);border-bottom:none;border-radius:10px 10px 0 0;user-select:none;display:flex;align-items:center;gap:6px;transition:background .12s}
+  .tab-labels label:hover{background:var(--panel);color:var(--ink)}
+  .tabA:checked ~ .tab-labels .lab-A{background:var(--green);border-color:var(--green);color:#fff}
+  .tabB:checked ~ .tab-labels .lab-B{background:var(--purple);border-color:var(--purple);color:#fff}
+  .tab-body{display:none;padding:16px;border:1px solid var(--grid);border-radius:0 10px 10px 10px;background:var(--panel)}
+  .tabA:checked ~ .tab-bodies .tab-A{display:block;border-color:var(--green);background:color-mix(in srgb,var(--green) 4%,var(--panel))}
+  .tabB:checked ~ .tab-bodies .tab-B{display:block;border-color:var(--purple);background:color-mix(in srgb,var(--purple) 4%,var(--panel))}
+  .lab-A::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block}
+  .lab-B::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--purple);display:inline-block}
+  .tabA:checked ~ .tab-labels .lab-A::before,.tabB:checked ~ .tab-labels .lab-B::before{background:#fff}
   .tabA:checked ~ .tab-labels .lab-N1,
-  .tabB:checked ~ .tab-labels .lab-N2{color:#fff; background:var(--primary); border-color:var(--primary); border-bottom:3px solid;}
-  .tabA:checked ~ .tab-bodies .tab-A.body-N{display:block; background:#eef4fb; border-color:var(--primary);}
-  .tabB:checked ~ .tab-bodies .tab-B.body-N{display:block; background:#eef4fb; border-color:var(--primary);}
-  /* 코드 접기 토글 */
-  .fold-btn{display:block; width:100%; text-align:left; background:var(--code-bg); color:#aebdd0; border:1px solid rgba(255,255,255,.12); border-radius:9px; padding:9px 14px; font-size:12px; font-weight:700; cursor:pointer; font-family:'JetBrains Mono','Consolas','D2Coding',monospace,'Pretendard',sans-serif; margin:10px 0; transition:background .12s;}
-  .fold-btn:hover{background:#2c3a4e; color:#e8eef6;}
-  .fold-btn .cnt{color:#7d8aa0; font-weight:400; margin-left:8px;}
-  .ftag + .fold-btn{margin-top:0; border-radius:0 9px 9px 9px;}
-  pre.folded{display:none;}
-  .fold-btn.open{margin-bottom:0; border-radius:9px 9px 0 0;}
-  .ftag + .fold-btn.open{border-radius:0 9px 0 0;}
-  .fold-btn.open + pre{margin-top:0; border-radius:0 0 9px 9px;}
-  .fold-btn.bottom{margin-top:0; border-radius:0 0 9px 9px; text-align:center; display:none;}
-  .fold-btn.bottom.show{display:block;}
-  .nav-btns{display:flex; justify-content:space-between; margin-top:22px; padding-top:14px; border-top:1px solid var(--line);}
-  .nav-btns button{background:var(--primary); color:#fff; border:0; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;}
-  .nav-btns button:disabled{background:#bdc3c7; cursor:default;}
-  .nav-btns button.ghost{background:#fff; color:var(--primary); border:1.5px solid var(--primary);}
-  @media(max-width:860px){
-    .stage{aspect-ratio:auto; flex-direction:column; width:96vw; height:auto;}
-    .sidebar{flex:none; width:100%; display:flex; flex-wrap:wrap; padding:10px;}
-    .sidebar .brand{width:100%;} .nav-group{width:100%;}
-    .nav-item{border-left:0; border-radius:8px; padding:7px 10px;}
-    .content{padding:20px;} .arrow .a{transform:rotate(90deg);}
+  .tabB:checked ~ .tab-labels .lab-N2{color:#fff;background:var(--blue);border-color:var(--blue)}
+  .tabA:checked ~ .tab-bodies .tab-A.body-N{display:block;background:color-mix(in srgb,var(--blue) 4%,var(--panel));border-color:var(--blue)}
+  .tabB:checked ~ .tab-bodies .tab-B.body-N{display:block;background:color-mix(in srgb,var(--blue) 4%,var(--panel));border-color:var(--blue)}
+
+  /* ---- 코드 접기 토글 ---- */
+  .fold-btn{display:block;width:100%;text-align:left;background:var(--code-bg);color:#aab2bd;border:1px solid var(--code-bd);border-radius:10px;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--mono);margin:10px 0;transition:background .12s}
+  .fold-btn:hover{background:#2b303b;color:#e6e8ec}
+  .fold-btn .cnt{color:#6b7482;font-weight:400;margin-left:8px}
+  .ftag + .fold-btn{margin-top:0;border-radius:0 10px 10px 10px}
+  pre.folded{display:none}
+  .fold-btn.open{margin-bottom:0;border-radius:10px 10px 0 0}
+  .ftag + .fold-btn.open{border-radius:0 10px 0 0}
+  .fold-btn.open + pre{margin-top:0;border-radius:0 0 10px 10px}
+  .fold-btn.bottom{margin-top:0;border-radius:0 0 10px 10px;text-align:center;display:none}
+  .fold-btn.bottom.show{display:block}
+
+  /* ---- 이전/다음 ---- */
+  .nav-btns{display:flex;justify-content:space-between;margin-top:24px;padding-top:14px;border-top:1px solid var(--grid)}
+  .nav-btns button{background:var(--blue);color:#fff;border:0;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+  .nav-btns button:disabled{background:var(--grid);color:var(--foot);cursor:default}
+  .nav-btns button.ghost{background:var(--panel);color:var(--blue);border:1px solid var(--blue)}
+
+  /* ---- 운용 섹션 보조 (metric·prompt·vs) ---- */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .metric{background:var(--panel);border:1px solid var(--grid);border-radius:10px;padding:10px 12px}
+  .metric .l{font-size:11px;color:var(--dim)} .metric .v{font-family:var(--mono);font-size:16px;font-weight:600;margin:2px 0} .metric .d{font-size:11.5px;color:var(--dim)}
+  .prompt{background:color-mix(in srgb,var(--rg-matter) 6%,var(--panel));border:1px dashed color-mix(in srgb,var(--rg-matter) 55%,transparent);border-radius:10px;padding:12px 14px;font-size:13px;margin:8px 0;white-space:pre-wrap;line-height:1.55}
+  .prompt::before{content:"프롬프트 예시";display:block;font-family:var(--mono);font-size:10.5px;color:var(--rg-matter);letter-spacing:.1em;margin-bottom:6px}
+  .vs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+  .vs>div{background:var(--panel);border:1px solid var(--grid);border-radius:12px;padding:14px 16px}
+  .vs h4{font-size:13.5px;margin:0 0 6px;font-family:var(--mono);font-weight:600}
+  .vs .a h4{color:var(--orange)} .vs .b h4{color:var(--green)}
+
+  /* ---- 반응형 ---- */
+  @media(max-width:900px){
+    .stage{grid-template-columns:1fr;height:auto}
+    .sidebar{display:flex;flex-wrap:wrap;gap:2px;padding:10px;position:static;overflow:visible}
+    .brand{width:100%} .nav-group{width:100%}
+    .nav-item{padding:7px 10px}
+    .content{padding:20px;overflow:visible}
+    .grid2,.grid3,.vs{grid-template-columns:1fr}
+    .arrow .a{transform:rotate(90deg)}
   }
 </style>
 </head>
 <body>
 <div class="stage">
   <aside class="sidebar">
-    <div class="brand"><b>멀티노드 환경 센싱 모니터</b><span>구축 가이드 · Nano ESP32 + UNO Q · rev. 2026-06</span></div>
+    <div class="brand"><b>멀티노드 환경 센싱 모니터</b><span>multinode_aq · UNO R4 / Nicla·Portenta + UNO Q · rev. 2026-09 (fw v3)</span></div>
 
     <div class="nav-group">시작하기</div>
     <div class="nav-item" data-target="s0"><span class="n">0</span>개요 &amp; 준비물</div>
@@ -157,6 +204,7 @@
 <div class="nav-item" data-target="sEXT"><span class="n">＊</span>확장 과제</div>
     <div class="nav-item" data-target="sVIS"><span class="n">V</span>비전 노드 (재실)</div>
     <div class="nav-item" data-target="sPY"><span class="n">EN</span>보드용 파일(영문)</div>
+    <div class="nav-item" data-target="sAI"><span class="n">AI</span>GitHub + 클로드 코드 운용</div>
     <div class="nav-item" data-target="s13"><span class="n">끝</span>정리·초기화</div>
   </aside>
   <main class="content">
@@ -839,14 +887,33 @@ client.loop_forever()
             <tr><td><code class="in">MQTT_USER</code> / <code class="in">MQTT_PASS</code></td><td>HiveMQ 계정 (Access Management)</td></tr>
             <tr><td><code class="in">PUBLISH_MIN</code></td><td>발행 주기(분). <b>모든 노드 같은 값!</b></td></tr>
           </table>
+          <div class="box tip"><span class="lbl">💡 v3 (2026-09)</span>운용 중 확인된 "수집 중단" 사례를 반영한 자가 복구판입니다: 워치독(setup 완료 후 무장) · 브로커 재접속 논블로킹(10s 간격 1회) · NTP 6h 재동기(매 loop 모뎀 호출 제거) · <code class="in">publish()</code> 결과 검사 + 3버킷 연속 실패 시 자가 리셋 · begin 실패 센서 10분 재시도. 발행 계약(11변수 JSON·5분 버킷)은 그대로입니다. 정본: 저장소 <code class="in">firmware/sensor_node_uno_r4_cloud.ino</code></div>
           <span class="ftag">sensor_node_uno_r4_cloud.ino</span>
 <pre>/*
  * ============================================================
- *  멀티노드 환경 센싱 펌웨어  ★ UNO R4 WiFi 판  (SEN55 + SCD30)
+ *  멀티노드 환경 센싱 펌웨어  ★ UNO R4 WiFi 판  (SEN55 + SCD30) — v3
  *  - 센서1 SEN55(0x69): PM1.0/2.5/4.0/10, 습도, 온도, VOC지수, NOx지수
  *  - 센서2 SCD30(0x61): CO2(ppm), 온도, 습도  ← 온습도 대표값으로 사용
  *  - 전송 : WiFi -&gt; MQTT over TLS (HiveMQ Cloud, 8883)
  *  - 시각 : NTP(WiFi.getTime, UTC) -&gt; 정각 격자 측정·발행
+ * ------------------------------------------------------------
+ *  v2 (운용 반영분): 센서 동결/쓰레기 값 물리범위 필터(plausibleSEN),
+ *      SEN55 연속 무효·SCD30 무응답 감시 → I2C 버스 복구(SCL 9펄스) → MCU 리셋
+ *  v3 변경 (2026-09-05 — 통신·시각 계층 자가 복구):
+ *   ① 브로커 재접속을 무한 블로킹 루프 → 10초 간격 1회 시도로 변경
+ *      (장애 중에도 loop 유지: 샘플링·센서 감시 계속, WiFiS3 고착 시 행 방지)
+ *   ② 시각을 매 loop WiFi.getTime() 호출 → epoch 기준점 + millis 경과로 변경
+ *      (모뎀 AT 왕복 제거, 순간 0 반환에 의한 1970 타임스탬프 오염 차단)
+ *      + NTP 6시간 재동기(표류·millis 롤오버 차단), 미확보 시 10분 재시도
+ *   ③ 발행 3버킷 연속 실패(≈15분) → MCU 리셋 (WiFiS3/MQTT 드라이버 고착 탈출)
+ *   ④ client.setBufferSize(512) + publish() 반환값 검사
+ *      (기본 256B는 11변수 페이로드 ~240B와 여유 20B 미만 — 조용한 전량 미전송 위험)
+ *   ⑤ 하드웨어 WDT(RA4M1, 최대 5592ms)를 setup 완료 후 무장 — Wire/WiFiS3
+ *      호출 내부의 진짜 행(hang)을 리셋으로 회수. TLS connect가 5.5s를 넘기면
+ *      WDT 리셋 후 비무장 setup 경로에서 재접속하므로 부팅 루프에 갇히지 않음.
+ *   ⑥ 부팅 때 실패한 센서(begin 실패)는 10분마다 재초기화 시도,
+ *      SEN55(또는 SCD30 포함)가 1시간 계속 죽어 있으면 MCU 리셋
+ *   ⑦ loop 말미 delay(20) — busy-spin 제거
  * ============================================================
  *  온습도 정책:
  *    - SCD30 온습도 = 대표값(정확, CO2 보정용). 대시보드 표시.
@@ -865,7 +932,7 @@ client.loop_forever()
  *    - PubSubClient            (by Nick O&#x27;Leary)
  *    - Sensirion I2C SEN5X     (+ Sensirion Core 동반)
  *    - SparkFun SCD30          (SCD30, UNO R4/ESP32 지원)
- *    ※ WiFiS3 는 보드패키지 내장
+ *    ※ WiFiS3 / WDT 는 보드패키지 내장
  * ============================================================
  */
 
@@ -874,6 +941,7 @@ client.loop_forever()
 #include &lt;Wire.h&gt;
 #include &lt;SensirionI2CSen5x.h&gt;
 #include &lt;SparkFun_SCD30_Arduino_Library.h&gt;   // ★ SCD30
+#include &lt;WDT.h&gt;                              // v3: RA4M1 하드웨어 워치독
 #include &lt;time.h&gt;
 
 // ===================== 사용자 설정 =====================
@@ -887,6 +955,14 @@ const char* MQTT_PASS = &quot;여기_password&quot;;
 
 const int           PUBLISH_MIN = 5;
 const unsigned long SAMPLE_MS   = 10000;
+// ---- v3 자가 복구 파라미터 ----
+const unsigned long WDT_MS           = 5592;           // RA4M1 최대치
+const unsigned long MQTT_RETRY_MS    = 10000UL;        // 브로커 재접속 시도 간격
+const int           PUB_FAIL_LIMIT   = 3;              // 연속 발행 실패 버킷 → 리셋
+const unsigned long NTP_RESYNC_MS    = 6UL*3600UL*1000UL;  // 확보 후 재동기 6h
+const unsigned long NTP_RETRY_MS     = 10UL*60UL*1000UL;   // 미확보 시 재시도 10분
+const unsigned long DEAD_RETRY_MS    = 10UL*60UL*1000UL;   // 죽은 센서 재초기화 10분
+const unsigned long DEAD_RESET_MS    = 60UL*60UL*1000UL;   // 1시간 계속 죽음 → 리셋
 // ======================================================
 
 WiFiSSLClient net;
@@ -913,6 +989,23 @@ bool timeOK = false;
 long curBucket = -1;
 unsigned long lastSample = 0;
 
+// ---- v3 상태 ----
+static unsigned long epochBase = 0, msBase = 0;    // NTP 기준점 + millis 경과
+static unsigned long lastNtp = 0, lastMqttTry = 0, lastDeadTry = 0, deadSince = 0;
+static int  pubFails = 0;          // 연속 발행 실패 버킷 수
+static bool wdtOn = false;         // WDT 무장 여부 (setup 완료 후 true)
+
+static void wdtFeed() { if (wdtOn) WDT.refresh(); }
+
+void mcuReset() {                    // 보드별 소프트웨어 리셋
+  Serial.flush(); delay(200);
+#if defined(ARDUINO_ARCH_RENESAS)
+  NVIC_SystemReset();                // UNO R4 (RA4M1)
+#elif defined(ARDUINO_ARCH_ESP32)
+  ESP.restart();                     // Nano ESP32
+#endif
+}
+
 void makeNodeId() {
   byte mac[6];
   WiFi.macAddress(mac);
@@ -928,36 +1021,49 @@ void connectWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   unsigned long t0 = millis();
   while (WiFi.status() != WL_CONNECTED &amp;&amp; millis() - t0 &lt; 15000) {
+    wdtFeed();                       // v3: 대기 중 생존 신고
     delay(500); Serial.print(&quot;.&quot;);
   }
   Serial.println(WiFi.status() == WL_CONNECTED ? &quot; OK&quot; : &quot; FAIL&quot;);
 }
 
-void connectBroker() {
-  while (!client.connected()) {
-    connectWiFi();
-    String cid = nodeId + &quot;-&quot; + String(random(0xffff), HEX);
-    Serial.print(&quot;MQTT&quot;);
-    if (client.connect(cid.c_str(), MQTT_USER, MQTT_PASS)) Serial.println(&quot; OK&quot;);
-    else { Serial.print(&quot; rc=&quot;); Serial.println(client.state()); delay(2000); }
+/* v3: 무한 루프 → 1회 시도. 실패는 호출자가 주기 재시도/카운트로 처리.
+ *     (장애 중에도 loop가 계속 돌아 샘플링·센서 감시가 살아 있게) */
+bool tryBroker() {
+  if (client.connected()) return true;
+  connectWiFi();
+  if (WiFi.status() != WL_CONNECTED) return false;
+  wdtFeed();                         // TLS 협상 직전 생존 신고 (5.5s 초과 시 WDT 리셋 = 회수)
+  String cid = nodeId + &quot;-&quot; + String(random(0xffff), HEX);
+  Serial.print(&quot;MQTT&quot;);
+  if (client.connect(cid.c_str(), MQTT_USER, MQTT_PASS)) {
+    wdtFeed(); Serial.println(&quot; OK&quot;); return true;
   }
+  Serial.print(&quot; rc=&quot;); Serial.println(client.state());
+  return false;
 }
 
-void syncTime() {
-  Serial.print(&quot;NTP 동기화&quot;);
-  unsigned long epoch = 0;
-  unsigned long t0 = millis();
-  while ((epoch = WiFi.getTime()) == 0 &amp;&amp; millis() - t0 &lt; 10000) {
+/* v3: 최초 동기 + 주기 재동기 겸용. 기준점(epochBase/msBase)만 갱신하고
+ *     이후 시각은 millis 경과로 계산 — 매 loop 모뎀 왕복 제거 */
+bool syncTime(int tries) {
+  Serial.print(&quot;NTP&quot;);
+  bool first = !timeOK;
+  for (int i = 0; i &lt; tries; i++) {
+    wdtFeed();
+    unsigned long e = WiFi.getTime();
+    if (e &gt; 1600000000UL) {
+      epochBase = e; msBase = millis(); timeOK = true;
+      Serial.println(&quot; OK&quot;);
+      if (first) { long sec = PUBLISH_MIN * 60L; curBucket = ((long)epochBase / sec) * sec; }
+      return true;
+    }
     Serial.print(&quot;.&quot;); delay(500);
   }
-  if (epoch &gt; 0) { timeOK = true;
-    Serial.print(&quot; OK (UTC epoch &quot;); Serial.print(epoch); Serial.println(&quot;)&quot;);
-  } else { timeOK = false;
-    Serial.println(&quot; FAIL -&gt; 정각정렬 없이 동작&quot;);
-  }
+  Serial.println(first ? &quot; FAIL -&gt; 정각정렬 없이 동작&quot; : &quot; FAIL -&gt; 기존 시각 유지&quot;);
+  return false;
 }
 
-long nowEpoch() { return (long)WiFi.getTime(); }
+long nowEpoch() { return (long)(epochBase + (millis() - msBase) / 1000UL); }
 
 String epochToStr(long epoch) {
   time_t t = (time_t)epoch;
@@ -995,8 +1101,20 @@ void publishAverage(long bucketEpoch) {
       sTemp/n, sHum/n, sVoc/n, sNox/n,
       sCo2/cdiv, sScdT/cdiv, sScdH/cdiv, n);
   }
-  client.publish(topic.c_str(), p);
-  Serial.print(&quot;PUB: &quot;); Serial.println(p);
+
+  bool sent = tryBroker() &amp;&amp; client.publish(topic.c_str(), p);   // v3: 결과 검사
+  if (sent) {
+    pubFails = 0;
+    Serial.print(&quot;PUB: &quot;);
+  } else {
+    if (++pubFails &gt;= PUB_FAIL_LIMIT) {      // ≈15분 연속 미전송 → 드라이버 고착 의심
+      Serial.println(&quot;[RESET] 발행 연속 실패&quot;);
+      mcuReset();
+    }
+    Serial.print(&quot;FAIL(미전송 &quot;); Serial.print(pubFails); Serial.print(&quot;/&quot;);
+    Serial.print(PUB_FAIL_LIMIT); Serial.print(&quot;): &quot;);
+  }
+  Serial.println(p);
 }
 
 // v2: I2C 통신은 성공(err==0)해도 센서가 굳어 쓰레기 값을 반복 반환하는
@@ -1004,14 +1122,6 @@ void publishAverage(long bucketEpoch) {
 bool plausibleSEN(float t, float h, float pm25, float pm10) {
   return t &gt; -20 &amp;&amp; t &lt; 60 &amp;&amp; h &gt;= 0 &amp;&amp; h &lt;= 100 &amp;&amp;
          pm25 &gt;= 0 &amp;&amp; pm25 &lt; 1000 &amp;&amp; pm10 &gt;= 0 &amp;&amp; pm10 &lt; 2000;
-}
-
-void mcuReset() {                    // 보드별 소프트웨어 리셋
-#if defined(ARDUINO_ARCH_RENESAS)
-  NVIC_SystemReset();                // UNO R4 (RA4M1)
-#elif defined(ARDUINO_ARCH_ESP32)
-  ESP.restart();                     // Nano ESP32
-#endif
 }
 
 void takeSample() {
@@ -1022,7 +1132,7 @@ void takeSample() {
     if (!err &amp;&amp; !isnan(pm25) &amp;&amp; !isnan(temp) &amp;&amp; plausibleSEN(temp, hum, pm25, pm10)) {
       sPm1 += pm1; sPm25 += pm25; sPm4 += pm4; sPm10 += pm10;
       sHum += hum; sTemp += temp; sVoc += voc; sNox += nox;
-      n++; senFail = 0;
+      n++; senFail = 0; recoverCnt = 0;      // v3: 정상 샘플 → 복구 누계도 청산
     } else {
       senFail++;                     // 통신 실패든 물리범위 밖이든 무효 샘플
     }
@@ -1042,6 +1152,7 @@ void takeSample() {
 // v2: 잠긴 I2C 버스 복구 -&gt; 센서 재초기화 -&gt; 실패 누적 시 MCU 리셋
 void recoverI2C() {
   recoverCnt++;
+  wdtFeed();
   Serial.print(&quot;[RECOVER] I2C 복구 시도 &quot;); Serial.println(recoverCnt);
   Wire.end();
   // 슬레이브가 버스를 물고 있을 때: SCL 9펄스로 강제 해제
@@ -1062,7 +1173,6 @@ void recoverI2C() {
   Serial.print(&quot; SCD30=&quot;);          Serial.println(scdOK ? &quot;OK&quot; : &quot;FAIL&quot;);
   if ((!senOK &amp;&amp; !scdOK) || recoverCnt &gt; RECOVER_MAX) {
     Serial.println(&quot;[RECOVER] 복구 불가 -&gt; MCU 리셋&quot;);
-    delay(300);
     mcuReset();
   }
   senFail = 0; scdLastOK = millis();
@@ -1095,19 +1205,33 @@ void setup() {
 
   connectWiFi();
   makeNodeId();
-  syncTime();
   client.setServer(BROKER, PORT);
-  connectBroker();
+  client.setBufferSize(512);         // v3: 기본 256B는 페이로드와 여유 20B 미만
+  client.setSocketTimeout(5);        // v3: CONNACK/read 대기 상한 (기본 15s)
+  syncTime(20);
+  for (int i = 0; i &lt; 3 &amp;&amp; !tryBroker(); i++) delay(2000);   // v3: 유한 시도
 
   Serial.print(&quot;Node: &quot;);  Serial.println(nodeId);
   Serial.print(&quot;Topic: &quot;); Serial.println(topic);
   Serial.print(&quot;발행주기: &quot;); Serial.print(PUBLISH_MIN); Serial.println(&quot;분&quot;);
 
-  if (timeOK) { long sec = PUBLISH_MIN * 60L; curBucket = (nowEpoch()/sec)*sec; }
+  lastNtp = millis(); lastMqttTry = millis(); lastDeadTry = millis();
+
+  // v3: 부팅 경로가 끝난 뒤에만 무장 — RA4M1 WDT 최대 5592ms라
+  //     느린 TLS connect가 부팅 루프를 만드는 것을 피한다.
+  //     (WDT 리셋 후에는 비무장 setup에서 재접속하므로 자연 탈출)
+  wdtOn = WDT.begin(WDT_MS);
+  Serial.println(wdtOn ? &quot;[WDT] 무장 (5.5s)&quot; : &quot;[WDT] begin 실패 — 소프트 감시만&quot;);
 }
 
 void loop() {
-  if (!client.connected()) connectBroker();
+  wdtFeed();                         // v3: 매 루프 생존 신고
+
+  // v3: 브로커 재접속은 10초 간격 1회 — 장애 중에도 loop 유지
+  if (!client.connected() &amp;&amp; millis() - lastMqttTry &gt;= MQTT_RETRY_MS) {
+    lastMqttTry = millis();
+    tryBroker();
+  }
   client.loop();
 
   // v2: 센서 동결/버스 행 감지 -&gt; 복구
@@ -1116,16 +1240,37 @@ void loop() {
     recoverI2C();
   }
 
+  // v3: 부팅부터 죽어 있는 센서 재초기화 (10분 간격), 1시간 지속 → 리셋
+  if (!senOK || !scdOK) {
+    if (deadSince == 0) deadSince = millis();
+    if (millis() - deadSince &gt; DEAD_RESET_MS) {
+      Serial.println(&quot;[RESET] 센서 1시간 무응답&quot;);
+      mcuReset();
+    }
+    if (millis() - lastDeadTry &gt;= DEAD_RETRY_MS) {
+      lastDeadTry = millis();
+      recoverI2C();
+    }
+  } else deadSince = 0;
+
   unsigned long now = millis();
   long sec = PUBLISH_MIN * 60L;
 
+  // v3: 시각 재동기 — 확보 전 10분 간격, 확보 후 6시간 간격
+  if (WiFi.status() == WL_CONNECTED &amp;&amp;
+      now - lastNtp &gt;= (timeOK ? NTP_RESYNC_MS : NTP_RETRY_MS)) {
+    lastNtp = now;
+    syncTime(3);
+  }
+
   if (timeOK) {
-    long epoch  = nowEpoch();
-    long bucket = (epoch / sec) * sec;
+    long bucket = (nowEpoch() / sec) * sec;
     if (curBucket &lt; 0) curBucket = bucket;
-    if (bucket != curBucket) {
+    if (bucket &gt; curBucket) {                // 버킷 경계 → 발행
       publishAverage(curBucket);
       resetAccum();
+      curBucket = bucket;
+    } else if (bucket &lt; curBucket) {         // v3: 재동기로 시계 후퇴 → 중복 발행 방지
       curBucket = bucket;
     }
     if (now - lastSample &gt;= SAMPLE_MS) {
@@ -1145,8 +1290,9 @@ void loop() {
       lastPub = now; publishAverage(0); resetAccum();
     }
   }
-}
-</pre>
+
+  delay(20);                         // v3: busy-spin 제거 (모뎀·I2C 부하 완화)
+}</pre>
           <details style="margin:10px 0;"><summary style="cursor:pointer;font-weight:700;color:var(--accent);">▸ 로컬(mosquitto) 버전 — 격리 없는 망일 때 펼치기</summary>
           <div style="padding:10px 0;">
           <p>로컬은 <code class="in">BROKER</code>에 허브 IP(<code class="in">192.168.x.x</code>, 패널 2에서 <code class="in">hostname -I</code>), 포트 1883. 인증·TLS 없음.</p>
@@ -1474,6 +1620,7 @@ void loop() {
             <tr><td><code class="in">MQTT_USER</code> / <code class="in">MQTT_PASS</code></td><td>HiveMQ 계정</td></tr>
             <tr><td><code class="in">PUBLISH_MIN</code></td><td>발행 주기(분). <b>모든 노드 같은 값!</b></td></tr>
           </table>
+          <div class="box warn"><span class="lbl">⚠️ 이 판은 v1 (참고용)</span>Nano ESP32 판에는 아직 R4 판의 v3 자가 복구(워치독·논블로킹 재접속·NTP 재동기)가 이식되지 않았습니다. 현행 운용 노드는 전부 UNO R4라 우선순위가 낮습니다 — ESP32로 신규 노드를 만들 계획이면 R4 v3 현장 검증 후 이식을 요청하세요.</div>
           <span class="ftag">aq_node_nano_esp32_cloud.ino</span>
 <pre>/*
  * ============================================================
@@ -2772,15 +2919,27 @@ window.addEventListener(&#x27;resize&#x27;,drawOverlay);
       </div>
       <div class="tab-bodies">
         <div class="tab-body tab-A body-N">
+      <div class="box tip"><span class="lbl">💡 v3 (2026-09)</span>두 판(Nicla/Portenta) 공통으로 "영구 다운" 원인을 제거한 자가 복구판입니다: <code class="in">wd.start()</code>를 setup() 첫 줄로(초기화 데드엔드 = 벽돌 경로 차단) · cam.begin/관문1 실패는 재시도 후 <code class="in">NVIC_SystemReset()</code> · 웜 리셋 후 센서 안정화 3초 · 발행 3버킷/캡처 1분 연속 실패 시 자가 복구 · NTP 6h 재동기 · 부팅 시 리셋 사유 출력. 정본: 저장소 <code class="in">firmware/occ_node_*_cloud.ino</code></div>
       <span class="ftag">occ_node_nicla_cloud.ino</span>
 <pre>/*
  * ============================================================
- *  멀티노드 재실 인원 노드  ★ Nicla Vision 판 (최종·운용)
+ *  멀티노드 재실 인원 노드  ★ Nicla Vision 판 (운용 v3)
  *  - Arduino_MQTT_MultiNode_Demo 발행 계약 정렬 (occ 서브토픽)
  *  - 탐지 : 10초 단발 FOMO 추론 (듀티 ~0.7% → 발열 최소)
  *  - 통계 : 5분 버킷당 ~30샘플 → 평균·중앙값·최대 동시 발행
  *  - 좌표 : &quot;버킷 내 최대 인원 시점&quot;의 centroid 보존 (UI 대표 좌표)
  *  - 감시 : 하드웨어 워치독 30초 — 행(hang) 시 자동 리셋 (무인 운용 보험)
+ * ------------------------------------------------------------
+ *  v3 변경 (2026-09-05 — &quot;영구 다운&quot; 원인 제거):
+ *   ① wd.start()를 setup() 첫 줄로 — 모든 초기화 경로가 WDT 보호下
+ *   ② while(1) 데드엔드 제거 — cam.begin/관문1 실패는 재시도 후 NVIC_SystemReset()
+ *   ③ 웜 리셋 후 카메라 안정화 지연 3초 (WDT 리셋은 GC2145를 리셋하지 못함)
+ *   ④ 발행 3버킷 연속 실패(≈15분) → 자가 리셋 (WiFi/MQTT 드라이버 고착 복구)
+ *   ⑤ 캡처/추론 6회 연속 실패(≈1분) → 카메라 재초기화, 2회 무효 → 자가 리셋
+ *   ⑥ NTP 6시간 재동기화 (millis 49.7일 롤오버·시계 표류 차단), 실패 시 10분 재시도
+ *   ⑦ WiFi 대기·NTP 루프에 wd.kick() 보강, endMessage() 반환값 검사
+ *   ⑧ 부팅 시 리셋 사유 출력 (전원/워치독/소프트웨어 구분 — 현장 진단용)
+ *   ※ 최종 안전망은 별도: 비전 노드 전원을 플러그 스케줄로 매일 재인가 (PROGRESS 09-01)
  * ============================================================
  *  전제: 경량 모델 (FOMO 0.1 + Grayscale, Peak RAM ~150K)
  *        — 0.35 모델(240K)은 WiFi와 공존 불가 (실측 확인)
@@ -2817,7 +2976,7 @@ window.addEventListener(&#x27;resize&#x27;,drawOverlay);
 #include &lt;WiFiSSLClient.h&gt;
 #include &lt;ArduinoMqttClient.h&gt;
 #include &lt;time.h&gt;
-#include &lt;mbed.h&gt;                          // Watchdog
+#include &lt;mbed.h&gt;                          // Watchdog · ResetReason · NVIC_SystemReset
 
 // ===================== 사용자 설정 =====================
 const char* WIFI_SSID = &quot;your-wifi-ssid&quot;;
@@ -2835,6 +2994,14 @@ const int PUBLISH_MIN  = 5;                // 버킷(분) — env 노드와 동�
 #define DETECT_MS        10000UL           // 탐지 주기 10초 (테스트 시 2000UL)
 #define BUCKET_MAX_S     40                // 버킷 내 샘플 상한
 #define WATCHDOG_MS      30000             // 30초 무응답 → 자동 리셋
+// --- v3 자가 복구 파라미터 ---
+#define CAM_SETTLE_MS    3000              // 웜 리셋 후 GC2145 안정화 대기
+#define CAM_TRIES        3                 // cam.begin / 관문1 재시도 횟수
+#define PUB_FAIL_LIMIT   3                 // 연속 발행 실패 버킷 수 → 자가 리셋 (≈15분)
+#define CAP_FAIL_LIMIT   6                 // 연속 캡처/추론 실패 → 카메라 재초기화 (≈1분)
+#define CAM_REINIT_LIMIT 2                 // 재초기화 무효 횟수 → 자가 리셋
+#define NTP_RESYNC_MS    (6UL*3600UL*1000UL) // 시각 재동기 주기 6h (롤오버·표류 차단)
+#define NTP_RETRY_MS     (10UL*60UL*1000UL)  // 시각 미확보 시 재시도 10분
 // ======================================================
 
 /* ---------- 카메라 (QQVGA) ---------- */
@@ -2868,12 +3035,29 @@ static int     occLast = 0;
 static bool timeOK = false;
 static unsigned long epochBase = 0, msBase = 0;
 static long curBucket = -1;
-static unsigned long lastDetect = 0, lastPubFallback = 0;
+static unsigned long lastDetect = 0, lastPubFallback = 0, lastNtp = 0;
+
+/* ---------- v3 자가 복구 카운터 ---------- */
+static uint8_t pubFails = 0;               // 연속 발행 실패 버킷 수
+static uint8_t capFails = 0;               // 연속 캡처/추론 실패 수
+static uint8_t camReinits = 0;             // 성공 없이 반복된 카메라 재초기화 수
 
 WiFiSSLClient tls;
 MqttClient mqtt(tls);
 String nodeId, topic;
 mbed::Watchdog &amp;wd = mbed::Watchdog::get_instance();
+
+/* WDT를 먹이면서 기다린다 — 긴 delay 대체 (v3) */
+static void settle(unsigned long ms) {
+  unsigned long t0 = millis();
+  while (millis() - t0 &lt; ms) { wd.kick(); delay(100); }
+}
+
+static void selfReset(const char* why) {
+  Serial.print(&quot;[RESET] &quot;); Serial.println(why);
+  Serial.flush(); delay(200);
+  NVIC_SystemReset();
+}
 
 /* ================= 프로젝트 관례 함수 ================= */
 void makeNodeId() {
@@ -2893,6 +3077,7 @@ bool connectWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASS, ENC_TYPE_CCMP);
   unsigned long t0 = millis();
   while (WiFi.status() != WL_CONNECTED &amp;&amp; millis() - t0 &lt; 15000) {
+    wd.kick();                              // v3: 대기 중 생존 신고
     delay(500); Serial.print(&quot;.&quot;);
   }
   bool ok = (WiFi.status() == WL_CONNECTED);
@@ -2908,23 +3093,32 @@ bool connectBroker() {
   mqtt.setUsernamePassword(MQTT_USER, MQTT_PASS);
   mqtt.setKeepAliveInterval(60 * 1000L);
   Serial.print(&quot;MQTT&quot;);
-  if (mqtt.connect(BROKER, PORT)) { Serial.println(&quot; OK&quot;); return true; }
+  if (mqtt.connect(BROKER, PORT)) { wd.kick(); Serial.println(&quot; OK&quot;); return true; }
   Serial.print(&quot; rc=&quot;); Serial.println(mqtt.connectError());
   return false;
 }
 
-void syncTime() {                           // WiFi 모듈 내장 NTP
+/* v3: 최초 동기 + 주기 재동기 겸용. 성공 시 epochBase/msBase 갱신 →
+ *     millis 롤오버(49.7일)와 수정 표류가 버킷 시각을 오염시키지 못함 */
+bool syncTime(uint8_t tries) {              // WiFi 모듈 내장 NTP
   Serial.print(&quot;NTP&quot;);
-  for (int i = 0; i &lt; 10; i++) {
+  bool first = !timeOK;
+  for (uint8_t i = 0; i &lt; tries; i++) {
+    wd.kick();
     unsigned long e = WiFi.getTime();
     if (e &gt; 1600000000UL) {
       epochBase = e; msBase = millis(); timeOK = true;
       Serial.println(&quot; OK&quot;);
-      return;
+      if (first &amp;&amp; PUBLISH_MIN &gt; 0) {       // 최초 확보 시 버킷 정렬
+        long sec = PUBLISH_MIN * 60L;
+        curBucket = ((epochBase) / sec) * sec;
+      }
+      return true;
     }
     Serial.print(&quot;.&quot;); delay(1000);
   }
-  Serial.println(&quot; FAIL -&gt; 정각정렬 없이 동작&quot;);
+  Serial.println(first ? &quot; FAIL -&gt; 정각정렬 없이 동작&quot; : &quot; FAIL -&gt; 기존 시각 유지&quot;);
+  return false;
 }
 
 long nowEpoch() {
@@ -2940,6 +3134,16 @@ String epochToStr(long epoch) {
 }
 
 /* ================= 카메라/추론 ================= */
+static bool cameraInit() {                  // v3: 재시도 가능한 초기화
+  for (uint8_t i = 0; i &lt; CAM_TRIES; i++) {
+    wd.kick();
+    if (cam.begin(CAMERA_R160x120, CAMERA_RGB565, 30)) return true;
+    Serial.println(&quot;[CAM] begin 실패 — 재시도&quot;);
+    settle(2000);
+  }
+  return false;
+}
+
 static inline void px565(const uint8_t *src, int sx, int sy,
                          uint8_t *b, uint8_t *g, uint8_t *r) {
 #if CAM_ROTATE_180
@@ -3009,10 +3213,20 @@ static int infer_once() {
   return n;
 }
 
-/* 10초 단발 샘플 + 최대 시점 좌표 보존 */
+/* 10초 단발 샘플 + 최대 시점 좌표 보존 + v3 카메라 자가 복구 */
 void takeSample() {
   int c = infer_once();
-  if (c &lt; 0) { Serial.println(&quot;detect 실패 - 결측&quot;); return; }
+  if (c &lt; 0) {
+    Serial.println(&quot;detect 실패 - 결측&quot;);
+    if (++capFails &gt;= CAP_FAIL_LIMIT) {     // ≈1분 연속 실패 → 센서 고착 의심
+      capFails = 0;
+      if (++camReinits &gt; CAM_REINIT_LIMIT) selfReset(&quot;카메라 재초기화 무효&quot;);
+      Serial.println(&quot;[CAM] 재초기화 시도&quot;);
+      if (!cameraInit()) selfReset(&quot;카메라 재초기화 실패&quot;);
+    }
+    return;
+  }
+  capFails = 0; camReinits = 0;             // 성공 → 카운터 청산
   occLast = c;
   if (s_n &lt; BUCKET_MAX_S) samples[s_n++] = (int8_t)c;
   if (c &gt; 0 &amp;&amp; (uint8_t)c &gt;= best_cnt) {          // ★ 최대 경신 시 좌표 보존
@@ -3060,40 +3274,66 @@ void publishBucket(long bucketEpoch) {
       cbuf, EI_CLASSIFIER_INPUT_WIDTH, s_n);
   }
 
+  bool sent = false;                        // v3: 전송 성공을 끝까지 확인
   if (connectBroker()) {
     mqtt.beginMessage(topic);
     mqtt.print(p);
-    mqtt.endMessage();
+    sent = (mqtt.endMessage() == 1);
+  }
+  if (sent) {
+    pubFails = 0;
     Serial.print(&quot;PUB: &quot;);
-  } else Serial.print(&quot;SKIP(미연결): &quot;);
+  } else {
+    if (++pubFails &gt;= PUB_FAIL_LIMIT)       // 3버킷(≈15분) 연속 실패 → 드라이버 고착 의심
+      selfReset(&quot;발행 연속 실패&quot;);
+    Serial.print(&quot;FAIL(미전송 &quot;); Serial.print(pubFails); Serial.print(&quot;/&quot;);
+    Serial.print(PUB_FAIL_LIMIT); Serial.print(&quot;): &quot;);
+  }
   Serial.println(p);
 }
 
 void resetBucket() { s_n = 0; best_cnt = 0; }
 
+/* v3: 부팅 원인 출력 — 전원 재인가/워치독/소프트리셋 구분 (현장 진단) */
+static void printResetReason() {
+  Serial.print(&quot;[BOOT] reset = &quot;);
+  switch (mbed::ResetReason::get()) {
+    case RESET_REASON_POWER_ON:  Serial.println(&quot;전원 인가&quot;);        break;
+    case RESET_REASON_WATCHDOG:  Serial.println(&quot;워치독 (행 복구)&quot;); break;
+    case RESET_REASON_SOFTWARE:  Serial.println(&quot;자가 리셋&quot;);        break;
+    case RESET_REASON_PIN_RESET: Serial.println(&quot;리셋 버튼&quot;);        break;
+    default:                     Serial.println(&quot;기타&quot;);             break;
+  }
+}
+
 /* ================================================================= */
 void setup() {
   Serial.begin(115200);
   delay(500);
-  Serial.println(&quot;\n[BOOT] Nicla occ node (10s 단발 / 5분 버킷 / 워치독)&quot;);
+  wd.start(WATCHDOG_MS);                    // ★v3 첫 줄 무장 — 이후 모든 경로가 WDT 보호下
+  Serial.println(&quot;\n[BOOT] Nicla occ node v3 (10s 단발 / 5분 버킷 / 워치독)&quot;);
+  printResetReason();
 
-  if (!cam.begin(CAMERA_R160x120, CAMERA_RGB565, 30)) {
-    Serial.println(&quot;[ERR] 카메라 초기화 실패&quot;);
-    while (1) delay(1000);
-  }
+  settle(CAM_SETTLE_MS);                    // ★v3 웜 리셋 시 GC2145 안정화 대기
+
+  if (!cameraInit())                        // ★v3 데드엔드 제거 — 재시도 후 리셋
+    selfReset(&quot;카메라 초기화 실패&quot;);
 
   /* 관문 1: 아레나 선점 (WiFi 이전 — 연속 힙 블록 확보) */
   Serial.print(&quot;[관문1] 아레나 선점 추론... &quot;);
-  if (infer_once() &lt; 0) {
-    Serial.println(&quot;실패&quot;);
-    while (1) delay(1000);
+  bool warm = false;
+  for (uint8_t i = 0; i &lt; CAM_TRIES &amp;&amp; !warm; i++) {
+    wd.kick();
+    warm = (infer_once() &gt;= 0);
+    if (!warm) settle(1000);
   }
+  if (!warm) selfReset(&quot;관문1 실패&quot;);       // ★v3 데드엔드 제거
   Serial.print(&quot;성공 (&quot;); Serial.print(g_infer_ms); Serial.println(&quot;ms)&quot;);
 
   /* 관문 2: WiFi + NTP + 브로커 */
   connectWiFi();
   makeNodeId();
-  syncTime();
+  syncTime(10);
   connectBroker();
 
   /* 관문 3: 공존 검증 */
@@ -3106,10 +3346,8 @@ void setup() {
   Serial.print(&quot;s 단발 / 버킷 &quot;); Serial.print(PUBLISH_MIN);
   Serial.print(&quot;분 / 회전 &quot;); Serial.println(CAM_ROTATE_180);
 
-  if (timeOK) { long sec = PUBLISH_MIN * 60L; curBucket = (nowEpoch()/sec)*sec; }
   lastPubFallback = millis();
-
-  wd.start(WATCHDOG_MS);                    // ★ 무인 운용 보험: 30초 행 → 리셋
+  lastNtp = millis();
 }
 
 void loop() {
@@ -3119,12 +3357,21 @@ void loop() {
   unsigned long now = millis();
   long sec = PUBLISH_MIN * 60L;
 
+  /* v3: 시각 재동기 — 확보 전 10분 간격, 확보 후 6시간 간격 */
+  if (WiFi.status() == WL_CONNECTED &amp;&amp;
+      now - lastNtp &gt;= (timeOK ? NTP_RESYNC_MS : NTP_RETRY_MS)) {
+    lastNtp = now;
+    syncTime(3);
+  }
+
   if (timeOK) {
     long bucket = (nowEpoch() / sec) * sec;
     if (curBucket &lt; 0) curBucket = bucket;
-    if (bucket != curBucket) {              // 버킷 경계 → 발행
+    if (bucket &gt; curBucket) {               // 버킷 경계 → 발행
       publishBucket(curBucket);
       resetBucket();
+      curBucket = bucket;
+    } else if (bucket &lt; curBucket) {        // v3: 재동기로 시계 후퇴 → 중복 발행 방지
       curBucket = bucket;
     }
   } else {
@@ -3144,20 +3391,30 @@ void loop() {
   }
 
   delay(20);
-}
-</pre>
+}</pre>
         </div>
         <div class="tab-body tab-B body-N">
       <div class="box tip"><span class="lbl">💡 Nicla 판과의 차이</span>구조·발행 계약(occ 서브토픽·5분 버킷·centroid)은 동일. 카메라 드라이버만 <code class="in">hm0360.h / HM0360</code>(Vision Shield Rev2)이며, 실드가 흑백 센서라 Grayscale 모델과 궁합이 좋습니다. <code class="in">CAM_ROTATE_180</code>은 Nicla에서 확정한 값을 <b>그대로 쓰지 말고</b> Portenta 조준 테스트에서 다시 확정하세요(센서 실장 방향이 다를 수 있음).</div>
       <span class="ftag">occ_node_portenta_cloud.ino</span>
 <pre>/*
  * ============================================================
- *  멀티노드 재실 인원 노드  ★ Portenta H7 + Vision Shield 판 (운용)
+ *  멀티노드 재실 인원 노드  ★ Portenta H7 + Vision Shield 판 (운용 v3)
  *  - Arduino_MQTT_MultiNode_Demo 발행 계약 정렬 (occ 서브토픽)
  *  - 탐지 : 10초 단발 FOMO 추론 (듀티 ~0.7% → 발열 최소)
  *  - 통계 : 5분 버킷당 ~30샘플 → 평균·중앙값·최대 동시 발행
  *  - 좌표 : &quot;버킷 내 최대 인원 시점&quot;의 centroid 보존 (UI 대표 좌표)
  *  - 감시 : 하드웨어 워치독 30초 — 행(hang) 시 자동 리셋 (무인 운용 보험)
+ * ------------------------------------------------------------
+ *  v3 변경 (2026-09-05 — &quot;영구 다운&quot; 원인 제거):
+ *   ① wd.start()를 setup() 첫 줄로 — 모든 초기화 경로가 WDT 보호下
+ *   ② while(1) 데드엔드 제거 — cam.begin/관문1 실패는 재시도 후 NVIC_SystemReset()
+ *   ③ 웜 리셋 후 카메라 안정화 지연 3초 (WDT 리셋은 HM0360을 리셋하지 못함)
+ *   ④ 발행 3버킷 연속 실패(≈15분) → 자가 리셋 (WiFi/MQTT 드라이버 고착 복구)
+ *   ⑤ 캡처/추론 6회 연속 실패(≈1분) → 카메라 재초기화, 2회 무효 → 자가 리셋
+ *   ⑥ NTP 6시간 재동기화 (millis 49.7일 롤오버·시계 표류 차단), 실패 시 10분 재시도
+ *   ⑦ WiFi 대기·NTP 루프에 wd.kick() 보강, endMessage() 반환값 검사
+ *   ⑧ 부팅 시 리셋 사유 출력 (전원/워치독/소프트웨어 구분 — 현장 진단용)
+ *   ※ 최종 안전망은 별도: 비전 노드 전원을 플러그 스케줄로 매일 재인가 (PROGRESS 09-01)
  * ============================================================
  *  전제: 경량 모델 (FOMO 0.1 + Grayscale) — Nicla와 동일 라이브러리 사용
  *  카메라: HM0360 (Rev2 실드, 흑백). CAP_QVGA=1이면 320x240 QVGA 전체(검증 모드),
@@ -3177,7 +3434,7 @@ void loop() {
  *      w     : c의 좌표계 크기 (모델 입력 폭)
  *      n     : 버킷 내 유효 샘플 수 (품질 지표, 정상 ~30)
  * ------------------------------------------------------------
- *  설치 절차: Nicla_AimingStream 펌웨어로 방향·화각 확정
+ *  설치 절차: Portenta_AimingStream 펌웨어로 방향·화각 확정
  *             → CAM_ROTATE_180에 반영 → 본 펌웨어 업로드
  *  필요 라이브러리: ArduinoMqttClient
  *  보드: Portenta H7 (M7 core) + Vision Shield
@@ -3196,7 +3453,7 @@ void loop() {
 #include &lt;WiFiSSLClient.h&gt;
 #include &lt;ArduinoMqttClient.h&gt;
 #include &lt;time.h&gt;
-#include &lt;mbed.h&gt;                          // Watchdog
+#include &lt;mbed.h&gt;                          // Watchdog · ResetReason · NVIC_SystemReset
 
 // ===================== 사용자 설정 =====================
 const char* WIFI_SSID = &quot;your-wifi-ssid&quot;;
@@ -3214,9 +3471,17 @@ const int PUBLISH_MIN  = 5;                // 버킷(분) — env 노드와 동�
 #define DETECT_MS        10000UL           // 탐지 주기 10초 (테스트 시 2000UL)
 #define BUCKET_MAX_S     40                // 버킷 내 샘플 상한
 #define WATCHDOG_MS      30000             // 30초 무응답 → 자동 리셋
+// --- v3 자가 복구 파라미터 ---
+#define CAM_SETTLE_MS    3000              // 웜 리셋 후 HM0360 안정화 대기
+#define CAM_TRIES        3                 // cam.begin / 관문1 재시도 횟수
+#define PUB_FAIL_LIMIT   3                 // 연속 발행 실패 버킷 수 → 자가 리셋 (≈15분)
+#define CAP_FAIL_LIMIT   6                 // 연속 캡처/추론 실패 → 카메라 재초기화 (≈1분)
+#define CAM_REINIT_LIMIT 2                 // 재초기화 무효 횟수 → 자가 리셋
+#define NTP_RESYNC_MS    (6UL*3600UL*1000UL) // 시각 재동기 주기 6h (롤오버·표류 차단)
+#define NTP_RETRY_MS     (10UL*60UL*1000UL)  // 시각 미확보 시 재시도 10분
 // ======================================================
 
-/* ---------- 카메라 (QQVGA) ---------- */
+/* ---------- 카메라 ---------- */
 HM0360 himax;
 Camera cam(himax);
 FrameBuffer fb;
@@ -3252,12 +3517,29 @@ static int     occLast = 0;
 static bool timeOK = false;
 static unsigned long epochBase = 0, msBase = 0;
 static long curBucket = -1;
-static unsigned long lastDetect = 0, lastPubFallback = 0;
+static unsigned long lastDetect = 0, lastPubFallback = 0, lastNtp = 0;
+
+/* ---------- v3 자가 복구 카운터 ---------- */
+static uint8_t pubFails = 0;               // 연속 발행 실패 버킷 수
+static uint8_t capFails = 0;               // 연속 캡처/추론 실패 수
+static uint8_t camReinits = 0;             // 성공 없이 반복된 카메라 재초기화 수
 
 WiFiSSLClient tls;
 MqttClient mqtt(tls);
 String nodeId, topic;
 mbed::Watchdog &amp;wd = mbed::Watchdog::get_instance();
+
+/* WDT를 먹이면서 기다린다 — 긴 delay 대체 (v3) */
+static void settle(unsigned long ms) {
+  unsigned long t0 = millis();
+  while (millis() - t0 &lt; ms) { wd.kick(); delay(100); }
+}
+
+static void selfReset(const char* why) {
+  Serial.print(&quot;[RESET] &quot;); Serial.println(why);
+  Serial.flush(); delay(200);
+  NVIC_SystemReset();
+}
 
 /* ================= 프로젝트 관례 함수 ================= */
 void makeNodeId() {
@@ -3277,6 +3559,7 @@ bool connectWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASS, ENC_TYPE_CCMP);
   unsigned long t0 = millis();
   while (WiFi.status() != WL_CONNECTED &amp;&amp; millis() - t0 &lt; 15000) {
+    wd.kick();                              // v3: 대기 중 생존 신고
     delay(500); Serial.print(&quot;.&quot;);
   }
   bool ok = (WiFi.status() == WL_CONNECTED);
@@ -3292,23 +3575,32 @@ bool connectBroker() {
   mqtt.setUsernamePassword(MQTT_USER, MQTT_PASS);
   mqtt.setKeepAliveInterval(60 * 1000L);
   Serial.print(&quot;MQTT&quot;);
-  if (mqtt.connect(BROKER, PORT)) { Serial.println(&quot; OK&quot;); return true; }
+  if (mqtt.connect(BROKER, PORT)) { wd.kick(); Serial.println(&quot; OK&quot;); return true; }
   Serial.print(&quot; rc=&quot;); Serial.println(mqtt.connectError());
   return false;
 }
 
-void syncTime() {                           // WiFi 모듈 내장 NTP
+/* v3: 최초 동기 + 주기 재동기 겸용. 성공 시 epochBase/msBase 갱신 →
+ *     millis 롤오버(49.7일)와 수정 표류가 버킷 시각을 오염시키지 못함 */
+bool syncTime(uint8_t tries) {              // WiFi 모듈 내장 NTP
   Serial.print(&quot;NTP&quot;);
-  for (int i = 0; i &lt; 10; i++) {
+  bool first = !timeOK;
+  for (uint8_t i = 0; i &lt; tries; i++) {
+    wd.kick();
     unsigned long e = WiFi.getTime();
     if (e &gt; 1600000000UL) {
       epochBase = e; msBase = millis(); timeOK = true;
       Serial.println(&quot; OK&quot;);
-      return;
+      if (first &amp;&amp; PUBLISH_MIN &gt; 0) {       // 최초 확보 시 버킷 정렬
+        long sec = PUBLISH_MIN * 60L;
+        curBucket = ((epochBase) / sec) * sec;
+      }
+      return true;
     }
     Serial.print(&quot;.&quot;); delay(1000);
   }
-  Serial.println(&quot; FAIL -&gt; 정각정렬 없이 동작&quot;);
+  Serial.println(first ? &quot; FAIL -&gt; 정각정렬 없이 동작&quot; : &quot; FAIL -&gt; 기존 시각 유지&quot;);
+  return false;
 }
 
 long nowEpoch() {
@@ -3324,6 +3616,16 @@ String epochToStr(long epoch) {
 }
 
 /* ================= 카메라/추론 ================= */
+static bool cameraInit() {                  // v3: 재시도 가능한 초기화
+  for (uint8_t i = 0; i &lt; CAM_TRIES; i++) {
+    wd.kick();
+    if (cam.begin(CAM_MODE, CAMERA_GRAYSCALE, 30)) return true;
+    Serial.println(&quot;[CAM] begin 실패 — 재시도&quot;);
+    settle(2000);
+  }
+  return false;
+}
+
 static inline uint8_t pxg(const uint8_t *raw, int sx, int sy) {
 #if CAM_ROTATE_180
   sx = RAW_W - 1 - sx;  sy = RAW_H - 1 - sy;
@@ -3379,10 +3681,20 @@ static int infer_once() {
   return n;
 }
 
-/* 10초 단발 샘플 + 최대 시점 좌표 보존 */
+/* 10초 단발 샘플 + 최대 시점 좌표 보존 + v3 카메라 자가 복구 */
 void takeSample() {
   int c = infer_once();
-  if (c &lt; 0) { Serial.println(&quot;detect 실패 - 결측&quot;); return; }
+  if (c &lt; 0) {
+    Serial.println(&quot;detect 실패 - 결측&quot;);
+    if (++capFails &gt;= CAP_FAIL_LIMIT) {     // ≈1분 연속 실패 → 센서 고착 의심
+      capFails = 0;
+      if (++camReinits &gt; CAM_REINIT_LIMIT) selfReset(&quot;카메라 재초기화 무효&quot;);
+      Serial.println(&quot;[CAM] 재초기화 시도&quot;);
+      if (!cameraInit()) selfReset(&quot;카메라 재초기화 실패&quot;);
+    }
+    return;
+  }
+  capFails = 0; camReinits = 0;             // 성공 → 카운터 청산
   occLast = c;
   if (s_n &lt; BUCKET_MAX_S) samples[s_n++] = (int8_t)c;
   if (c &gt; 0 &amp;&amp; (uint8_t)c &gt;= best_cnt) {          // ★ 최대 경신 시 좌표 보존
@@ -3430,42 +3742,68 @@ void publishBucket(long bucketEpoch) {
       cbuf, EI_CLASSIFIER_INPUT_WIDTH, s_n);
   }
 
+  bool sent = false;                        // v3: 전송 성공을 끝까지 확인
   if (connectBroker()) {
     mqtt.beginMessage(topic);
     mqtt.print(p);
-    mqtt.endMessage();
+    sent = (mqtt.endMessage() == 1);
+  }
+  if (sent) {
+    pubFails = 0;
     Serial.print(&quot;PUB: &quot;);
-  } else Serial.print(&quot;SKIP(미연결): &quot;);
+  } else {
+    if (++pubFails &gt;= PUB_FAIL_LIMIT)       // 3버킷(≈15분) 연속 실패 → 드라이버 고착 의심
+      selfReset(&quot;발행 연속 실패&quot;);
+    Serial.print(&quot;FAIL(미전송 &quot;); Serial.print(pubFails); Serial.print(&quot;/&quot;);
+    Serial.print(PUB_FAIL_LIMIT); Serial.print(&quot;): &quot;);
+  }
   Serial.println(p);
 }
 
 void resetBucket() { s_n = 0; best_cnt = 0; }
 
+/* v3: 부팅 원인 출력 — 전원 재인가/워치독/소프트리셋 구분 (현장 진단) */
+static void printResetReason() {
+  Serial.print(&quot;[BOOT] reset = &quot;);
+  switch (mbed::ResetReason::get()) {
+    case RESET_REASON_POWER_ON:  Serial.println(&quot;전원 인가&quot;);        break;
+    case RESET_REASON_WATCHDOG:  Serial.println(&quot;워치독 (행 복구)&quot;); break;
+    case RESET_REASON_SOFTWARE:  Serial.println(&quot;자가 리셋&quot;);        break;
+    case RESET_REASON_PIN_RESET: Serial.println(&quot;리셋 버튼&quot;);        break;
+    default:                     Serial.println(&quot;기타&quot;);             break;
+  }
+}
+
 /* ================================================================= */
 void setup() {
   Serial.begin(115200);
   delay(500);
-  Serial.println(&quot;\n[BOOT] Portenta occ node (10s 단발 / 5분 버킷 / 워치독)&quot;);
+  wd.start(WATCHDOG_MS);                    // ★v3 첫 줄 무장 — 이후 모든 경로가 WDT 보호下
+  Serial.println(&quot;\n[BOOT] Portenta occ node v3 (10s 단발 / 5분 버킷 / 워치독)&quot;);
+  printResetReason();
   Serial.print(&quot;[CAM] &quot;); Serial.print(RAW_W); Serial.print(&quot;x&quot;);
   Serial.print(RAW_H); Serial.println(CAP_QVGA ? &quot; QVGA 전체(4:3)&quot; : &quot; QQVGA 전체(4:3)&quot;);
 
-  if (!cam.begin(CAM_MODE, CAMERA_GRAYSCALE, 30)) {
-    Serial.println(&quot;[ERR] 카메라 초기화 실패&quot;);
-    while (1) delay(1000);
-  }
+  settle(CAM_SETTLE_MS);                    // ★v3 웜 리셋 시 HM0360 안정화 대기
+
+  if (!cameraInit())                        // ★v3 데드엔드 제거 — 재시도 후 리셋
+    selfReset(&quot;카메라 초기화 실패&quot;);
 
   /* 관문 1: 아레나 선점 (WiFi 이전 — 연속 힙 블록 확보) */
   Serial.print(&quot;[관문1] 아레나 선점 추론... &quot;);
-  if (infer_once() &lt; 0) {
-    Serial.println(&quot;실패&quot;);
-    while (1) delay(1000);
+  bool warm = false;
+  for (uint8_t i = 0; i &lt; CAM_TRIES &amp;&amp; !warm; i++) {
+    wd.kick();
+    warm = (infer_once() &gt;= 0);
+    if (!warm) settle(1000);
   }
+  if (!warm) selfReset(&quot;관문1 실패&quot;);       // ★v3 데드엔드 제거
   Serial.print(&quot;성공 (&quot;); Serial.print(g_infer_ms); Serial.println(&quot;ms)&quot;);
 
   /* 관문 2: WiFi + NTP + 브로커 */
   connectWiFi();
   makeNodeId();
-  syncTime();
+  syncTime(10);
   connectBroker();
 
   /* 관문 3: 공존 검증 */
@@ -3478,10 +3816,8 @@ void setup() {
   Serial.print(&quot;s 단발 / 버킷 &quot;); Serial.print(PUBLISH_MIN);
   Serial.print(&quot;분 / 회전 &quot;); Serial.println(CAM_ROTATE_180);
 
-  if (timeOK) { long sec = PUBLISH_MIN * 60L; curBucket = (nowEpoch()/sec)*sec; }
   lastPubFallback = millis();
-
-  wd.start(WATCHDOG_MS);                    // ★ 무인 운용 보험: 30초 행 → 리셋
+  lastNtp = millis();
 }
 
 void loop() {
@@ -3491,12 +3827,21 @@ void loop() {
   unsigned long now = millis();
   long sec = PUBLISH_MIN * 60L;
 
+  /* v3: 시각 재동기 — 확보 전 10분 간격, 확보 후 6시간 간격 */
+  if (WiFi.status() == WL_CONNECTED &amp;&amp;
+      now - lastNtp &gt;= (timeOK ? NTP_RESYNC_MS : NTP_RETRY_MS)) {
+    lastNtp = now;
+    syncTime(3);
+  }
+
   if (timeOK) {
     long bucket = (nowEpoch() / sec) * sec;
     if (curBucket &lt; 0) curBucket = bucket;
-    if (bucket != curBucket) {              // 버킷 경계 → 발행
+    if (bucket &gt; curBucket) {               // 버킷 경계 → 발행
       publishBucket(curBucket);
       resetBucket();
+      curBucket = bucket;
+    } else if (bucket &lt; curBucket) {        // v3: 재동기로 시계 후퇴 → 중복 발행 방지
       curBucket = bucket;
     }
   } else {
@@ -3561,6 +3906,8 @@ mosquitto_sub -h xxxxx.s1.eu.hivemq.cloud -p 8883 \
   <section class="panel" id="s8">
     <h2 class="title"><span class="badge">8</span>허브 — 대시보드</h2>
     <p class="lead">DB를 읽어 그래프로 보여주고 CSV로 내보내는 웹 화면입니다. 노드가 늘면 자동으로 칸이 추가됩니다.</p>
+
+    <div class="box"><span class="lbl">현행 운영은 webapp.py SPA — 이 장은 학습용 사이클 완성판</span>이 장의 <code class="in">dashboard.py</code>(Streamlit 단일 파일)는 손으로 타이핑해 한 사이클을 완성할 수 있는 <b>학습판</b>입니다. 실제 운영은 2026-08-29부로 표준 라이브러리 웹서버 + 바닐라 JS SPA(<code class="in">hub/webapp.py</code> + <code class="in">hub/web/</code>)로 전환되었습니다 — 8501 관리자 / 8502 공개(모니터링 전용) 두 인스턴스, 60초 폴 &lt;50KB, 하단 dock 모바일 UI. 학습판으로 원리를 익힌 뒤 운영판은 <code class="in">git pull</code>로 받으면 됩니다(코드가 수천 줄이라 손 타이핑 대상이 아님).</div>
 
     <h3>화면 구성 (5개 섹션으로 구성)</h3>
     <table>
@@ -4822,6 +5169,14 @@ User=arduino
 
 [Install]
 WantedBy=multi-user.target</pre>
+    <div class="box"><span class="lbl">현행 서비스 구성 (2026-09)</span>운영 보드에서 Streamlit 서비스는 정지되었고, 다음 구성이 돌아갑니다 — 유닛 파일 정본은 저장소 <code class="in">hub/systemd/</code>:
+    <table>
+      <tr><th>유닛</th><th>역할</th></tr>
+      <tr><td><code class="in">multinode_aq_hub.service</code></td><td>MQTT 구독 → SQLite 적재 (수집, 불가침)</td></tr>
+      <tr><td><code class="in">multinode_aq_web.service</code> / <code class="in">_web_public</code></td><td>webapp.py — 8501 관리자 / 8502 공개(Tailscale Funnel)</td></tr>
+      <tr><td><code class="in">multinode_aq_analyst_hourly·daily.timer</code></td><td>추론 — 매시 레짐·제어 판단·예측 / 매일 밴드·전이</td></tr>
+      <tr><td><code class="in">multinode_aq_analyst_weekly.timer</code></td><td>모델 재학습·승격 심사 — <b>격주</b>(1·3주 일요일 06:30 UTC)</td></tr>
+    </table></div>
 
     <div class="box"><span class="lbl">두 파일의 차이는 ExecStart 한 줄뿐</span>
     <table style="margin-top:8px;">
@@ -5030,6 +5385,7 @@ sudo rm -rf /var/lib/tailscale     <span class="c"># 남은 상태 디렉토리<
   <section class="panel" id="s12">
     <h2 class="title"><span class="badge" style="background:var(--secondary)">→</span>다음 단계</h2>
     <p class="lead">이 시스템은 곧 ML·AI 확장을 위한 데이터 수집기입니다.</p>
+    <div class="box ok"><span class="lbl">✅ 현행 진행 상황 (2026-09)</span>아래 항목 중 상당수는 이미 구현되어 운영 중입니다 — CO₂·VOC 레짐 분석(GMM + 규칙 하이브리드), 예측 경보(30분), 웹 SPA 대시보드, 격주 모델 거버넌스. 남은 큰 과제는 <b>스마트플러그(Tapo/Shelly) 실물 제어</b>와 제어 전후 개입 실험입니다. 상세 이력은 저장소 <code class="in">docs/PROGRESS.md</code>가 정본.</div>
     <ul>
       <li><b>데이터 축적</b> — 1~2주 무인 수집(트랙 B)으로 충분한 데이터 모으기</li>
       <li><b>CO₂·VOC 레짐 분석</b> — DB의 <code class="in">co2</code> 열을 활용. CO₂·VOC를 ML 타깃으로 (자세한 전략은 다음 「확장 과제」 패널 참조)</li>
@@ -6357,6 +6713,81 @@ with st.expander(&quot;Clear all collected data (DANGER)&quot;, expanded=False):
   </section>
 
   <!-- s13 정리 -->
+  <!-- sAI 현행 개발·운용 방식 -->
+  <section class="panel" id="sAI">
+    <h2 class="title"><span class="badge" style="background:var(--acc)">AI</span>현행 개발 방식 — GitHub + 클로드 코드 운용</h2>
+    <p class="lead">패널 0~9의 수동 사이클을 한 번 완주했다면, 이제 이 시스템이 실제로 어떻게 개발·배포되는지 봅니다. 사람은 명령을 승인하고 결과를 검증하는 역할을 맡습니다.</p>
+
+    <div class="box why"><span class="lbl">WHY · 수작업을 먼저 한 사람만 검증할 수 있다</span>AI가 만든 코드가 "돌아가는지"는 누구나 봅니다. 그러나 "올바른 자리에 놓였는지" — 토픽이 <code class="in">multinode_aq/+/env</code>가 맞는지, 서비스가 <code class="in">.venv</code> 절대경로를 가리키는지, 시각이 노드가 만든 5분 버킷인지 — 는 파이프라인을 손으로 이어 본 사람만 봅니다. 이 매뉴얼의 진짜 산출물은 코드가 아니라 <b>검증 능력</b>입니다.</div>
+
+    <h3>운용 지도 — 코드가 흐르는 길</h3>
+    <div class="diagram">
+      <div class="dbox"><div class="t">노트북 (Windows)</div><div class="d">클로드 코드 + VS Code<br>수정 · 테스트 · 커밋</div></div>
+      <div class="arrow"><span class="a">→</span>push</div>
+      <div class="dbox cloud"><div class="t">GitHub (main)</div><div class="d">정답 사본은 한 곳<br>모든 이력 추적 가능</div></div>
+      <div class="arrow"><span class="a">→</span>pull</div>
+      <div class="dbox hub"><div class="t">허브 보드 (UNO Q)</div><div class="d"><code class="in">git pull</code>만 — 보드에서 직접 수정 금지</div></div>
+      <div class="arrow"><span class="a">→</span>사람</div>
+      <div class="dbox"><div class="t">systemd 재시작</div><div class="d"><code class="in">sudo</code>는 사람이 —<br>AI는 명령을 출력만</div></div>
+    </div>
+    <p class="small">노드 펌웨어는 예외적으로 사람이 Arduino IDE로 직접 업로드합니다(보드가 git을 모르므로). 대신 <b>정본은 저장소 <code class="in">firmware/</code></b>이고, 매뉴얼의 코드 목록은 그 사본입니다.</p>
+
+    <h3>역할 분담 — 사람 vs 클로드 코드</h3>
+    <table>
+      <tr><th></th><th>사람 (운영자)</th><th>클로드 코드</th></tr>
+      <tr><td>설계</td><td>요구 정의 · 선택지 결정 ([ASK]에 답)</td><td>선택지·트레이드오프 제시, 계획(plan) 작성</td></tr>
+      <tr><td>구현</td><td>결과 검토</td><td>파일 수정 · 테스트 작성 · <code class="in">uv run pytest</code></td></tr>
+      <tr><td>배포</td><td><code class="in">sudo systemctl restart …</code> 실행, 펌웨어 플래싱</td><td>main 커밋 · push · <code class="in">ssh q "git pull"</code></td></tr>
+      <tr><td>확인</td><td>실화면·실물 동작 확인</td><td>읽기 전용 점검 (<code class="in">is-active</code> · <code class="in">journalctl</code> · <code class="in">curl</code> · DB 조회)</td></tr>
+      <tr><td>기록</td><td>결정 사항 승인</td><td>PROGRESS.md 갱신 · 커밋 메시지 · 메모리 노트</td></tr>
+    </table>
+
+    <h3>경계는 말이 아니라 파일로 — CLAUDE.md</h3>
+    <p>“hub.py는 건드리지 마”라는 <b>말</b>은 규칙이 아닙니다. 이 프로젝트는 규칙을 저장소 루트의 <code class="in">CLAUDE.md</code>에 적어 두고, 클로드 코드가 <b>매 세션 자동으로 읽게</b> 합니다. 실제 운용 규칙 요지:</p>
+<pre># CLAUDE.md 운용 규칙 (요지)
+- 보드(ssh q)의 파일을 직접 수정하지 않는다 — 배포는 git pull 한 경로뿐
+- sudo / systemctl restart|enable|daemon-reload 는 실행하지 말고 명령을 출력만
+  (읽기 전용 점검 is-active · journalctl · curl 은 허용)
+- hub.py 의 쓰기 경로와 readings/occupancy 테이블은 불가침
+  (analysis/actuator_state 는 analyst.py 만 쓴다)
+- 보드에 sqlite3 CLI 없음 → .venv/bin/python -c "import sqlite3; ..." 로 조회
+- 페이즈가 끝나면 멈추고 보고 — 확인 없이 다음 페이즈 시작 금지</pre>
+    <div class="grid3">
+      <div class="metric"><div class="l">CLAUDE.md</div><div class="v">프로젝트 규칙서</div><div class="d">폴더에 두면 매 세션 자동 로드. 불가침 경계·배포 경로·검증 명령이 여기에.</div></div>
+      <div class="metric"><div class="l">docs/ 문서 체계</div><div class="v">기록 = 컨텍스트</div><div class="d">PROGRESS(작업 일지) · DRIFT(문서↔실물 차이) · INVENTORY(보드 실측) — AI가 다음 세션에서 이어받는 기억.</div></div>
+      <div class="metric"><div class="l">승인 (permission)</div><div class="v">사람의 손</div><div class="d">파일 쓰기·명령 실행 전 승인을 묻는 모드. 승인 전에 명령을 <b>읽는 것</b>이 운영자의 일.</div></div>
+    </div>
+
+    <h3>한 번의 변경이 배포되기까지 — 실제 사이클</h3>
+    <div class="flow"><div class="fphase fph-hub">
+      <div class="fphase-h"><span class="pico">🔁</span>변경 → 검증 → 배포 <span class="pnum">현행 표준 절차</span></div>
+      <div class="fsteps">
+        <div class="fstep"><div><div class="fs-t">요청과 설계</div><div class="fs-d">무엇을 바꿀지 합의. 큰 변경은 계획(plan)을 먼저 받고 승인 — 사용자 결정이 필요한 항목은 [ASK]로 표시됨</div></div></div>
+        <div class="fstep"><div><div class="fs-t">수정 + 로컬 검증</div><div class="fs-d">코드 수정 → <span class="fs-c">uv run pytest hub/tests -q</span> → 웹 변경이면 로컬 미리보기 브라우저 확인(데스크톱·모바일 폭)</div></div></div>
+        <div class="fstep"><div><div class="fs-t">main 커밋 · push</div><div class="fs-d">의미 단위 커밋(비밀 파일은 .gitignore) → <span class="fs-c">git push</span></div></div></div>
+        <div class="fstep"><div><div class="fs-t">보드 반영</div><div class="fs-d"><span class="fs-c">ssh q "cd /home/arduino/multinode_aq && git pull"</span> — 보드는 받기만</div></div></div>
+        <div class="fstep"><div><div class="fs-t">서비스 재시작 (사람)</div><div class="fs-d">서버 코드가 바뀐 경우에만 — AI가 출력한 <span class="fs-c">sudo systemctl restart multinode_aq_web</span>을 사람이 실행</div></div></div>
+        <div class="fstep"><div><div class="fs-t">읽기 전용 확인</div><div class="fs-d"><span class="fs-c">systemctl is-active</span> · <span class="fs-c">journalctl -u … -n 20</span> · 대시보드 화면 — 그리고 PROGRESS.md에 기록</div></div></div>
+      </div>
+    </div></div>
+
+    <h3>실전 프롬프트 — 이 프로젝트에서 실제로 쓴 형태</h3>
+    <div class="prompt">비전노드가 빈번하게 드롭되고 전원 재인가 전까지 복구가 안 돼.
+운용 펌웨어(occ_node_portenta_cloud.ino)를 면밀히 검토해서 개선할 수 있을까?
+- 발행 계약(occ 토픽·5분 버킷 JSON)은 바꾸지 말 것
+- 수정본은 firmware/ 에 커밋하고, 보드 반영까지. sudo가 필요하면 명령만 출력
+- 검증: 로컬 pytest 통과 + 시리얼 부팅 로그에서 확인할 항목을 알려줘</div>
+    <div class="box ai"><span class="lbl">AI · 요청 잘 하는 법 4원칙</span><ol style="margin:0 0 0 16px"><li><b>형식을 먼저 정한다</b> — 토픽·JSON 필드·파일 위치를 내가 지정.</li><li><b>제약을 준다</b> — “발행 계약 불변”, “sudo는 출력만”, “hub.py 접근 금지”.</li><li><b>검증 기준을 같이 준다</b> — “pytest 통과”, “시리얼에 [WDT] 무장이 찍히면 성공”.</li><li><b>결과를 읽는다</b> — 돌아가는지가 아니라 <b>제자리인지</b>.</li></ol></div>
+
+    <h3>수동 사이클 vs 클로드 코드 — 무엇이 달라지나</h3>
+    <div class="vs">
+      <div class="a"><h4>수동 (이 매뉴얼 0~9)</h4><ul><li>한 사이클에 하루 이상, 오타·경로 실수가 절반</li><li>대신 각 마디에서 <b>무엇이 실패하는지</b>를 직접 봄</li><li>명령어·개념이 손에 남아 <b>검증자</b>가 됨</li></ul></div>
+      <div class="b"><h4>클로드 코드 (현행)</h4><ul><li>같은 변경이 수십 분 — 테스트·커밋·배포·기록까지 한 흐름</li><li>단, 검증 기준을 준 사람만 결과가 맞는지 앎</li><li>sudo · 비밀 · 쓰기 경로 경계는 CLAUDE.md + 승인으로 사람이 지킴</li></ul></div>
+    </div>
+
+    <div class="box key"><span class="lbl">🔑 이 페이지가 말하려는 한 가지</span>AI 개발의 효율은 “코드를 대신 써 준다”에서 오지 않습니다. <b>파이프라인을 아는 사람이 검증 기준을 주고, 경계를 파일(CLAUDE.md·.gitignore·문서)로 걸어 둘 때</b> 옵니다. 패널 0~9가 그 사람을 만들고, 이 페이지가 그 경계를 보여줍니다.</div>
+  </section>
+
   <section class="panel" id="s13">
     <h2 class="title"><span class="badge" style="background:var(--warn)">끝</span>종료 · 초기화 · 정리</h2>
     <p class="lead">상황별 정리 루틴: <b>(가)</b> 잠깐 멈췄다 다시 / <b>(나)</b> 데이터만 초기화 / <b>(다)</b> 프로젝트 통째 정리.</p>
@@ -6459,7 +6890,7 @@ sudo rm -f /etc/mosquitto/conf.d/multinode_aq.conf</pre>
 </div>
 
 <script>
-  const order = ['s0', 's1', 'sW', 's5', 's7', 's2', 's3', 's4', 's6', 's8', 's9', 's10', 'sTS', 's11', 's12', 'sEXT', 'sPY', 's13'];
+  const order = ['s0', 's1', 'sW', 's5', 's7', 's2', 's3', 's4', 's6', 's8', 's9', 's10', 'sTS', 's11', 's12', 'sEXT', 'sVIS', 'sPY', 'sAI', 's13'];
   const items = document.querySelectorAll('.nav-item');
   const panels = document.querySelectorAll('.panel');
   const prevBtn = document.getElementById('prevBtn');

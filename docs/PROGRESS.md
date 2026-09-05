@@ -157,3 +157,11 @@ Phase 6 후 화면 검토에서 합의한 항목. Phase 번호 없음(태그 없
 5. **부팅 시 죽은 센서 10분마다 재초기화, 1시간 지속 시 리셋**(종전엔 begin 실패 = 영구 좀비 — SCD30 죽으면 CO₂ 없어 QC 95% 게이트 제외 유형) + 정상 샘플 시 recoverCnt 청산 + loop 말미 delay(20).
 
 발행 계약(11변수 JSON·5분 버킷) 불변. 비전 v3와 함께 **다음 주 노드 일괄 업데이트 예정**(사용자). 미결 추가: manual.html 6-1/6-2 내장 코드 목록을 firmware/ v3와 동기화할지 [ASK]. Nano ESP32 판(`aq_node_nano_esp32_cloud.ino`)도 동일 구판 — R4 검증 후 필요 시 동일 적용.
+
+## manual.html 리디자인(라이트) + v3 코드 반영 + 운용 섹션 추가 (2026-09-05, main 직접 커밋)
+
+교사 실습 매뉴얼(docs/manual.html)을 training_manual_v1/발표자료 디자인 컨셉으로 재스타일:
+- **라이트 모드**: 토큰 = hub/web/app.css `[data-theme="light"]` 팔레트(+구판 변수 별칭 --primary/--accent/--warn 유지로 인라인 스타일 무수정), IBM Plex Sans KR/Mono(Pretendard/JetBrains 대체), 16:9 stage → 사이드바+콘텐츠 풀뷰 그리드, 섹션 칩 제목·레짐 팔레트 박스(why/tip/warn/ok/ai/key)·다크 코드블록 유지. 마크업 구조·패널 내비 상호작용은 원형 유지(흐름 보존).
+- **최신 코드**: 6-1 R4 cloud / 6-2 Nicla·Portenta occ 내장 목록을 firmware/ v3 정본으로 교체(+v3 요지 박스), ESP32 cloud 판은 "v1 참고용" 경고. s8에 "현행 운영 = webapp.py SPA(8501/8502), Streamlit은 학습판" 안내, s9에 현행 systemd 구성표(hub/web·web_public/analyst hourly·daily·**격주** weekly), s12에 현행 진행 상황 박스.
+- **신규 sAI 패널** "현행 개발 방식 — GitHub + 클로드 코드 운용"(끝 패널 앞): 운용 지도(노트북→GitHub→보드 pull→sudo는 사람), 역할 분담표, CLAUDE.md 규칙 요지, 표준 배포 사이클 6단계, 실전 프롬프트 예시, 수동 vs 클로드 코드 비교 — training 매뉴얼 마무리 파트의 현행 프로젝트판.
+- 버그 수정: 사이드바 "비전 노드 (재실)" 클릭이 죽어 있던 order 배열 누락(sVIS) 복구.
