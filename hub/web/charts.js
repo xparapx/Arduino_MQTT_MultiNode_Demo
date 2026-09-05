@@ -85,6 +85,52 @@ const CH = (() => {
     return s + "</svg>";
   }
 
+  // weekly comparison: one row per KST week -- q1-q3 range bar + median tick
+  function weekbars(rows, thr, color, unit) {
+    const dim = css("--dim"), red = css("--red"), ink = css("--ink"), grid = css("--grid");
+    if (!rows || !rows.length) return `<svg class="chart" viewBox="0 0 660 60"><text x="330" y="34" font-size="11" fill="${dim}" text-anchor="middle">no data</text></svg>`;
+    const L = 122, R = 54, W = 660, RH = 30, T = 8, H = T + rows.length * RH + 20;
+    let lo = Math.min(...rows.map((r) => r.q1), thr ?? Infinity), hi = Math.max(...rows.map((r) => r.q3), thr ?? -Infinity);
+    if (hi === lo) hi = lo + 1;
+    const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+    const x = (v) => L + (v - lo) / (hi - lo) * (W - L - R);
+    let s = `<svg class="chart" viewBox="0 0 ${W} ${H}">`;
+    if (thr !== undefined) s += `<line x1="${f1(x(thr))}" y1="${T - 2}" x2="${f1(x(thr))}" y2="${H - 18}" stroke="${red}" stroke-dasharray="4 3" opacity="0.8"/><text x="${f1(x(thr))}" y="${H - 5}" font-size="9" fill="${red}" text-anchor="middle">${num(thr)}</text>`;
+    rows.forEach((r, i) => {
+      const y = T + i * RH + RH / 2;
+      s += `<text x="${L - 10}" y="${y + 4}" font-size="11" fill="${ink}" text-anchor="end">${esc(r.start)}–${esc(r.end)}</text>`
+         + `<line x1="${L}" y1="${y}" x2="${W - R}" y2="${y}" stroke="${grid}" stroke-width="1"/>`
+         + `<rect x="${f1(x(r.q1))}" y="${y - 7}" width="${f1(Math.max(2, x(r.q3) - x(r.q1)))}" height="14" rx="4" fill="${color}" opacity="${i === rows.length - 1 ? 0.75 : 0.4}" data-tip="${esc(r.start)}–${esc(r.end)}\nq1 ${num(r.q1)} · 중앙 ${num(r.med)} · q3 ${num(r.q3)} ${esc(unit || "")}"/>`
+         + `<line x1="${f1(x(r.med))}" y1="${y - 10}" x2="${f1(x(r.med))}" y2="${y + 10}" stroke="${ink}" stroke-width="2.4"/>`
+         + `<text x="${f1(x(r.q3)) + 8}" y="${y + 4}" font-size="10" fill="${dim}">${num(r.med)}</text>`;
+    });
+    return s + "</svg>";
+  }
+
+  // day-of-week x hour rhythm: 7x24 median heatmap (rows Mon..Sun, KST)
+  function dowheat(grid, thr, color, unit) {
+    const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
+    const L = 34, T = 22, CW = 25, CH_ = 22, GAP = 2;
+    const W = L + 24 * CW + 6, H = T + 7 * CH_ + 6;
+    const dim = css("--dim"), red = css("--red"), plot = css("--plot");
+    const vals = grid.flat().filter((v) => v !== null && v !== undefined);
+    if (!vals.length) return `<svg class="chart" viewBox="0 0 ${W} ${H}"><text x="${W / 2}" y="${H / 2}" font-size="11" fill="${dim}" text-anchor="middle">no data</text></svg>`;
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    let s = `<svg class="chart" viewBox="0 0 ${W} ${H}">`;
+    for (let h = 0; h < 24; h += 4) s += `<text x="${L + h * CW + CW / 2}" y="${T - 8}" font-size="9" fill="${dim}" text-anchor="middle">${String(h).padStart(2, "0")}</text>`;
+    grid.forEach((row, di) => {
+      s += `<text x="${L - 8}" y="${T + di * CH_ + CH_ / 2 + 3.5}" font-size="10" fill="${di >= 5 ? red : dim}" text-anchor="end">${DAYS[di]}</text>`;
+      row.forEach((v, h) => {
+        const x = L + h * CW, y = T + di * CH_;
+        if (v === null || v === undefined) { s += `<rect x="${x}" y="${y}" width="${CW - GAP}" height="${CH_ - GAP}" rx="3" fill="${plot}"/>`; return; }
+        const a = hi === lo ? 0.5 : 0.08 + 0.84 * (v - lo) / (hi - lo);
+        const over = thr !== undefined && v > thr;
+        s += `<rect x="${x}" y="${y}" width="${CW - GAP}" height="${CH_ - GAP}" rx="3" fill="${color}" fill-opacity="${f1(a)}"${over ? ` stroke="${red}" stroke-width="1.6"` : ""} data-tip="${DAYS[di]} ${String(h).padStart(2, "0")}:00–${String(h).padStart(2, "0")}:59\n중앙 ${num(v)} ${esc(unit || "")}${over ? `\n⚠ 임계 초과` : ""}"/>`;
+      });
+    });
+    return s + "</svg>";
+  }
+
   // per-node ON-threshold exceedance: % of rows above the rules-layer threshold
   function pbars(rows, color) {
     const ink = css("--ink"), dim = css("--dim");
@@ -357,5 +403,5 @@ const CH = (() => {
     return s + "</svg>";
   }
 
-  return { radar, box, hbars, trend, pbars, line, occBars, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO };
+  return { radar, box, hbars, trend, pbars, dowheat, weekbars, line, occBars, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO };
 })();

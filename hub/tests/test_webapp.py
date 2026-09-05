@@ -88,6 +88,11 @@ def test_live_and_stats(site):
     assert all(0.0 <= r["pct"] <= 100.0 for r in ex)
     assert [r["pct"] for r in ex] == sorted((r["pct"] for r in ex), reverse=True)
     assert st["thr"] == webdata.EXCEED_THR
+    wk = st["weekly"]["co2"]                                    # per-week q1/med/q3
+    assert wk and all(r["q1"] <= r["med"] <= r["q3"] for r in wk)
+    g = st["dow"]["co2"]                                        # Mon..Sun x 24h median grid
+    assert len(g) == 7 and all(len(r) == 24 for r in g)
+    assert any(v is not None for r in g for v in r)
     assert w.stats() is st                                          # memoised on the bucket
 
 

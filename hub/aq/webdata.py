@@ -219,7 +219,10 @@ class WebData:
         def build():
             if not self._has_db():
                 return {"version": bucket, "days": days, "box": {}, "by_node": {}}
-            sql = ("SELECT node, date(ts, '+9 hours') AS d, " + ", ".join(GAUGE_KEYS)
+            sql = ("SELECT node, date(ts, '+9 hours') AS d, "
+                   "strftime('%w', ts, '+9 hours') AS wd, strftime('%H', ts, '+9 hours') AS hh, "
+                   "date(ts, '+9 hours', 'weekday 0', '-6 days') AS wk, "   # week key = that week's Monday (KST)
+                   + ", ".join(GAUGE_KEYS)
                    + " FROM readings WHERE ts >= datetime('now', ?)")
             with closing(self._ro()) as con:
                 if "readings" not in self._tables(con):
@@ -243,7 +246,25 @@ class WebData:
                               for n, v in g.items()]
             # daily q1/med/q3 per target (KST day) and ON-threshold exceedance per node --
             # server aggregates only, a few hundred numbers for the whole window
-            daily, exceed = {}, {}
+            daily, exceed, dow, weekly = {}, {}, {}, {}
+            for k in TARGET_KEYS:
+                v = dfa.dropna(subset=[k])
+                rows = []
+                if not v.empty:
+                    q = v.groupby("wk")[k].quantile([0.25, 0.5, 0.75]).unstack().sort_index()
+                    span = v.groupby("wk")["d"].agg(["min", "max"])
+                    for wk, r in q.iterrows():
+                        rows.append({"start": span.loc[wk, "min"][5:], "end": span.loc[wk, "max"][5:],
+                                     "q1": round(float(r[0.25]), 1), "med": round(float(r[0.5]), 1),
+                                     "q3": round(float(r[0.75]), 1)})
+                weekly[k] = rows
+            for k in TARGET_KEYS:
+                v = dfa.dropna(subset=[k])
+                grid = [[None] * 24 for _ in range(7)]          # rows Mon..Sun (KST)
+                if not v.empty:
+                    for (w, hh), val in v.groupby(["wd", "hh"])[k].median().items():
+                        grid[(int(w) + 6) % 7][int(hh)] = round(float(val), 1)
+                dow[k] = grid
             for k in TARGET_KEYS:
                 v = dfa.dropna(subset=[k])
                 if v.empty:
@@ -263,7 +284,7 @@ class WebData:
                              for n, p in pct.sort_values(ascending=False).items()]
             return {"version": bucket, "days": days, "rows": int(len(dfa)), "box": box,
                     "box_days": BOX_DAYS, "by_node": by_node, "thr": EXCEED_THR,
-                    "daily": daily, "exceed": exceed}
+                    "daily": daily, "exceed": exceed, "dow": dow, "weekly": weekly}
         return self._memo("stats", bucket, build)
 
     def series(self, node: str) -> dict:
