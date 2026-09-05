@@ -168,16 +168,17 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .dev svg.gauge { height: 14px; } .dev svg.strip { height: 58px; }
 .dev .empty { height: 77px; display: grid; place-items: center; font-size: 11px; color: var(--foot); border: 1px dashed var(--grid); border-radius: 6px; }
 .st { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; padding: 2px 8px; border-radius: 5px; background: var(--chip2-bg); border: 1px solid var(--chip2-bd); color: var(--dim); white-space: nowrap; }
-.st.on { color: var(--ink); border-color: var(--ink); animation: st-pulse 2s ease-in-out infinite; --st-c: var(--ink); }
+.st.on { color: var(--green); border-color: var(--green); animation: st-pulse 2s ease-in-out infinite; --st-c: var(--green); }
 .st.keep { color: var(--acc); border-color: var(--acc); animation: st-pulse 2s ease-in-out infinite; --st-c: var(--acc); }
 @keyframes st-pulse {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--st-c) 45%, transparent); }
   50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--st-c) 0%, transparent); }
 }
 .zc { font-size: 10px; padding: 1px 6px; border-radius: 4px; color: var(--ink); font-weight: 500; }
-.z-off { background: color-mix(in srgb, var(--rg-clean) var(--zone-mix), var(--panel)); }
+/* 장치 상태 의미론: ON = green(동작), OFF = red (사용자 확정 2026-09-05) */
+.z-off { background: color-mix(in srgb, var(--red) var(--zone-mix), var(--panel)); }
 .z-band { background: color-mix(in srgb, var(--rg-human) var(--zone-mix), var(--panel)); }
-.z-on { background: color-mix(in srgb, var(--rg-mixed) var(--zone-mix), var(--panel)); }
+.z-on { background: color-mix(in srgb, var(--green) var(--zone-mix), var(--panel)); }
 .howto { display: flex; flex-wrap: wrap; gap: 6px 26px; font-size: 12px; color: var(--dim); padding: 10px 16px; margin-bottom: 12px; }
 .howto div { display: flex; gap: 7px; align-items: center; }
 .howto .sw { display: inline-block; width: 22px; height: 11px; border-radius: 2px; flex: none; }

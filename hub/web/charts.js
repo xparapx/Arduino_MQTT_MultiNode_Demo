@@ -428,7 +428,7 @@ const CH = (() => {
     if (d) s += `<path d="${d.trim()}" fill="none" stroke="${panel}" stroke-width="4" stroke-linejoin="round" opacity="0.75"/>`
               + `<path d="${d.trim()}" fill="none" stroke="${css("--chart-ink") || ink}" stroke-width="2.2" stroke-linejoin="round"/>`;   // 패널색 케이싱 — 배경 위 라인 확보
     // ON history track + unjudged (QC-excluded) hours
-    s += `<rect x="0" y="${trkY}" width="${W}" height="${trkH}" fill="${plot}" stroke="${grid}" stroke-width="1"/>`;
+    s += `<rect x="0" y="${trkY}" width="${W}" height="${trkH}" fill="${css("--red")}" fill-opacity="0.4" stroke="${grid}" stroke-width="1"/>`;   // OFF = red, ON = green
     for (const [a, z] of (b.on || {})[dev] || []) s += `<rect x="${f1(xh(a))}" y="${trkY}" width="${f1(Math.max(0, xh(z) - xh(a)))}" height="${trkH}" fill="${css("--green")}"/>`;
     for (const [a, z] of b.unjudged || []) s += `<rect x="${f1(xh(a))}" y="${trkY}" width="${f1(Math.max(0, xh(z) - xh(a)))}" height="${trkH}" fill="url(#${uid})"/>`;
     // hourly hover columns
