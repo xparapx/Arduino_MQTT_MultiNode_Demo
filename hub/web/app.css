@@ -295,8 +295,10 @@ svg.chart .hb-over { animation: hb-blink 2.2s ease-in-out infinite; }
   .subtabs a.on { font-size: 12.5px; }
   .subtabs a svg { width: 17px; height: 17px; }
   .subtabs a span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-  .boxrow { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .boxrow .bx { flex: 0 0 108px; }
+  /* 분포 boxen: 가로 스크롤 대신 2행 × 4열 한 화면 */
+  .boxrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; overflow-x: visible; }
+  .boxrow .bx { flex: none; min-width: 0; }
+  .boxrow .bx .tt { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .metric .v { font-size: 15px; }
   .tbl th, .tbl td { padding: 6px 6px; font-size: 11px; }
   .vp .maprow { flex-direction: column; }

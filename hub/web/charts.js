@@ -33,17 +33,20 @@ const CH = (() => {
   // boxen(letter-value): 중앙 50% 상자 + 75/87.5/93.75% 꼬리 세그먼트 — 이상치 점 구름 대체.
   // 핵심 변수(co2/voc)는 세그먼트 색 = 해당 컬러맵의 구간 중앙값 위치, 보조 변수는 단색 불투명도 단계.
   function box(st, key) {
-    const lv = st.lv || [];
+    // 구서버(재시작 전) 응답엔 lv가 없음 → Tukey 통계로 2단계 유사 boxen 폴백
+    const lv = st.lv && st.lv.length ? st.lv
+      : [[st.q1, st.q3], [st.lowerfence, st.upperfence]].filter((p) => p[0] !== undefined);
     if (!lv.length) return "";
     const outer = lv[lv.length - 1];
     let lo = outer[0], hi = outer[1];
     if (hi === lo) { hi = lo + 1; }
+    const H = matchMedia("(max-width: 899.98px)").matches ? 104 : 130;   // 모바일 높이 -20%
+    const T = 12, B = 6, X = 60;
     const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
-    const H = 130, T = 12, B = 6, X = 60;
     const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
     const ink = css("--ink"), dim = css("--dim");
     const core = key === "co2" || key === "voc", col = varColor(key);
-    const W4 = [34, 22, 14, 8], OP = [0.8, 0.55, 0.36, 0.22], COV = [50, 75, 87.5, 93.75];
+    const W4 = [20, 13, 8, 5], OP = [0.8, 0.55, 0.36, 0.22], COV = [50, 75, 87.5, 93.75];   // 밴드 폭 -40%
     const segFill = (a, b, i) => core
       ? `fill="rgb(${cmapAt(cmap(key), ((a + b) / 2 - lo) / (hi - lo))})" fill-opacity="0.9"`
       : `fill="${col}" fill-opacity="${OP[i]}"`;
@@ -55,7 +58,7 @@ const CH = (() => {
     };
     for (let i = lv.length - 1; i >= 1; i--) { seg(lv[i][0], lv[i - 1][0], i); seg(lv[i - 1][1], lv[i][1], i); }
     seg(lv[0][0], lv[0][1], 0);
-    s += `<line x1="${X - 19}" y1="${f1(y(st.median))}" x2="${X + 19}" y2="${f1(y(st.median))}" stroke="${ink}" stroke-width="2.5" data-tip="${esc(`중앙 ${num(st.median, 1)} · 평균 ${num(st.mean, 1)} · n ${num(st.n)}`)}"/>`;
+    s += `<line x1="${X - 12}" y1="${f1(y(st.median))}" x2="${X + 12}" y2="${f1(y(st.median))}" stroke="${ink}" stroke-width="2.5" data-tip="${esc(`중앙 ${num(st.median, 1)} · 평균 ${num(st.mean, 1)} · n ${num(st.n)}`)}"/>`;
     const my = y(st.median);
     for (const v of [outer[0], st.median, outer[1]]) {
       if (v !== st.median && Math.abs(y(v) - my) < 9) continue;      // don't collide with the median label
