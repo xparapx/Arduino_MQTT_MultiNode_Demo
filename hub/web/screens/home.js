@@ -41,7 +41,7 @@
       });
     }
     if (L) L.nodes.filter((n) => n.down).forEach((n) => items.push(`<div class="row alertrow" style="gap:8px">${chip("수신 지연", "warn")}<span>${dot(n.color)}${esc(n.label)} — ${n.recv_time ? `마지막 ${esc(n.recv_time.slice(5, 16))}` : "수신 없음"}</span></div>`));
-    return sec("forecast", "orange", "경보 · 이상 요약", `${items.length ? items.length + "건" : ""}`)
+    return sec("forecast", "orange", "경보 · 이상 요약", `${items.length ? items.length + "건 · " : ""}경보·QC hourly · 수신 지연 15분 기준 · 60 s 갱신`)
       + `<div class="panel">${items.length ? `<div style="display:flex;flex-direction:column;gap:8px;font-size:13px">${items.join("")}</div>` : '<div class="empty" style="padding:12px 0">현재 경보·이상 없음 — 모든 판정 노드 정상 범위</div>'}</div>`;
   }
 
