@@ -146,3 +146,14 @@ Phase 6 후 화면 검토에서 합의한 항목. Phase 번호 없음(태그 없
 6. **wd.kick 보강**(WiFi 대기·NTP 루프·MQTT 성공 후) + 부팅 시 `mbed::ResetReason` 출력(전원/워치독/자가 리셋 구분 — 현장 시리얼 진단용).
 
 발행 계약(JSON·토픽·버킷)·듀티(10s 단발) 불변 — hub/DB 영향 없음. 대책 2계층(Tapo 플러그 일일 전원 재인가 07:59/08:00 KST)은 별도 진행. 배포는 사용자가 Arduino IDE로 노드별 업로드(더블탭 부트로더), WIFI/MQTT 자격은 업로드 시 기입.
+
+## 환경 노드(UNO R4) 펌웨어 v3 — 통신·시각 계층 자가 복구 (2026-09-05, main 직접 커밋)
+
+`firmware/sensor_node_uno_r4_cloud.ino` 재검토. 발견: 레포 파일은 **v1 구판**(토픽 `multinode_sensor_demo`, 센서 건강감시 없음)이었고 실제 운용본은 manual 6-1의 **v2**(plausibleSEN 물리범위 필터 — 94.2℃/PM2378 동결 사례 대응, SCL 9펄스 I2C 복구, MCU 리셋)였음. 레포 파일을 v2 기반 + v3 통신 계층으로 갱신(드리프트 해소, 토픽 `multinode_aq` 정렬):
+1. **브로커 재접속: 무한 블로킹 while → 10초 간격 1회 시도** — 장애 중에도 loop 유지(샘플링·센서 감시 지속), WiFiS3 고착 행 방지. 종전엔 통신 두절 = loop 정지 = "수집 중단" 패턴.
+2. **시각: 매 loop `WiFi.getTime()` → epochBase+millis** — 초당 수백 회 모뎀 AT 왕복 제거, 순간 0 반환 시 1970 타임스탬프 오염 잠재 결함 차단(보드 DB 실사: 1970 행 0건 = 잠재). NTP 6h 재동기 + 미확보 10분 재시도 + 시계 후퇴 중복발행 가드.
+3. **발행 3버킷 연속 실패(≈15분) → MCU 리셋** + `publish()` 반환 검사 + `setBufferSize(512)`(기본 256B는 240B 페이로드와 여유 <20B — 조용한 전량 미전송 위험) + `setSocketTimeout(5)`.
+4. **하드웨어 WDT(RA4M1 최대 5592ms)를 setup 완료 후 무장** — Wire/WiFiS3 내부 행 회수. TLS connect >5.5s면 WDT 리셋 후 비무장 setup에서 재접속(부팅 루프 회피 설계). 
+5. **부팅 시 죽은 센서 10분마다 재초기화, 1시간 지속 시 리셋**(종전엔 begin 실패 = 영구 좀비 — SCD30 죽으면 CO₂ 없어 QC 95% 게이트 제외 유형) + 정상 샘플 시 recoverCnt 청산 + loop 말미 delay(20).
+
+발행 계약(11변수 JSON·5분 버킷) 불변. 비전 v3와 함께 **다음 주 노드 일괄 업데이트 예정**(사용자). 미결 추가: manual.html 6-1/6-2 내장 코드 목록을 firmware/ v3와 동기화할지 [ASK]. Nano ESP32 판(`aq_node_nano_esp32_cloud.ino`)도 동일 구판 — R4 검증 후 필요 시 동일 적용.
