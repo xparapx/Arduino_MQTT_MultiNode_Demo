@@ -25,6 +25,8 @@ const AQ = (() => {
       b.classList.toggle("on", b.dataset.theme === t);
       b.addEventListener("click", () => setTheme(b.dataset.theme));
     });
+    const tm = document.getElementById("theme-mob");   // 모바일 플로팅 토글 (사이드바 숨김 대비)
+    if (tm) tm.addEventListener("click", () => setTheme(theme() === "dark" ? "light" : "dark"));
   }
   const onTheme = (fn) => listeners.push(fn);
 

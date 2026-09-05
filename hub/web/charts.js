@@ -78,7 +78,7 @@ const CH = (() => {
     if (opts.threshold !== undefined) s += `<line x1="${L}" y1="${f1(y(opts.threshold))}" x2="${W - R}" y2="${f1(y(opts.threshold))}" stroke="${red}" stroke-dasharray="4 3" opacity="0.8"/><text x="${W - R}" y="${f1(y(opts.threshold) - 3)}" font-size="8" fill="${red}" text-anchor="end">${num(opts.threshold)}</text>`;
     let d = "";
     dl.med.forEach((v, i) => { d += `${i ? "L" : "M"}${f1(x(i))},${f1(y(v))}`; });
-    s += `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2"/>`;
+    s += `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2"${glow(color, opts.glow)}/>`;
     dl.med.forEach((v, i) => { s += `<circle cx="${f1(x(i))}" cy="${f1(y(v))}" r="2.6" fill="${color}" data-tip="${esc(dl.days[i])}\n중앙 ${num(v, 1)} ${esc(opts.unit || "")} · q1 ${num(dl.q1[i], 1)} · q3 ${num(dl.q3[i], 1)}"/>`; });
     [0, Math.floor((n - 1) / 2), n - 1].filter((v, i, a) => a.indexOf(v) === i)
       .forEach((i) => { s += `<text x="${f1(x(i))}" y="${H - 6}" font-size="9" fill="${dim}" text-anchor="${i === 0 ? "start" : i === n - 1 ? "end" : "middle"}">${esc((dl.days[i] || "").slice(5))}</text>`; });
@@ -125,7 +125,7 @@ const CH = (() => {
         if (v === null || v === undefined) { s += `<rect x="${x}" y="${y}" width="${CW - GAP}" height="${CH_ - GAP}" rx="3" fill="${plot}"/>`; return; }
         const t = hi === lo ? 0.5 : (v - lo) / (hi - lo);
         const over = thr !== undefined && v > thr;
-        s += `<rect x="${x}" y="${y}" width="${CW - GAP}" height="${CH_ - GAP}" rx="3" fill="rgb(${cmapAt(cmap(key), t)})" fill-opacity="0.92"${over ? ` stroke="${red}" stroke-width="1.6"` : ""} data-tip="${DAYS[di]} ${String(h).padStart(2, "0")}:00–${String(h).padStart(2, "0")}:59\n중앙 ${num(v)} ${esc(unit || "")}${over ? `\n⚠ 임계 초과` : ""}"/>`;
+        s += `<rect x="${x}" y="${y}" width="${CW - GAP}" height="${CH_ - GAP}" rx="3" fill="rgb(${cmapAt(cmap(key), t)})" fill-opacity="0.92"${over ? ` class="hb-over" stroke="${red}" stroke-width="1.6"` : ""} data-tip="${DAYS[di]} ${String(h).padStart(2, "0")}:00–${String(h).padStart(2, "0")}:59\n중앙 ${num(v)} ${esc(unit || "")}${over ? `\n⚠ 임계 초과` : ""}"/>`;
       });
     });
     return s + "</svg>";
@@ -177,7 +177,7 @@ const CH = (() => {
     if (opts.threshold !== undefined) s += `<line x1="${L}" y1="${f1(y(opts.threshold))}" x2="${W - R}" y2="${f1(y(opts.threshold))}" stroke="${red}" stroke-dasharray="3 3" opacity="0.7"/>`;
     let d = "", pen = false;
     values.forEach((v, i) => { if (v === null) { pen = false; return; } d += `${pen ? "L" : "M"}${f1(x(i))},${f1(y(v))}`; pen = true; });
-    s += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${opts.target ? 2.4 : 1.8}"/>`;
+    s += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${opts.target ? 2.4 : 1.8}"${glow(color, opts.glow)}/>`;
     values.forEach((v, i) => { if (v === null) return; s += `<circle cx="${f1(x(i))}" cy="${f1(y(v))}" r="${opts.target ? 3 : 2.4}" fill="${color}" data-tip="${esc(times[i] || "")}\n${num(v, 1)} ${esc(opts.unit || "")}"/>`; });
     const ticks = [0, Math.floor((values.length - 1) / 2), values.length - 1].filter((v, i, a) => a.indexOf(v) === i);
     ticks.forEach((i) => { const t = (times[i] || "").slice(5, 16); s += `<text x="${f1(x(i))}" y="${H - 8}" font-size="8" fill="${dim}" text-anchor="${i === 0 ? "start" : i === values.length - 1 ? "end" : "middle"}">${esc(t)}</text>`; });
@@ -361,6 +361,8 @@ const CH = (() => {
   };
   const cmap = (key) => CMAPS[key] || CMAPS.co2;
   const cvar = (key) => `rgb(${cmapAt(cmap(key), 0.5)})`;   // 단일 색이 필요한 차트용 중앙값 색
+  // 다크 테마에서 핵심 변수 라인 가독성 보강용 네온 글로우 (라이트 테마는 무효과)
+  const glow = (color, on) => on && document.documentElement.getAttribute("data-theme") !== "light" ? ` style="filter:drop-shadow(0 0 3px ${color})"` : "";
   function cmapDef(map, id, vertical, op) {
     const stops = map.map(([o, c]) => `<stop offset="${f1(o * 100)}%" stop-color="rgb(${c})" stop-opacity="${op}"/>`).join("");
     return `<linearGradient id="${id}" x1="0" y1="${vertical ? 1 : 0}" x2="${vertical ? 0 : 1}" y2="0">${stops}</linearGradient>`;

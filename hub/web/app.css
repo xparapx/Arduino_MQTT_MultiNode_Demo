@@ -256,8 +256,13 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .boxrow .bx { flex: 1 1 0; min-width: 0; }
 .boxrow .bx .tt { text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* 요일×시간 리듬: 임계 초과 셀 테두리 점멸 (reduced-motion에서는 아래 전역 규칙이 정지) */
+@keyframes hb-blink { 0%, 100% { stroke-opacity: 1; } 50% { stroke-opacity: 0.15; } }
+svg.chart .hb-over { animation: hb-blink 2.2s ease-in-out infinite; }
+
 /* ---- mobile (< 900px, Mealboard single breakpoint): bottom dock, one screen ---- */
 .dock { display: none; }
+.theme-mob { display: none; }
 .scrollx { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 @media (max-width: 899.98px) {
   html, body { font-size: 13px; }
@@ -304,6 +309,17 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
   svg.chart[style*="height"] { height: auto !important; }
   .scrollx svg.chart { min-width: 880px; }        /* 밴드(viewBox 1100) 가로 스크롤 */
   #tip { display: none !important; }
+  /* 사이드바가 숨는 모바일에서 테마 전환: dock 위 우측 플로팅 버튼 */
+  .theme-mob { display: grid; place-items: center; position: fixed; z-index: 41;
+    right: 12px; bottom: calc(68px + env(safe-area-inset-bottom));
+    width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--grid); color: var(--dim);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+  .theme-mob svg { width: 18px; height: 18px; stroke: currentColor; fill: none;
+    stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .theme-mob .moon { display: none; }
+  :root[data-theme="light"] .theme-mob .sun { display: none; }
+  :root[data-theme="light"] .theme-mob .moon { display: block; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
