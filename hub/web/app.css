@@ -155,15 +155,20 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .act .devs { display: flex; flex-direction: column; gap: 8px; }
 .act .why { font-size: 11px; color: var(--dim); line-height: 1.5; }
 .dev { background: var(--panel); border-radius: 8px; padding: 8px 10px 6px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.dev .lbl { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; font-size: 12px; }
+.dev .lbl { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; font-size: 13.5px; }
 .dev .lbl .val { margin-left: auto; }
 .dev .lbl .nm { font-weight: 600; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .dev .val { display: flex; align-items: center; gap: 6px; font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--dim); white-space: nowrap; }
 .dev .val b { color: var(--ink); font-weight: 500; font-size: 13px; }
 .dev svg.gauge { height: 14px; } .dev svg.strip { height: 58px; }
 .dev .empty { height: 77px; display: grid; place-items: center; font-size: 11px; color: var(--foot); border: 1px dashed var(--grid); border-radius: 6px; }
-.st { font-family: "IBM Plex Mono", monospace; font-size: 10px; padding: 1px 6px; border-radius: 4px; background: var(--chip2-bg); border: 1px solid var(--chip2-bd); color: var(--dim); white-space: nowrap; }
-.st.on { color: var(--ink); border-color: var(--ink); } .st.keep { color: var(--acc); border-color: var(--acc); }
+.st { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; padding: 2px 8px; border-radius: 5px; background: var(--chip2-bg); border: 1px solid var(--chip2-bd); color: var(--dim); white-space: nowrap; }
+.st.on { color: var(--ink); border-color: var(--ink); animation: st-pulse 2s ease-in-out infinite; --st-c: var(--ink); }
+.st.keep { color: var(--acc); border-color: var(--acc); animation: st-pulse 2s ease-in-out infinite; --st-c: var(--acc); }
+@keyframes st-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--st-c) 45%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--st-c) 0%, transparent); }
+}
 .zc { font-size: 10px; padding: 1px 6px; border-radius: 4px; color: var(--ink); font-weight: 500; }
 .z-off { background: color-mix(in srgb, var(--rg-clean) var(--zone-mix), var(--panel)); }
 .z-band { background: color-mix(in srgb, var(--rg-human) var(--zone-mix), var(--panel)); }

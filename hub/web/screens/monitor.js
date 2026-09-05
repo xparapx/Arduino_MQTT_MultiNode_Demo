@@ -64,7 +64,7 @@
     }
     const boxes = Object.entries(d.box).map(([k, st]) => `<div class="bx"><div class="tt" style="margin-bottom:4px;${st.target ? `color:${css(colors[k])}` : ""}">${esc(st.label)}${st.target ? " ★" : ""} <span style="opacity:.7">(${esc(st.unit)})</span></div>${CH.box(st, css(colors[k] || "--blue"))}</div>`).join("");
     el.innerHTML = h + `<div class="panel" style="margin-top:12px"><div class="tt" style="margin-bottom:8px">변수별 분포 — 최근 ${d.box_days || d.days}일</div><div class="boxrow">${boxes}</div></div>`
-      + '<p class="note">분포 박스는 p99에서 축을 자르고 생략된 극단 이상치는 ▲로 표기. 초과율 임계 = 행동지침 규칙 계층의 ON 임계와 동일. 상관 히트맵 · 레짐 산점도는 <b>진단 &amp; 추론</b>에서.</p>';
+      + '<p class="note">분포 박스는 p99에서 축을 자르고 생략된 극단 이상치는 ▲로 표기. 초과율 임계 = 제어 규칙 계층의 ON 임계와 동일. 상관 히트맵 · 레짐 산점도는 <b>진단 &amp; 추론</b>에서.</p>';
   }
 
   // ---- 시계열&비전 -------------------------------------------------------------------

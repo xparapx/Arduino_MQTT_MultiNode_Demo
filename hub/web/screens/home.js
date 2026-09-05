@@ -22,10 +22,10 @@
   }
 
   function roomsCard() {
-    if (!A || A.empty || !A.rooms || !A.rooms.length) return sec("action", "red", "교실별 현재 레짐 · 행동", "") + '<div class="panel empty">analyst.py hourly 실행 후 표시됩니다.</div>';
+    if (!A || A.empty || !A.rooms || !A.rooms.length) return sec("action", "red", "교실별 현재 레짐 · 제어", "") + '<div class="panel empty">analyst.py hourly 실행 후 표시됩니다.</div>';
     const rows = A.rooms.map((x) => ({ cls: x.judged ? "" : "dim", cells: [nm(x), regime(x.regime), actionChip(x.action.kind, x.action.word), num(x.co2), num(x.voc)] }));
-    return sec("action", "red", "교실별 현재 레짐 · 행동", `hourly ${esc(A.action_run_at_kst || "—")} KST 판정`)
-      + `<div class="panel">${table(["교실", "레짐", "행동", "CO₂ (ppm)", "VOC (idx)"], rows)}<p class="note">자세한 근거(히스테리시스 밴드 · 24h 추이)는 <b>진단 &amp; 추론 → 행동·경보</b>에서.</p></div>`;
+    return sec("action", "red", "교실별 현재 레짐 · 제어", `hourly ${esc(A.action_run_at_kst || "—")} KST 판정`)
+      + `<div class="panel">${table(["교실", "레짐", "제어", "CO₂ (ppm)", "VOC (idx)"], rows)}<p class="note">자세한 근거(히스테리시스 밴드 · 24h 추이)는 <b>진단 &amp; 추론 → 제어·경보</b>에서.</p></div>`;
   }
 
   function alertsCard() {

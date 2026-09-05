@@ -41,7 +41,7 @@
     const brows = A.rooms.map((x) => ({ cls: x.judged ? "" : "dim", cells: [nm(x), regime(x.regime), num(x.co2), num(x.voc), x.judged ? `${x.dwell_censored ? "≥" : ""}${num(x.dwell_min)}` : "—", actionChip(x.action.kind, x.action.word)], txt: [5] }));
     return sec("plane", "cyan", "절대 레짐 (FixedScaling)", `hourly · ${esc(A.model.ver || "—")} predict · ${cfg.regime.smooth_window * cfg.regime.bucket_minutes}분 평활 · CO₂÷${cfg.regime.co2_scale} · VOC÷${cfg.regime.voc_scale}`)
       + `<div class="grid g5" style="align-items:stretch"><div class="span3 panel" style="height:${BH}px">${CH.plane(A.rooms, cfg, meta, BH - 30)}</div>`
-      + `<div class="span2 panel" style="height:${BH}px;display:flex;flex-direction:column">${table(["교실", "레짐", "CO₂", "VOC", "체류(min)", "행동"], brows)}</div></div>`;
+      + `<div class="span2 panel" style="height:${BH}px;display:flex;flex-direction:column">${table(["교실", "레짐", "CO₂", "VOC", "체류(min)", "제어"], brows)}</div></div>`;
   }
 
   // ---- C: 스위칭 밴드 ----------------------------------------------------------------
@@ -70,7 +70,7 @@
   // ---- E: 행동지침 -------------------------------------------------------------------
   function secE() {
     const r = A.cfg.rules;
-    return sec("action", "red", "행동지침 (하이브리드모델)", `hourly · 환풍기 ON CO₂&gt;${r.fan.on_co2} / OFF &lt;${r.fan.off_co2} · 공청기 ON VOC&gt;${r.purifier.on_voc} / OFF &lt;${r.purifier.off_voc} · 최소 ${r.min_run_minutes}분`)
+    return sec("action", "red", "제어 판단 (하이브리드)", `hourly · 환풍기 ON CO₂&gt;${r.fan.on_co2} / OFF &lt;${r.fan.off_co2} · 공청기 ON VOC&gt;${r.purifier.on_voc} / OFF &lt;${r.purifier.off_voc} · 최소 ${r.min_run_minutes}분`)
       + `<div class="panel howto"><div><span class="sw z-off"></span>OFF 구간 — 하한 미만, 끔</div><div><span class="sw z-band"></span>밴드 — 하한~상한, 이전 상태 유지</div><div><span class="sw z-on"></span>ON 구간 — 상한 초과, 레짐 게이트 열리면 켬</div>`
       + `<div><span class="sw mk"></span>현재값 (hourly ${esc(A.action_run_at_kst || "—")} KST 판정) · 스트립 끝 = 최신 수신</div><div><span class="sw trk"></span>장치 ON 이력</div><div><span class="sw hat"></span>QC 탈락 — 규칙 미평가, 상태 유지</div></div>`
       + `<div class="acts">${A.rooms.map((x) => actionCard(x, r)).join("")}</div>`;
@@ -78,7 +78,7 @@
   function actionCard(x, rules) {
     const a = x.action, k = a.kind, col = css(actionColor[k] || "--grid");
     const why = x.judged ? `${AQ.REGIME_KO[x.regime] || x.regime} · 체류 ${x.dwell_censored ? "≥" : ""}${num(x.dwell_min)}분 · ${esc(a.reason)}` : esc(a.reason || "QC 게이트 미달 — 규칙 미평가, 장치 상태는 마지막 값 그대로");
-    return `<div class="act${k === "hold" ? " hold" : ""}" style="border-left-color:${col}"><div class="h">${nm(x)}${regime(x.regime)}</div><div class="do">${actionChip(k, a.word, true)}</div>`
+    return `<div class="act${k === "hold" ? " hold" : ""}" style="border-left-color:${col}"><div class="h">${nm(x)}${regime(x.regime)}</div>`
       + `<div class="devs">${deviceBlock(x, "fan", rules)}${deviceBlock(x, "purifier", rules)}</div><div class="why">${why}</div></div>`;
   }
   function deviceBlock(x, dev, rules) {
@@ -171,7 +171,7 @@
   }
   screen("dx-regime", "레짐·탐색", "plane", "cyan", renderRegime);
   screen("dx-band", "밴드·전이", "band", "orange", renderBand);
-  screen("dx-action", "행동·경보", "action", "red", renderAction);
+  screen("dx-action", "제어·경보", "action", "red", renderAction);
   screen("dx-scope", "유효범위", "shield", "green", renderScope, true);
   screen("dx-history", "모델이력", "history", "purple", renderHistory, true);
 })();

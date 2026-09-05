@@ -53,3 +53,4 @@ _phase0_backup/
 
 # pytest-cov
 .coverage
+docs/pitch/
