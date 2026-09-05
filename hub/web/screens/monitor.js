@@ -8,6 +8,8 @@
   try { S.node = localStorage.getItem("aq-node"); } catch (e) { /* ignore */ }
 
   const fmtAge = (m) => m === null ? "" : m < 90 ? `${Math.round(m)}분` : m < 48 * 60 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`;
+  // 핵심 변수 단일 색 = 시퀀셜 컬러맵(CO₂ YlOrRd / VOC matter) 중앙값, 나머지는 토큰
+  const cc = (k, col) => k === "co2" || k === "voc" ? CH.cvar(k) : css(col);
 
   function onLive(d) {
     S.live = d;
@@ -46,23 +48,23 @@
     const TITLE = { co2: "CO₂", voc: "VOC" }, UNIT = { co2: "ppm", voc: "idx" };
     let h = secMeta(`최근 ${d.days}일 · 5 min 갱신 · 서버 집계본만 전송 (q1 · median · q3) · ${num(d.rows)} 행`);
     if (d.daily) {
-      const tpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${TITLE[k]} 일별 추이 ★ <span style="opacity:.7">(전 교실 중앙값 · q1–q3 밴드 · 빨간선 = ON 임계 ${num(thr[k])})</span></div>${CH.trend(d.daily[k], css(col), { threshold: thr[k], unit: UNIT[k] })}</div>`;
+      const tpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${cc(k, col)}">${TITLE[k]} 일별 추이 ★ <span style="opacity:.7">(전 교실 중앙값 · q1–q3 밴드 · 빨간선 = ON 임계 ${num(thr[k])})</span></div>${CH.trend(d.daily[k], cc(k, col), { threshold: thr[k], unit: UNIT[k] })}</div>`;
       h += `<div class="grid g2">${tpanel("co2", "--cyan")}${tpanel("voc", "--green")}</div>`;
       if (d.weekly) {
-        const kpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${TITLE[k]} 주간 비교 <span style="opacity:.7">(주별 q1–q3 범위 · 세로선 = 중앙값 · 진한 막대 = 이번 주)</span></div>${CH.weekbars(d.weekly[k], thr[k], css(col), UNIT[k])}</div>`;
+        const kpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${cc(k, col)}">${TITLE[k]} 주간 비교 <span style="opacity:.7">(주별 q1–q3 범위 · 세로선 = 중앙값 · 진한 막대 = 이번 주)</span></div>${CH.weekbars(d.weekly[k], thr[k], cc(k, col), UNIT[k])}</div>`;
         h += `<div class="grid g2" style="margin-top:12px">${kpanel("co2", "--cyan")}${kpanel("voc", "--green")}</div>`;
       }
       if (d.dow) {
-        const wpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${TITLE[k]} 요일 × 시간 리듬 <span style="opacity:.7">(${d.days}일 중앙값 · 빨간 테두리 = 임계 초과)</span></div><div class="scrollx">${CH.dowheat(d.dow[k], thr[k], k, UNIT[k])}</div></div>`;
+        const wpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${cc(k, col)}">${TITLE[k]} 요일 × 시간 리듬 <span style="opacity:.7">(${d.days}일 중앙값 · 빨간 테두리 = 임계 초과)</span></div><div class="scrollx">${CH.dowheat(d.dow[k], thr[k], k, UNIT[k])}</div></div>`;
         h += `<div class="grid g2" style="margin-top:12px">${wpanel("co2", "--cyan")}${wpanel("voc", "--green")}</div>`;
       }
-      const xpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${TITLE[k]} 임계 초과율 by 교실 ★ <span style="opacity:.7">(&gt;${num(thr[k])} ${UNIT[k]} 인 시간 비율)</span></div>${CH.pbars(d.exceed[k] || [], k)}</div>`;
+      const xpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${cc(k, col)}">${TITLE[k]} 임계 초과율 by 교실 ★ <span style="opacity:.7">(&gt;${num(thr[k])} ${UNIT[k]} 인 시간 비율)</span></div>${CH.pbars(d.exceed[k] || [], k)}</div>`;
       h += `<div class="grid g2" style="margin-top:12px">${xpanel("co2", "--cyan")}${xpanel("voc", "--green")}</div>`;
     } else {
-      const bars = (k, col, unit) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${TITLE[k]} mean by node (${unit}) ★</div>${CH.hbars(d.by_node[k] || [], css(col), unit)}</div>`;
+      const bars = (k, col, unit) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${cc(k, col)}">${TITLE[k]} mean by node (${unit}) ★</div>${CH.hbars(d.by_node[k] || [], cc(k, col), unit)}</div>`;
       h += `<div class="grid g2">${bars("co2", "--cyan", "ppm")}${bars("voc", "--green", "idx")}</div>`;
     }
-    const boxes = Object.entries(d.box).map(([k, st]) => `<div class="bx"><div class="tt" style="margin-bottom:4px;${st.target ? `color:${css(colors[k])}` : ""}">${esc(st.label)}${st.target ? " ★" : ""} <span style="opacity:.7">(${esc(st.unit)})</span></div>${CH.box(st, css(colors[k] || "--blue"))}</div>`).join("");
+    const boxes = Object.entries(d.box).map(([k, st]) => `<div class="bx"><div class="tt" style="margin-bottom:4px;${st.target ? `color:${cc(k, colors[k])}` : ""}">${esc(st.label)}${st.target ? " ★" : ""} <span style="opacity:.7">(${esc(st.unit)})</span></div>${CH.box(st, cc(k, colors[k] || "--blue"))}</div>`).join("");
     el.innerHTML = h + `<div class="panel" style="margin-top:12px"><div class="tt" style="margin-bottom:8px">변수별 분포 — 최근 ${d.box_days || d.days}일</div><div class="boxrow">${boxes}</div></div>`
       + '<p class="note">분포 박스는 p99에서 축을 자르고 생략된 극단 이상치는 ▲로 표기. 초과율 임계 = 제어 규칙 계층의 ON 임계와 동일. 상관 히트맵 · 레짐 산점도는 <b>진단 &amp; 추론</b>에서.</p>';
   }
@@ -74,7 +76,7 @@
     const opts = (S.live ? S.live.nodes : []).map((n) => `<option value="${esc(n.node)}"${n.node === d.node ? " selected" : ""}>${esc(n.label)} (${esc(n.node)})</option>`).join("");
     const colors = { pm2p5: "--orange", pm10p0: "--red", scd_temp: "--yellow", scd_hum: "--blue", co2: "--cyan", voc: "--green" };
     const thr = { co2: 1000, voc: 200 };
-    const charts = Object.entries(d.series).map(([k, vals]) => { const m = d.metrics[k]; return `<div><div class="tt" style="${m.target ? `color:${css(colors[k])}` : ""}">${esc(m.label)} (${esc(m.unit)})${m.target ? " ★" : ""}</div>${CH.line(d.times, vals, css(colors[k]), { threshold: thr[k], unit: m.unit, target: m.target })}</div>`; }).join("");
+    const charts = Object.entries(d.series).map(([k, vals]) => { const m = d.metrics[k]; return `<div><div class="tt" style="${m.target ? `color:${cc(k, colors[k])}` : ""}">${esc(m.label)} (${esc(m.unit)})${m.target ? " ★" : ""}</div>${CH.line(d.times, vals, cc(k, colors[k]), { threshold: thr[k], unit: m.unit, target: m.target })}</div>`; }).join("");
     el.innerHTML = secMeta("재실 탐지 포함 · 60 s 갱신 · 선택 상태 유지 · 최근 60 버킷 = 5시간")
       + `<div class="panel"><div class="row" style="margin-bottom:10px"><span class="tt">노드 선택</span><select id="node-sel">${opts}</select><span class="tt">최근 ${d.times.length} 버킷</span></div>`
       + (d.times.length ? `<div class="grid g6">${charts}</div>` : '<div class="empty">이 노드의 행이 없습니다</div>')

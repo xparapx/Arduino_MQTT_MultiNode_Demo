@@ -360,6 +360,7 @@ const CH = (() => {
           [0.727, "138,29,99"], [0.818, "107,24,93"], [0.909, "76,21,80"], [1, "47,15,61"]],
   };
   const cmap = (key) => CMAPS[key] || CMAPS.co2;
+  const cvar = (key) => `rgb(${cmapAt(cmap(key), 0.5)})`;   // 단일 색이 필요한 차트용 중앙값 색
   function cmapDef(map, id, vertical, op) {
     const stops = map.map(([o, c]) => `<stop offset="${f1(o * 100)}%" stop-color="rgb(${c})" stop-opacity="${op}"/>`).join("");
     return `<linearGradient id="${id}" x1="0" y1="${vertical ? 1 : 0}" x2="${vertical ? 0 : 1}" y2="0">${stops}</linearGradient>`;
@@ -423,5 +424,5 @@ const CH = (() => {
     return s + "</svg>";
   }
 
-  return { radar, box, hbars, trend, pbars, dowheat, weekbars, line, occBars, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO };
+  return { radar, box, hbars, trend, pbars, dowheat, weekbars, line, occBars, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO, cvar };
 })();
