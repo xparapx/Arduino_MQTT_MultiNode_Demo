@@ -165,3 +165,7 @@ Phase 6 후 화면 검토에서 합의한 항목. Phase 번호 없음(태그 없
 - **최신 코드**: 6-1 R4 cloud / 6-2 Nicla·Portenta occ 내장 목록을 firmware/ v3 정본으로 교체(+v3 요지 박스), ESP32 cloud 판은 "v1 참고용" 경고. s8에 "현행 운영 = webapp.py SPA(8501/8502), Streamlit은 학습판" 안내, s9에 현행 systemd 구성표(hub/web·web_public/analyst hourly·daily·**격주** weekly), s12에 현행 진행 상황 박스.
 - **신규 sAI 패널** "현행 개발 방식 — GitHub + 클로드 코드 운용"(끝 패널 앞): 운용 지도(노트북→GitHub→보드 pull→sudo는 사람), 역할 분담표, CLAUDE.md 규칙 요지, 표준 배포 사이클 6단계, 실전 프롬프트 예시, 수동 vs 클로드 코드 비교 — training 매뉴얼 마무리 파트의 현행 프로젝트판.
 - 버그 수정: 사이드바 "비전 노드 (재실)" 클릭이 죽어 있던 order 배열 누락(sVIS) 복구.
+
+## 핵심 변수 컬러맵 개편 — CO₂ = YlOrRd · VOC = matter (2026-09-05, 사용자 확정)
+
+turbo 단일맵 → plotly 기준 변수별 시퀀셜 맵으로 교체(값 크기 매핑 전 지점): charts.js `CMAPS{co2,voc}` + `cmapDef`(그라디언트)/`cmapAt`(보간 샘플러). 적용: ① 제어 판단 게이지(0.55)·24h 스트립(0.32) — bandCfg에 key 추가 ② 요일×시간 히트맵 셀(투명도 램프 → 컬러맵, 0.92) ③ 임계 초과율 막대(pct/max → 컬러맵, 바닥 0.25) ④ howto 범례 스와치 2종(.sw.ylorrd/.sw.matter). 레짐 밴드(범주형 팔레트)는 불변. 10 passed, webtest로 stats·dx-action 확인. 정적 파일만 — 재시작 불요.

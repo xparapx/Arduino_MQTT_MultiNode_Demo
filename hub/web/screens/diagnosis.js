@@ -71,7 +71,7 @@
   function secE() {
     const r = A.cfg.rules;
     return sec("action", "red", "제어 판단 (하이브리드)", `hourly · 환풍기 ON CO₂&gt;${r.fan.on_co2} / OFF &lt;${r.fan.off_co2} · 공청기 ON VOC&gt;${r.purifier.on_voc} / OFF &lt;${r.purifier.off_voc} · 최소 ${r.min_run_minutes}분`)
-      + `<div class="panel howto"><div><span class="sw jet"></span>배경 = 값 크기 (낮음 → 높음, turbo)</div><div><span class="sw thr"></span>점선 = OFF 하한 · ON 상한 임계</div>`
+      + `<div class="panel howto"><div><span class="sw ylorrd"></span>CO₂ = YlOrRd</div><div><span class="sw matter"></span>VOC = matter</div><div>배경 = 값 크기 (낮음 → 높음)</div><div><span class="sw thr"></span>점선 = OFF 하한 · ON 상한 임계</div>`
       + `<div><span class="sw mk"></span>현재값 (hourly ${esc(A.action_run_at_kst || "—")} KST 판정) · 스트립 끝 = 최신 수신</div><div><span class="sw trk"></span>장치 ON 이력</div><div><span class="sw hat"></span>QC 탈락 — 규칙 미평가, 상태 유지</div></div>`
       + `<div class="acts">${A.rooms.map((x) => actionCard(x, r)).join("")}</div>`;
   }

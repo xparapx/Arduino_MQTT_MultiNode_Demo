@@ -108,7 +108,7 @@ const CH = (() => {
   }
 
   // day-of-week x hour rhythm: 7x24 median heatmap (rows Mon..Sun, KST)
-  function dowheat(grid, thr, color, unit) {
+  function dowheat(grid, thr, key, unit) {
     const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
     const L = 34, T = 22, CW = 25, CH_ = 22, GAP = 2;
     const W = L + 24 * CW + 6, H = T + 7 * CH_ + 6;
@@ -123,25 +123,25 @@ const CH = (() => {
       row.forEach((v, h) => {
         const x = L + h * CW, y = T + di * CH_;
         if (v === null || v === undefined) { s += `<rect x="${x}" y="${y}" width="${CW - GAP}" height="${CH_ - GAP}" rx="3" fill="${plot}"/>`; return; }
-        const a = hi === lo ? 0.5 : 0.08 + 0.84 * (v - lo) / (hi - lo);
+        const t = hi === lo ? 0.5 : (v - lo) / (hi - lo);
         const over = thr !== undefined && v > thr;
-        s += `<rect x="${x}" y="${y}" width="${CW - GAP}" height="${CH_ - GAP}" rx="3" fill="${color}" fill-opacity="${f1(a)}"${over ? ` stroke="${red}" stroke-width="1.6"` : ""} data-tip="${DAYS[di]} ${String(h).padStart(2, "0")}:00–${String(h).padStart(2, "0")}:59\n중앙 ${num(v)} ${esc(unit || "")}${over ? `\n⚠ 임계 초과` : ""}"/>`;
+        s += `<rect x="${x}" y="${y}" width="${CW - GAP}" height="${CH_ - GAP}" rx="3" fill="rgb(${cmapAt(cmap(key), t)})" fill-opacity="0.92"${over ? ` stroke="${red}" stroke-width="1.6"` : ""} data-tip="${DAYS[di]} ${String(h).padStart(2, "0")}:00–${String(h).padStart(2, "0")}:59\n중앙 ${num(v)} ${esc(unit || "")}${over ? `\n⚠ 임계 초과` : ""}"/>`;
       });
     });
     return s + "</svg>";
   }
 
   // per-node ON-threshold exceedance: % of rows above the rules-layer threshold
-  function pbars(rows, color) {
+  function pbars(rows, key) {
     const ink = css("--ink"), dim = css("--dim");
     const mx = Math.max(1, ...rows.map((r) => r.pct));
     const H = 8 + rows.length * 29 + 4;
     let s = `<svg class="chart" viewBox="0 0 400 ${H}">`;
     rows.forEach((r, i) => {
       const y = 8 + i * 29, w = Math.max(1, r.pct / mx * 280);
-      const op = 0.35 + 0.6 * (i === 0 ? 1 : (rows.length - i) / rows.length);
+      const t = 0.25 + 0.75 * (r.pct / mx);
       s += `<text x="72" y="${y + 14}" font-size="11" fill="${ink}" text-anchor="end">${esc(r.label)}</text>`
-         + `<rect x="80" y="${y}" width="${f1(w)}" height="20" rx="3" fill="${color}" opacity="${f1(op)}" data-tip="${esc(r.label)} 초과율 ${num(r.pct, 1)}%\n28일 중앙값 ${num(r.med, 1)}"/>`
+         + `<rect x="80" y="${y}" width="${f1(w)}" height="20" rx="3" fill="rgb(${cmapAt(cmap(key), t)})" opacity="0.9" data-tip="${esc(r.label)} 초과율 ${num(r.pct, 1)}%\n28일 중앙값 ${num(r.med, 1)}"/>`
          + `<text x="${f1(84 + w)}" y="${y + 14}" font-size="10" fill="${dim}">${num(r.pct, 1)}%</text>`;
     });
     return s + "</svg>";
@@ -338,7 +338,7 @@ const CH = (() => {
   const W_OFF = 0.25, W_BAND = 0.5;
   const bandCfg = (rules, dev) => {
     const r = rules[dev], on = dev === "fan" ? r.on_co2 : r.on_voc, off = dev === "fan" ? r.off_co2 : r.off_voc, span = on - off;
-    return { on, off, lo: Math.max(0, off - span), hi: on + span, var: dev === "fan" ? "CO₂" : "VOC", unit: dev === "fan" ? "ppm" : "" };
+    return { on, off, lo: Math.max(0, off - span), hi: on + span, key: dev === "fan" ? "co2" : "voc", var: dev === "fan" ? "CO₂" : "VOC", unit: dev === "fan" ? "ppm" : "" };
   };
   const bandFrac = (c, v) => {
     v = Math.min(Math.max(v, c.lo), c.hi);
@@ -351,20 +351,33 @@ const CH = (() => {
   const mix = (a, b, p) => "#" + hex(a).map((v, i) => Math.round(v * p + hex(b)[i] * (1 - p)).toString(16).padStart(2, "0")).join("");
   // zone fills = regime palette (off → 청정, band → 인체, on → 복합) mixed toward the panel, as app.css --zone-*
   const zoneFill = (k) => mix(css({ off: "--rg-clean", band: "--rg-human", on: "--rg-mixed" }[k]), css("--panel"), parseFloat(css("--zone-mix")) / 100);
-  // plotly "turbo" stops (jet의 지각 균일 개선판) -- continuous value axis for the gauge/strip
-  const JET = [[0, "48,18,59"], [0.071, "65,69,171"], [0.143, "70,117,237"], [0.286, "27,207,212"],
-               [0.429, "97,252,108"], [0.571, "209,232,52"], [0.714, "254,155,45"],
-               [0.857, "217,56,6"], [1, "122,4,2"]];
-  function jetDef(id, vertical, op) {
-    const stops = JET.map(([o, c]) => `<stop offset="${o * 100}%" stop-color="rgb(${c})" stop-opacity="${op}"/>`).join("");
+  // plotly sequential colormaps -- 핵심 변수 값 크기: CO₂ = YlOrRd, VOC = cmocean "matter"
+  const CMAPS = {
+    co2: [[0, "255,255,204"], [0.125, "255,237,160"], [0.25, "254,217,118"], [0.375, "254,178,76"],
+          [0.5, "253,141,60"], [0.625, "252,78,42"], [0.75, "227,26,28"], [0.875, "189,0,38"], [1, "128,0,38"]],
+    voc: [[0, "253,237,176"], [0.091, "250,205,145"], [0.182, "246,173,119"], [0.273, "240,142,98"],
+          [0.364, "231,109,84"], [0.455, "216,80,83"], [0.545, "195,56,90"], [0.636, "168,40,96"],
+          [0.727, "138,29,99"], [0.818, "107,24,93"], [0.909, "76,21,80"], [1, "47,15,61"]],
+  };
+  const cmap = (key) => CMAPS[key] || CMAPS.co2;
+  function cmapDef(map, id, vertical, op) {
+    const stops = map.map(([o, c]) => `<stop offset="${f1(o * 100)}%" stop-color="rgb(${c})" stop-opacity="${op}"/>`).join("");
     return `<linearGradient id="${id}" x1="0" y1="${vertical ? 1 : 0}" x2="${vertical ? 0 : 1}" y2="0">${stops}</linearGradient>`;
+  }
+  function cmapAt(map, t) {
+    t = Math.min(1, Math.max(0, t));
+    let i = 1;
+    while (i < map.length - 1 && map[i][0] < t) i++;
+    const [o0, a] = map[i - 1], [o1, b] = map[i], p = o1 === o0 ? 0 : (t - o0) / (o1 - o0);
+    const u = a.split(",").map(Number), w = b.split(",").map(Number);
+    return u.map((v, j) => Math.round(v + (w[j] - v) * p)).join(",");
   }
   const ZONE_KO = { off: "OFF 구간", band: "밴드", on: "ON 구간" };
 
   function bandGauge(c, v) {
     const W = 320, H = 14, barY = 1, barH = 12, x = (val) => bandFrac(c, val) * W;
     const uid = `jg${Math.random().toString(36).slice(2, 7)}`;
-    let s = `<svg class="chart gauge" viewBox="0 0 ${W} ${H}"><defs>${jetDef(uid, false, 0.55)}</defs>`;
+    let s = `<svg class="chart gauge" viewBox="0 0 ${W} ${H}"><defs>${cmapDef(cmap(c.key), uid, false, 0.55)}</defs>`;
     s += `<rect x="0" y="${barY}" width="${W}" height="${barH}" rx="3" fill="url(#${uid})"/>`;
     for (const t of [c.off, c.on]) s += `<line x1="${f1(x(t))}" x2="${f1(x(t))}" y1="${barY - 1}" y2="${barY + barH + 1}" stroke="${css("--panel")}" stroke-width="2" stroke-dasharray="2 2"/>`;
     if (v !== null && v !== undefined) {
@@ -381,7 +394,7 @@ const CH = (() => {
     const ink = css("--ink"), foot = css("--foot"), grid = css("--grid"), plot = css("--plot"), panel = css("--panel");
     const y = (v) => top + plotH - bandFrac(c, v) * plotH, x = (i) => (i / (n - 1)) * W, xh = (h) => (h / hours) * W;
     const uid = `h${Math.random().toString(36).slice(2, 7)}`;
-    let s = `<svg class="chart strip" viewBox="0 0 ${W} ${H}"><defs>${jetDef(uid + "g", true, 0.32)}<pattern id="${uid}" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="${foot}" stroke-width="1"/></pattern></defs>`;
+    let s = `<svg class="chart strip" viewBox="0 0 ${W} ${H}"><defs>${cmapDef(cmap(c.key), uid + "g", true, 0.32)}<pattern id="${uid}" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="${foot}" stroke-width="1"/></pattern></defs>`;
     s += `<rect x="0" y="${top}" width="${W}" height="${plotH}" fill="url(#${uid}g)"/>`;
     for (const t of [c.off, c.on]) s += `<line x1="0" x2="${W}" y1="${f1(y(t))}" y2="${f1(y(t))}" stroke="${foot}" stroke-width="1" stroke-dasharray="3 3" opacity="0.85"/>`;
     // value trace: one path per run of non-null buckets

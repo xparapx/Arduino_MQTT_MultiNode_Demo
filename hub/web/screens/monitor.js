@@ -53,10 +53,10 @@
         h += `<div class="grid g2" style="margin-top:12px">${kpanel("co2", "--cyan")}${kpanel("voc", "--green")}</div>`;
       }
       if (d.dow) {
-        const wpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${TITLE[k]} 요일 × 시간 리듬 <span style="opacity:.7">(${d.days}일 중앙값 · 빨간 테두리 = 임계 초과)</span></div><div class="scrollx">${CH.dowheat(d.dow[k], thr[k], css(col), UNIT[k])}</div></div>`;
+        const wpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${TITLE[k]} 요일 × 시간 리듬 <span style="opacity:.7">(${d.days}일 중앙값 · 빨간 테두리 = 임계 초과)</span></div><div class="scrollx">${CH.dowheat(d.dow[k], thr[k], k, UNIT[k])}</div></div>`;
         h += `<div class="grid g2" style="margin-top:12px">${wpanel("co2", "--cyan")}${wpanel("voc", "--green")}</div>`;
       }
-      const xpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${TITLE[k]} 임계 초과율 by 교실 ★ <span style="opacity:.7">(&gt;${num(thr[k])} ${UNIT[k]} 인 시간 비율)</span></div>${CH.pbars(d.exceed[k] || [], css(col))}</div>`;
+      const xpanel = (k, col) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${TITLE[k]} 임계 초과율 by 교실 ★ <span style="opacity:.7">(&gt;${num(thr[k])} ${UNIT[k]} 인 시간 비율)</span></div>${CH.pbars(d.exceed[k] || [], k)}</div>`;
       h += `<div class="grid g2" style="margin-top:12px">${xpanel("co2", "--cyan")}${xpanel("voc", "--green")}</div>`;
     } else {
       const bars = (k, col, unit) => `<div class="panel"><div class="tt" style="margin-bottom:6px;color:${css(col)}">${TITLE[k]} mean by node (${unit}) ★</div>${CH.hbars(d.by_node[k] || [], css(col), unit)}</div>`;
