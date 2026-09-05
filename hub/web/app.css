@@ -300,9 +300,10 @@ svg.chart .hb-over { animation: hb-blink 2.2s ease-in-out infinite; }
   .span2, .span3 { grid-column: auto; }
   .g6 > .panel { padding: 8px; }
   .subtabs { gap: 5px; }
-  .subtabs a { flex-direction: column; gap: 3px; padding: 6px 2px; font-size: 10.5px; }
-  .subtabs a.on { font-size: 12.5px; }
-  .subtabs a svg { width: 17px; height: 17px; }
+  /* 칩 텍스트·아이콘 확대, 활성/비활성 폰트 동일(굵기 포함) — 활성은 스윕 강조만 */
+  .subtabs a { flex-direction: column; gap: 3px; padding: 7px 2px; font-size: 13px; font-weight: 700; }
+  .subtabs a.on { font-size: 13px; }
+  .subtabs a svg { width: 20px; height: 20px; }
   .subtabs a span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   /* 분포 boxen: 가로 스크롤 대신 2행 × 4열 한 화면 */
   .boxrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; overflow-x: visible; }
