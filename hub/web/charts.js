@@ -149,15 +149,15 @@ const CH = (() => {
     const mx = Math.max(1, ...rows.map((r) => r.pct));
     const map = cmap(key), mid = cvar(key);
     const uid = `pb${Math.random().toString(36).slice(2, 7)}`;
-    const H = 8 + rows.length * 29 + 4;
+    const H = 6 + rows.length * 24 + 3;
     let defs = "", body = "";
     rows.forEach((r, i) => {
-      const y = 8 + i * 29, w = Math.max(1, r.pct / mx * 280);
+      const y = 6 + i * 24, w = Math.max(1, r.pct / mx * 280);
       const tEnd = 0.25 + 0.75 * (r.pct / mx);
       defs += `<linearGradient id="${uid}${i}" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="rgb(${cmapAt(map, 0.08)})"/><stop offset="100%" stop-color="rgb(${cmapAt(map, tEnd)})"/></linearGradient>`;
-      body += `<text x="72" y="${y + 14}" font-size="11" fill="${ink}" text-anchor="end">${esc(r.label)}</text>`
-         + `<rect x="80" y="${y}" width="${f1(w)}" height="20" rx="3" fill="url(#${uid}${i})" stroke="${mid}" stroke-opacity="0.55" stroke-width="1"${glow(mid, true)} data-tip="${esc(r.label)} 초과율 ${num(r.pct, 1)}%\n28일 중앙값 ${num(r.med, 1)}"/>`
-         + `<text x="${f1(84 + w)}" y="${y + 14}" font-size="10" fill="${dim}">${num(r.pct, 1)}%</text>`;
+      body += `<text x="72" y="${y + 12}" font-size="11" fill="${ink}" text-anchor="end">${esc(r.label)}</text>`
+         + `<rect x="80" y="${y}" width="${f1(w)}" height="16" rx="3" fill="url(#${uid}${i})" stroke="${mid}" stroke-opacity="0.55" stroke-width="1" data-tip="${esc(r.label)} 초과율 ${num(r.pct, 1)}%\n28일 중앙값 ${num(r.med, 1)}"/>`
+         + `<text x="${f1(84 + w)}" y="${y + 12}" font-size="10" fill="${dim}">${num(r.pct, 1)}%</text>`;
     });
     return `<svg class="chart" viewBox="0 0 400 ${H}"><defs>${defs}</defs>${body}</svg>`;
   }
