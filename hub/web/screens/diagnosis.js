@@ -88,7 +88,7 @@
       : state ? (kept ? '<span class="st keep">ON · 유지</span>' : '<span class="st on">ON</span>') : '<span class="st">OFF</span>';
     const key = dev === "fan" ? "co2" : "voc";
     const v = x.judged ? x[key] : ((d || {}).values || {})[key] ?? null, z = CH.bandZone(c, v);   // unjudged: the value the skipped rule saw
-    const val = v === null || v === undefined ? "<span>—</span>" : `<b>${c.var} ${num(Math.round(v))}</b>${c.unit ? `<span>${c.unit}</span>` : ""}<span class="zc z-${z}">${CH.ZONE_KO[z]}</span>`;
+    const val = v === null || v === undefined ? "<span>—</span>" : `<b data-tip="${esc(`${CH.ZONE_KO[z]} · 하한 ${c.off} · 상한 ${c.on}`)}">${c.var} ${num(Math.round(v))}</b>${c.unit ? `<span>${c.unit}</span>` : ""}`;
     const series = dev === "fan" ? b.co2 : b.voc;
     const body = series && series.length ? CH.bandGauge(c, v) + CH.bandStrip(c, b, dev, ko) : `<div class="empty">${b.hours || 24}h 수신 없음</div>`;
     return `<div class="dev"><div class="lbl"><span class="nm">${ko} ${st}</span><span class="val">${val}</span></div>${body}</div>`;
