@@ -98,7 +98,7 @@ table.cols td:first-child{font-family:ui-monospace,Menlo,Consolas,monospace;word
   <button role="tab" aria-selected="true" data-tab="ov">설계 맵 (큰 그림)</button>
   <button role="tab" aria-selected="false" data-tab="map">스크립트 연결 지도</button>
   <button role="tab" aria-selected="false" data-tab="db">DB 스키마</button>
-  <button role="tab" aria-selected="false" data-tab="gloss" id="glossbtn">API · 엔드포인트란</button>
+  <button role="tab" aria-selected="false" data-tab="gloss" id="glossbtn">핵심 기술 · 용어</button>
 </div>
 
 <section id="ov"><div class="ov" id="ovbody"></div></section>
@@ -160,6 +160,7 @@ const DATA = /*__DATA__*/{};
 document.getElementById('title').innerHTML=(DATA.title||'프로젝트 지도')+(DATA.subtitle?`<small>${DATA.subtitle}</small>`:'');
 document.title=DATA.title||'프로젝트 지도';
 if(DATA.glossary_html)document.getElementById('glossbody').innerHTML=DATA.glossary_html;
+if(DATA.glossary_label)document.getElementById('glossbtn').textContent=DATA.glossary_label;
 if(DATA.glossary===false)document.getElementById('glossbtn').hidden=true;
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));

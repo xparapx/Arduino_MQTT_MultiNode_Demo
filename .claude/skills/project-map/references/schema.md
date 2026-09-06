@@ -15,8 +15,11 @@
      "x": 30, "y": 60 /*선택: 생략 시 3열 자동 배치*/ }
  ],
  "rels": [ ["dbid.table", "dbid.table", "조인 키 라벨"] ],
- "glossary": true,            // false 면 용어 탭 숨김
- "glossary_html": "<h2>…</h2>" // 있으면 용어 탭 내용을 교체
+ "glossary": true,             // false 면 탭 숨김
+ "glossary_label": "핵심 기술 · 용어",  // 탭 이름 (기본 "핵심 기술 · 용어")
+ "glossary_html": "<h2>…</h2>"  // 탭 본문 — 프로젝트 핵심 구현 기술(왜 이 선택인지) + 도메인 용어.
+                                // 비우면 일반 API/엔드포인트 해설이 기본으로 나온다.
+                                // 쓸 수 있는 클래스: .flow(카드 흐름, .hl 강조) · table.cols · .note
 }
 ```
 

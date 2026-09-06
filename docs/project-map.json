@@ -4,157 +4,792 @@
  "overview": {
   "intro": "교실 13곳의 노드가 5분 버킷 측정값을 MQTT로 발행하면, 허브 보드(UNO Q)가 받아 SQLite 한 파일에 쌓고, 타이머가 추론을 돌려 analysis 테이블에 적고, 웹 서버는 그 집계본만 브라우저에 내보낸다. 계층 경계는 DB 테이블 소유권으로 강제된다 — 수집이 죽지 않는 것이 최우선 원칙.",
   "lanes": [
-   {"label": "① 실시간 수집", "items": [
-    "펌웨어 v3|워치독 선무장·자가 복구, 5분 버킷만 발행 (환경 8 · 비전 5)",
-    "HiveMQ Cloud|TLS 8883 우체국 — 전달만 하고 저장하지 않음",
-    "hub.py|구독 → 형 검증 → 적재. 쓰기 경로 불가침(CLAUDE.md)",
-    "sensor_data.db|WAL 단일 파일 = 유일한 원본"]},
-   {"label": "② 추론 배치", "items": [
-    "hourly|QC 95% 게이트 → GMM 레짐 → 제어 판단(히스테리시스) → 30분 예측",
-    "daily|스위칭 밴드 · 전이 · 상대 레짐 탐색 집계",
-    "격주|재학습 후보 적합 → 승격 심사 (거버넌스)",
-    "analysis|추론 결과는 이 테이블에만 — readings는 읽기 전용"]},
-   {"label": "③ 웹 소통", "items": [
-    "webapp.py|stdlib HTTP 두 인스턴스 — 8501 관리자 / 8502 공개(Funnel)",
-    "webdata.py|서버 집계본만 전송(60s 폴 <50KB) · 물리범위 필터",
-    "SPA|해시 라우터 + AQ.store(버전 게이트 — 변경 시에만 재렌더)",
-    "charts.js|손 SVG 14종 — CO₂ YlOrRd · VOC matter 컬러맵"]},
-   {"label": "④ 모델 거버넌스", "items": [
-    "governance.py|4분면 유지 ∧ (로그우도 +2% ∨ 중심 이동 ≥0.25) 통과 시 승격",
-    "models/|gmm_vN.joblib 버전 이력 — 활성 모델은 regime이 로드",
-    "model_ver|analysis 행마다 어떤 모델의 판정인지 기록"]},
-   {"label": "⑤ 운영 · 배포", "items": [
-    "GitHub main|정답 사본은 한 곳 — 보드는 git pull만",
-    "systemd|서비스 자동 재시작 · 타이머 스케줄",
-    "CLAUDE.md|sudo 출력만 · hub.py 불가침 등 경계를 파일로 강제",
-    "pytest + pre-commit 훅|커밋 전 테스트 가드"]}
+   {
+    "label": "① 실시간 수집",
+    "items": [
+     "펌웨어 v3|워치독 선무장·자가 복구, 5분 버킷만 발행 (환경 8 · 비전 5)",
+     "HiveMQ Cloud|TLS 8883 우체국 — 전달만 하고 저장하지 않음",
+     "hub.py|구독 → 형 검증 → 적재. 쓰기 경로 불가침(CLAUDE.md)",
+     "sensor_data.db|WAL 단일 파일 = 유일한 원본"
+    ]
+   },
+   {
+    "label": "② 추론 배치",
+    "items": [
+     "hourly|QC 95% 게이트 → GMM 레짐 → 제어 판단(히스테리시스) → 30분 예측",
+     "daily|스위칭 밴드 · 전이 · 상대 레짐 탐색 집계",
+     "격주|재학습 후보 적합 → 승격 심사 (거버넌스)",
+     "analysis|추론 결과는 이 테이블에만 — readings는 읽기 전용"
+    ]
+   },
+   {
+    "label": "③ 웹 소통",
+    "items": [
+     "webapp.py|stdlib HTTP 두 인스턴스 — 8501 관리자 / 8502 공개(Funnel)",
+     "webdata.py|서버 집계본만 전송(60s 폴 <50KB) · 물리범위 필터",
+     "SPA|해시 라우터 + AQ.store(버전 게이트 — 변경 시에만 재렌더)",
+     "charts.js|손 SVG 14종 — CO₂ YlOrRd · VOC matter 컬러맵"
+    ]
+   },
+   {
+    "label": "④ 모델 거버넌스",
+    "items": [
+     "governance.py|4분면 유지 ∧ (로그우도 +2% ∨ 중심 이동 ≥0.25) 통과 시 승격",
+     "models/|gmm_vN.joblib 버전 이력 — 활성 모델은 regime이 로드",
+     "model_ver|analysis 행마다 어떤 모델의 판정인지 기록"
+    ]
+   },
+   {
+    "label": "⑤ 운영 · 배포",
+    "items": [
+     "GitHub main|정답 사본은 한 곳 — 보드는 git pull만",
+     "systemd|서비스 자동 재시작 · 타이머 스케줄",
+     "CLAUDE.md|sudo 출력만 · hub.py 불가침 등 경계를 파일로 강제",
+     "pytest + pre-commit 훅|커밋 전 테스트 가드"
+    ]
+   }
   ]
  },
  "columns": [
-  {"id": "edge", "label": "교실 노드 · 브로커"},
-  {"id": "timer", "label": "실행 주체 (systemd)"},
-  {"id": "job", "label": "프로세스"},
-  {"id": "lib", "label": "공용 모듈 (hub/aq)"},
-  {"id": "data", "label": "데이터"},
-  {"id": "web", "label": "브라우저 (SPA)"}
+  {
+   "id": "edge",
+   "label": "교실 노드 · 브로커"
+  },
+  {
+   "id": "timer",
+   "label": "실행 주체 (systemd)"
+  },
+  {
+   "id": "job",
+   "label": "프로세스"
+  },
+  {
+   "id": "lib",
+   "label": "공용 모듈 (hub/aq)"
+  },
+  {
+   "id": "data",
+   "label": "데이터"
+  },
+  {
+   "id": "web",
+   "label": "브라우저 (SPA)"
+  }
  ],
  "nodes": {
-  "fw_env": {"c": "edge", "n": "firmware/sensor_node_uno_r4_cloud.ino", "s": "UNO R4 WiFi × 8 · SEN55+SCD30", "d": "환경 노드 운용 펌웨어(v3). 11변수를 10초 샘플→5분 버킷 평균으로 발행. 센서 동결 물리범위 필터·I2C 복구·논블로킹 재접속·자가 리셋.", "row": 0},
-  "fw_nicla": {"c": "edge", "n": "firmware/occ_node_nicla_cloud.ino", "s": "Nicla Vision × N · FOMO 재실", "d": "비전 노드(GC2145 컬러). 온디바이스 FOMO 사람 탐지 — 영상은 전송하지 않고 인원 통계와 centroid만 발행. v3 = 워치독 선무장·데드엔드 제거.", "row": 1},
-  "fw_portenta": {"c": "edge", "n": "firmware/occ_node_portenta_cloud.ino", "s": "Portenta H7 + Vision Shield", "d": "비전 노드의 Portenta 판(HM0360 흑백). 카메라 계층만 다르고 발행 계약은 Nicla 판과 동일.", "row": 2},
-  "broker": {"c": "edge", "n": "HiveMQ Cloud", "s": "TLS 8883 · multinode_aq/+/env·occ", "d": "우체국 — 발행자와 구독자를 이어주기만 하고 저장하지 않는다. 학교 WiFi 클라이언트 격리를 클라우드 경유로 우회.", "row": 3},
-  "u_hub": {"c": "timer", "n": "multinode_aq_hub.service", "s": "상시 · Restart=always", "d": "수집기를 부팅부터 상시 유지. secrets.env(MQTT 자격)를 환경으로 주입.", "row": 0},
-  "u_hourly": {"c": "timer", "n": "analyst_hourly.timer", "s": "매시 :05", "d": "정시 판정 배치 — 레짐·제어 판단·예측·경보.", "row": 1},
-  "u_daily": {"c": "timer", "n": "analyst_daily.timer", "s": "매일 06:00 UTC", "d": "일간 집계 — 스위칭 밴드·전이·탐색.", "row": 2},
-  "u_weekly": {"c": "timer", "n": "analyst_weekly.timer", "s": "격주 일요일 06:30 UTC", "d": "모델 재학습 후보 + 승격 심사. 주기는 사용자 확정으로 격주(1·3주).", "row": 3},
-  "u_web": {"c": "timer", "n": "multinode_aq_web.service", "s": "8501 · 관리자", "d": "관리자 인스턴스 — 내보내기·초기화·최근기록·모델이력 포함 전체 화면.", "row": 4},
-  "u_web_pub": {"c": "timer", "n": "multinode_aq_web_public.service", "s": "8502 · --public · Tailscale Funnel", "d": "공개 인스턴스 — 모니터링 전용(관리 기능 서버단 403). 학생·교사가 보는 주소.", "row": 5},
-  "u_dash": {"c": "timer", "n": "multinode_aq_dashboard.service", "s": "정지됨 (Streamlit 구판)", "d": "구 Streamlit 대시보드 유닛. 2026-08-29 웹 전환으로 정지 — 코드 정리는 [ASK] 보류.", "row": 6},
-  "hub_py": {"c": "job", "n": "hub/hub.py", "s": "수집기 — 불가침", "d": "MQTT 구독 → 검증 → readings·occupancy 적재. 이 프로젝트에서 유일하게 수정 금지인 쓰기 경로 — 분석이 죽어도 수집은 산다.", "row": 0},
-  "analyst_py": {"c": "job", "n": "hub/analyst.py", "s": "추론 러너 (hourly/daily/weekly)", "d": "aq 모듈을 파이프라인으로 엮어 실행하고 결과를 analysis에만 기록. readings는 읽기 전용.", "row": 1},
-  "webapp_py": {"c": "job", "n": "hub/webapp.py", "s": "stdlib HTTP · JSON API + 정적", "d": "표준 라이브러리 ThreadingHTTPServer. 프레임워크 0 — /api/* 집계 JSON과 hub/web/ 정적 SPA를 서빙, /diagnosis는 302.", "row": 4},
-  "tests": {"c": "job", "n": "hub/tests/ + pre-commit 훅", "s": "pytest — 커밋 가드", "d": "API 계약·집계 형태·라우트를 단언. .claude 훅이 커밋 전에 강제로 돌려 깨진 채 push되는 것을 막는다.", "row": 6},
-  "config": {"c": "lib", "n": "aq/config.py", "s": "analyst.toml 로더", "d": "임계·창·스케일 상수를 코드 한 곳으로. 학사일정(calendar.json)도 여기서 읽는다.", "row": 0},
-  "aqdb": {"c": "lib", "n": "aq/db.py", "s": "SQLite 접근", "d": "analysis·actuator_state의 쓰기 담당(analyst 전용). readings 읽기 쿼리도 이곳에.", "row": 1},
-  "schemas": {"c": "lib", "n": "aq/schemas.py", "s": "payload 계약", "d": "analysis.payload JSON의 형태를 한 곳에 고정 — 화면과 추론이 같은 계약을 본다.", "row": 2},
-  "qc": {"c": "lib", "n": "aq/qc.py", "s": "품질 게이트", "d": "노드×일 CO₂ 유효율 ≥95%만 판정 대상. 미달은 '판정 보류'로 정직하게 — 보간 금지 원칙.", "row": 3},
-  "regime": {"c": "lib", "n": "aq/regime.py", "s": "GMM 4레짐", "d": "고정 스케일(CO₂/400·VOC/100) 평면의 GMM — 청정/물질/인체/복합. 축이 물리 상수라 재학습해도 비교 가능.", "row": 4},
-  "rules": {"c": "lib", "n": "aq/rules.py", "s": "제어 판단 (히스테리시스)", "d": "레짐이 게이트를 열고 임계 규칙이 방아쇠 — ON 1000/OFF 700 밴드와 최소 가동으로 떨림 방지. 최종 결정은 항상 검증 가능한 규칙.", "row": 5},
-  "forecast": {"c": "lib", "n": "aq/forecast.py", "s": "30분 예측 (Ridge)", "d": "나빠지기 전에 알리는 예측 경보의 계산부.", "row": 6},
-  "occ_co2": {"c": "lib", "n": "aq/occ_co2.py", "s": "재실 × CO₂", "d": "같은 라벨의 환경·비전 노드를 버킷으로 조인해 Spearman 상관 — 두 센서계의 교차 검증.", "row": 7},
-  "governance": {"c": "lib", "n": "aq/governance.py", "s": "모델 승격 심사", "d": "격주 재학습 후보를 기준(4분면 유지 ∧ 개선)으로 심사해 gmm_vN으로 저장 — 모델도 심사를 받는다.", "row": 8},
-  "explore": {"c": "lib", "n": "aq/explore.py", "s": "상대 레짐 탐색", "d": "RobustScaling 상대 좌표 — 보는 도구(층위 1), 판정에는 쓰지 않는다.", "row": 9},
-  "summary": {"c": "lib", "n": "aq/summary.py", "s": "오늘 한눈에 문장", "d": "결정적 템플릿 문장 생성 — LLM 없음, 재현 가능.", "row": 10},
-  "webdata": {"c": "lib", "n": "aq/webdata.py", "s": "API 읽기 계층", "d": "웹이 쓰는 모든 집계(분위·히트맵·boxen lv·초과율)를 서버에서 계산. 물리범위(PLAUSIBLE) 필터로 무효 측정 배제. DB에는 읽기만.", "row": 11},
-  "analysis_view": {"c": "lib", "n": "aq/analysis_view.py", "s": "analysis 읽기", "d": "analysis payload를 화면용으로 푸는 읽기 전용 계층 + 서비스 상태 요약.", "row": 12},
-  "ui_common": {"c": "lib", "n": "aq/ui_common.py", "s": "METRICS · 팔레트", "d": "변수 정의·노드 팔레트·라벨 페어링 등 화면 공통 상수. webdata와 표를 공유(테스트로 결합 확인).", "row": 13},
-  "db_file": {"c": "data", "n": "sensor_data.db", "s": "SQLite · WAL", "d": "유일한 원본. readings·occupancy(수집)와 analysis·actuator_state(추론)가 소유권으로 분리된 한 파일.", "row": 0},
-  "nodes_json": {"c": "data", "n": "nodes.json", "s": "수동 관리 — 라벨 페어링 정본", "d": "node_id → 교실 라벨. 환경↔비전 노드는 같은 라벨로 짝지어진다. 코드가 쓰지 않는 사람 편집 파일.", "row": 2},
-  "toml": {"c": "data", "n": "config/analyst.toml", "s": "임계·창 상수", "d": "ON/OFF 임계, 창 길이, 스케일 상수 — 코드 밖 설정.", "row": 3},
-  "calendar": {"c": "data", "n": "config/calendar.json", "s": "학사일정", "d": "방학·수업시간 — 재실 해석과 집계 마스킹의 근거.", "row": 4},
-  "models": {"c": "data", "n": "hub/models/ (gmm_vN.joblib)", "s": "모델 버전 저장소", "d": "승격된 GMM의 이력. 활성 버전 이름이 analysis.model_ver로 남는다.", "row": 5},
-  "secrets": {"c": "data", "n": "hub/secrets.env", "s": "MQTT 자격 — gitignore", "d": "브로커 호스트·계정. 저장소엔 없고 보드에만 — 서비스가 EnvironmentFile로 주입.", "row": 6},
-  "w_index": {"c": "web", "n": "web/index.html", "s": "단일 shell", "d": "SPA 껍데기 — 사이드바/dock, 테마 프리페인트, 화면 섹션 컨테이너.", "row": 0},
-  "w_router": {"c": "web", "n": "web/router.js", "s": "해시 라우터", "d": "화면 registry·admin 게이트(공개 인스턴스에서 관리자 해시 차단)·스크롤 복원.", "row": 1},
-  "w_app": {"c": "web", "n": "web/app.js", "s": "AQ.store · 공통", "d": "URL당 인터벌 1개, 활성 화면만 폴, 버전이 바뀔 때만 콜백 — 유휴 재렌더 0회 계약. 테마·툴팁·토스트도 여기.", "row": 2},
-  "w_charts": {"c": "web", "n": "web/charts.js", "s": "손 SVG 차트 14종", "d": "레이더·밴드·boxen·히트맵·게이지를 라이브러리 없이 생성. CO₂ YlOrRd·VOC matter 컬러맵의 단일 구현처.", "row": 3},
-  "w_home": {"c": "web", "n": "screens/home.js", "s": "#home", "d": "시스템 상태·교실별 레짐/제어·경보 요약·오늘 한눈에.", "row": 4},
-  "w_mon": {"c": "web", "n": "screens/monitor.js", "s": "#mon-*", "d": "실시간 레이더·통계 5단(추이→주간→요일리듬→초과율→분포)·시계열&비전·최근기록(admin).", "row": 5},
-  "w_dx": {"c": "web", "n": "screens/diagnosis.js", "s": "#dx-*", "d": "레짐·탐색 / 밴드·전이 / 제어·경보, 유효범위·모델이력(admin).", "row": 6},
-  "w_admin": {"c": "web", "n": "screens/admin.js", "s": "#admin", "d": "CSV 내보내기·초기화·시스템 상세 — 관리자 인스턴스 전용.", "row": 7}
+  "fw_env": {
+   "c": "edge",
+   "n": "firmware/sensor_node_uno_r4_cloud.ino",
+   "s": "UNO R4 WiFi × 8 · SEN55+SCD30",
+   "d": "환경 노드 운용 펌웨어(v3). 11변수를 10초 샘플→5분 버킷 평균으로 발행. 센서 동결 물리범위 필터·I2C 복구·논블로킹 재접속·자가 리셋.",
+   "row": 0
+  },
+  "fw_nicla": {
+   "c": "edge",
+   "n": "firmware/occ_node_nicla_cloud.ino",
+   "s": "Nicla Vision × N · FOMO 재실",
+   "d": "비전 노드(GC2145 컬러). 온디바이스 FOMO 사람 탐지 — 영상은 전송하지 않고 인원 통계와 centroid만 발행. v3 = 워치독 선무장·데드엔드 제거.",
+   "row": 1
+  },
+  "fw_portenta": {
+   "c": "edge",
+   "n": "firmware/occ_node_portenta_cloud.ino",
+   "s": "Portenta H7 + Vision Shield",
+   "d": "비전 노드의 Portenta 판(HM0360 흑백). 카메라 계층만 다르고 발행 계약은 Nicla 판과 동일.",
+   "row": 2
+  },
+  "broker": {
+   "c": "edge",
+   "n": "HiveMQ Cloud",
+   "s": "TLS 8883 · multinode_aq/+/env·occ",
+   "d": "우체국 — 발행자와 구독자를 이어주기만 하고 저장하지 않는다. 학교 WiFi 클라이언트 격리를 클라우드 경유로 우회.",
+   "row": 3
+  },
+  "u_hub": {
+   "c": "timer",
+   "n": "multinode_aq_hub.service",
+   "s": "상시 · Restart=always",
+   "d": "수집기를 부팅부터 상시 유지. secrets.env(MQTT 자격)를 환경으로 주입.",
+   "row": 0
+  },
+  "u_hourly": {
+   "c": "timer",
+   "n": "analyst_hourly.timer",
+   "s": "매시 :05",
+   "d": "정시 판정 배치 — 레짐·제어 판단·예측·경보.",
+   "row": 1
+  },
+  "u_daily": {
+   "c": "timer",
+   "n": "analyst_daily.timer",
+   "s": "매일 06:00 UTC",
+   "d": "일간 집계 — 스위칭 밴드·전이·탐색.",
+   "row": 2
+  },
+  "u_weekly": {
+   "c": "timer",
+   "n": "analyst_weekly.timer",
+   "s": "격주 일요일 06:30 UTC",
+   "d": "모델 재학습 후보 + 승격 심사. 주기는 사용자 확정으로 격주(1·3주).",
+   "row": 3
+  },
+  "u_web": {
+   "c": "timer",
+   "n": "multinode_aq_web.service",
+   "s": "8501 · 관리자",
+   "d": "관리자 인스턴스 — 내보내기·초기화·최근기록·모델이력 포함 전체 화면.",
+   "row": 4
+  },
+  "u_web_pub": {
+   "c": "timer",
+   "n": "multinode_aq_web_public.service",
+   "s": "8502 · --public · Tailscale Funnel",
+   "d": "공개 인스턴스 — 모니터링 전용(관리 기능 서버단 403). 학생·교사가 보는 주소.",
+   "row": 5
+  },
+  "u_dash": {
+   "c": "timer",
+   "n": "multinode_aq_dashboard.service",
+   "s": "정지됨 (Streamlit 구판)",
+   "d": "구 Streamlit 대시보드 유닛. 2026-08-29 웹 전환으로 정지 — 코드 정리는 [ASK] 보류.",
+   "row": 6
+  },
+  "hub_py": {
+   "c": "job",
+   "n": "hub/hub.py",
+   "s": "수집기 — 불가침",
+   "d": "MQTT 구독 → 검증 → readings·occupancy 적재. 이 프로젝트에서 유일하게 수정 금지인 쓰기 경로 — 분석이 죽어도 수집은 산다.",
+   "row": 0
+  },
+  "analyst_py": {
+   "c": "job",
+   "n": "hub/analyst.py",
+   "s": "추론 러너 (hourly/daily/weekly)",
+   "d": "aq 모듈을 파이프라인으로 엮어 실행하고 결과를 analysis에만 기록. readings는 읽기 전용.",
+   "row": 1
+  },
+  "webapp_py": {
+   "c": "job",
+   "n": "hub/webapp.py",
+   "s": "stdlib HTTP · JSON API + 정적",
+   "d": "표준 라이브러리 ThreadingHTTPServer. 프레임워크 0 — /api/* 집계 JSON과 hub/web/ 정적 SPA를 서빙, /diagnosis는 302.",
+   "row": 4
+  },
+  "tests": {
+   "c": "job",
+   "n": "hub/tests/ + pre-commit 훅",
+   "s": "pytest — 커밋 가드",
+   "d": "API 계약·집계 형태·라우트를 단언. .claude 훅이 커밋 전에 강제로 돌려 깨진 채 push되는 것을 막는다.",
+   "row": 6
+  },
+  "config": {
+   "c": "lib",
+   "n": "aq/config.py",
+   "s": "analyst.toml 로더",
+   "d": "임계·창·스케일 상수를 코드 한 곳으로. 학사일정(calendar.json)도 여기서 읽는다.",
+   "row": 0
+  },
+  "aqdb": {
+   "c": "lib",
+   "n": "aq/db.py",
+   "s": "SQLite 접근",
+   "d": "analysis·actuator_state의 쓰기 담당(analyst 전용). readings 읽기 쿼리도 이곳에.",
+   "row": 1
+  },
+  "schemas": {
+   "c": "lib",
+   "n": "aq/schemas.py",
+   "s": "payload 계약",
+   "d": "analysis.payload JSON의 형태를 한 곳에 고정 — 화면과 추론이 같은 계약을 본다.",
+   "row": 2
+  },
+  "qc": {
+   "c": "lib",
+   "n": "aq/qc.py",
+   "s": "품질 게이트",
+   "d": "노드×일 CO₂ 유효율 ≥95%만 판정 대상. 미달은 '판정 보류'로 정직하게 — 보간 금지 원칙.",
+   "row": 3
+  },
+  "regime": {
+   "c": "lib",
+   "n": "aq/regime.py",
+   "s": "GMM 4레짐",
+   "d": "고정 스케일(CO₂/400·VOC/100) 평면의 GMM — 청정/물질/인체/복합. 축이 물리 상수라 재학습해도 비교 가능.",
+   "row": 4
+  },
+  "rules": {
+   "c": "lib",
+   "n": "aq/rules.py",
+   "s": "제어 판단 (히스테리시스)",
+   "d": "레짐이 게이트를 열고 임계 규칙이 방아쇠 — ON 1000/OFF 700 밴드와 최소 가동으로 떨림 방지. 최종 결정은 항상 검증 가능한 규칙.",
+   "row": 5
+  },
+  "forecast": {
+   "c": "lib",
+   "n": "aq/forecast.py",
+   "s": "30분 예측 (Ridge)",
+   "d": "나빠지기 전에 알리는 예측 경보의 계산부.",
+   "row": 6
+  },
+  "occ_co2": {
+   "c": "lib",
+   "n": "aq/occ_co2.py",
+   "s": "재실 × CO₂",
+   "d": "같은 라벨의 환경·비전 노드를 버킷으로 조인해 Spearman 상관 — 두 센서계의 교차 검증.",
+   "row": 7
+  },
+  "governance": {
+   "c": "lib",
+   "n": "aq/governance.py",
+   "s": "모델 승격 심사",
+   "d": "격주 재학습 후보를 기준(4분면 유지 ∧ 개선)으로 심사해 gmm_vN으로 저장 — 모델도 심사를 받는다.",
+   "row": 8
+  },
+  "explore": {
+   "c": "lib",
+   "n": "aq/explore.py",
+   "s": "상대 레짐 탐색",
+   "d": "RobustScaling 상대 좌표 — 보는 도구(층위 1), 판정에는 쓰지 않는다.",
+   "row": 9
+  },
+  "summary": {
+   "c": "lib",
+   "n": "aq/summary.py",
+   "s": "오늘 한눈에 문장",
+   "d": "결정적 템플릿 문장 생성 — LLM 없음, 재현 가능.",
+   "row": 10
+  },
+  "webdata": {
+   "c": "lib",
+   "n": "aq/webdata.py",
+   "s": "API 읽기 계층",
+   "d": "웹이 쓰는 모든 집계(분위·히트맵·boxen lv·초과율)를 서버에서 계산. 물리범위(PLAUSIBLE) 필터로 무효 측정 배제. DB에는 읽기만.",
+   "row": 11
+  },
+  "analysis_view": {
+   "c": "lib",
+   "n": "aq/analysis_view.py",
+   "s": "analysis 읽기",
+   "d": "analysis payload를 화면용으로 푸는 읽기 전용 계층 + 서비스 상태 요약.",
+   "row": 12
+  },
+  "ui_common": {
+   "c": "lib",
+   "n": "aq/ui_common.py",
+   "s": "METRICS · 팔레트",
+   "d": "변수 정의·노드 팔레트·라벨 페어링 등 화면 공통 상수. webdata와 표를 공유(테스트로 결합 확인).",
+   "row": 13
+  },
+  "db_file": {
+   "c": "data",
+   "n": "sensor_data.db",
+   "s": "SQLite · WAL",
+   "d": "유일한 원본. readings·occupancy(수집)와 analysis·actuator_state(추론)가 소유권으로 분리된 한 파일.",
+   "row": 0
+  },
+  "nodes_json": {
+   "c": "data",
+   "n": "nodes.json",
+   "s": "수동 관리 — 라벨 페어링 정본",
+   "d": "node_id → 교실 라벨. 환경↔비전 노드는 같은 라벨로 짝지어진다. 코드가 쓰지 않는 사람 편집 파일.",
+   "row": 2
+  },
+  "toml": {
+   "c": "data",
+   "n": "config/analyst.toml",
+   "s": "임계·창 상수",
+   "d": "ON/OFF 임계, 창 길이, 스케일 상수 — 코드 밖 설정.",
+   "row": 3
+  },
+  "calendar": {
+   "c": "data",
+   "n": "config/calendar.json",
+   "s": "학사일정",
+   "d": "방학·수업시간 — 재실 해석과 집계 마스킹의 근거.",
+   "row": 4
+  },
+  "models": {
+   "c": "data",
+   "n": "hub/models/ (gmm_vN.joblib)",
+   "s": "모델 버전 저장소",
+   "d": "승격된 GMM의 이력. 활성 버전 이름이 analysis.model_ver로 남는다.",
+   "row": 5
+  },
+  "secrets": {
+   "c": "data",
+   "n": "hub/secrets.env",
+   "s": "MQTT 자격 — gitignore",
+   "d": "브로커 호스트·계정. 저장소엔 없고 보드에만 — 서비스가 EnvironmentFile로 주입.",
+   "row": 6
+  },
+  "w_index": {
+   "c": "web",
+   "n": "web/index.html",
+   "s": "단일 shell",
+   "d": "SPA 껍데기 — 사이드바/dock, 테마 프리페인트, 화면 섹션 컨테이너.",
+   "row": 0
+  },
+  "w_router": {
+   "c": "web",
+   "n": "web/router.js",
+   "s": "해시 라우터",
+   "d": "화면 registry·admin 게이트(공개 인스턴스에서 관리자 해시 차단)·스크롤 복원.",
+   "row": 1
+  },
+  "w_app": {
+   "c": "web",
+   "n": "web/app.js",
+   "s": "AQ.store · 공통",
+   "d": "URL당 인터벌 1개, 활성 화면만 폴, 버전이 바뀔 때만 콜백 — 유휴 재렌더 0회 계약. 테마·툴팁·토스트도 여기.",
+   "row": 2
+  },
+  "w_charts": {
+   "c": "web",
+   "n": "web/charts.js",
+   "s": "손 SVG 차트 14종",
+   "d": "레이더·밴드·boxen·히트맵·게이지를 라이브러리 없이 생성. CO₂ YlOrRd·VOC matter 컬러맵의 단일 구현처.",
+   "row": 3
+  },
+  "w_home": {
+   "c": "web",
+   "n": "screens/home.js",
+   "s": "#home",
+   "d": "시스템 상태·교실별 레짐/제어·경보 요약·오늘 한눈에.",
+   "row": 4
+  },
+  "w_mon": {
+   "c": "web",
+   "n": "screens/monitor.js",
+   "s": "#mon-*",
+   "d": "실시간 레이더·통계 5단(추이→주간→요일리듬→초과율→분포)·시계열&비전·최근기록(admin).",
+   "row": 5
+  },
+  "w_dx": {
+   "c": "web",
+   "n": "screens/diagnosis.js",
+   "s": "#dx-*",
+   "d": "레짐·탐색 / 밴드·전이 / 제어·경보, 유효범위·모델이력(admin).",
+   "row": 6
+  },
+  "w_admin": {
+   "c": "web",
+   "n": "screens/admin.js",
+   "s": "#admin",
+   "d": "CSV 내보내기·초기화·시스템 상세 — 관리자 인스턴스 전용.",
+   "row": 7
+  }
  },
  "edges": [
-  ["fw_env", "broker", "http", "env · 5분 버킷"],
-  ["fw_nicla", "broker", "http", "occ"],
-  ["fw_portenta", "broker", "http", "occ"],
-  ["broker", "hub_py", "http", "구독 +/env · +/occ"],
-  ["u_hub", "hub_py", "call", ""],
-  ["u_hourly", "analyst_py", "call", "hourly"],
-  ["u_daily", "analyst_py", "call", "daily"],
-  ["u_weekly", "analyst_py", "call", "weekly(격주)"],
-  ["u_web", "webapp_py", "call", "8501"],
-  ["u_web_pub", "webapp_py", "call", "8502 --public"],
-  ["u_hub", "secrets", "rd", "EnvironmentFile"],
-  ["hub_py", "db_file", "wr", "readings · occupancy"],
-  ["analyst_py", "config", "imp", ""],
-  ["analyst_py", "qc", "imp", ""],
-  ["analyst_py", "regime", "imp", ""],
-  ["analyst_py", "rules", "imp", ""],
-  ["analyst_py", "forecast", "imp", ""],
-  ["analyst_py", "occ_co2", "imp", ""],
-  ["analyst_py", "explore", "imp", ""],
-  ["analyst_py", "governance", "imp", ""],
-  ["analyst_py", "summary", "imp", ""],
-  ["analyst_py", "schemas", "imp", ""],
-  ["analyst_py", "aqdb", "imp", ""],
-  ["aqdb", "db_file", "wr", "analysis · actuator_state"],
-  ["config", "toml", "rd", ""],
-  ["config", "calendar", "rd", ""],
-  ["governance", "models", "wr", "gmm_vN 승격"],
-  ["regime", "models", "rd", "활성 모델 로드"],
-  ["webapp_py", "webdata", "imp", ""],
-  ["webdata", "analysis_view", "imp", ""],
-  ["webdata", "ui_common", "imp", ""],
-  ["webdata", "db_file", "rd", "집계 쿼리만"],
-  ["webdata", "nodes_json", "rd", "라벨 페어링"],
-  ["tests", "webapp_py", "imp", "계약 단언"],
-  ["webapp_py", "w_index", "http", "정적 서빙 · /diagnosis 302"],
-  ["w_index", "w_router", "imp", ""],
-  ["w_index", "w_app", "imp", ""],
-  ["w_index", "w_charts", "imp", ""],
-  ["w_index", "w_home", "imp", ""],
-  ["w_index", "w_mon", "imp", ""],
-  ["w_index", "w_dx", "imp", ""],
-  ["w_index", "w_admin", "imp", ""],
-  ["w_app", "webapp_py", "http", "/api/* 60s 폴 <50KB"]
+  [
+   "fw_env",
+   "broker",
+   "http",
+   "env · 5분 버킷"
+  ],
+  [
+   "fw_nicla",
+   "broker",
+   "http",
+   "occ"
+  ],
+  [
+   "fw_portenta",
+   "broker",
+   "http",
+   "occ"
+  ],
+  [
+   "broker",
+   "hub_py",
+   "http",
+   "구독 +/env · +/occ"
+  ],
+  [
+   "u_hub",
+   "hub_py",
+   "call",
+   ""
+  ],
+  [
+   "u_hourly",
+   "analyst_py",
+   "call",
+   "hourly"
+  ],
+  [
+   "u_daily",
+   "analyst_py",
+   "call",
+   "daily"
+  ],
+  [
+   "u_weekly",
+   "analyst_py",
+   "call",
+   "weekly(격주)"
+  ],
+  [
+   "u_web",
+   "webapp_py",
+   "call",
+   "8501"
+  ],
+  [
+   "u_web_pub",
+   "webapp_py",
+   "call",
+   "8502 --public"
+  ],
+  [
+   "u_hub",
+   "secrets",
+   "rd",
+   "EnvironmentFile"
+  ],
+  [
+   "hub_py",
+   "db_file",
+   "wr",
+   "readings · occupancy"
+  ],
+  [
+   "analyst_py",
+   "config",
+   "imp",
+   ""
+  ],
+  [
+   "analyst_py",
+   "qc",
+   "imp",
+   ""
+  ],
+  [
+   "analyst_py",
+   "regime",
+   "imp",
+   ""
+  ],
+  [
+   "analyst_py",
+   "rules",
+   "imp",
+   ""
+  ],
+  [
+   "analyst_py",
+   "forecast",
+   "imp",
+   ""
+  ],
+  [
+   "analyst_py",
+   "occ_co2",
+   "imp",
+   ""
+  ],
+  [
+   "analyst_py",
+   "explore",
+   "imp",
+   ""
+  ],
+  [
+   "analyst_py",
+   "governance",
+   "imp",
+   ""
+  ],
+  [
+   "analyst_py",
+   "summary",
+   "imp",
+   ""
+  ],
+  [
+   "analyst_py",
+   "schemas",
+   "imp",
+   ""
+  ],
+  [
+   "analyst_py",
+   "aqdb",
+   "imp",
+   ""
+  ],
+  [
+   "aqdb",
+   "db_file",
+   "wr",
+   "analysis · actuator_state"
+  ],
+  [
+   "config",
+   "toml",
+   "rd",
+   ""
+  ],
+  [
+   "config",
+   "calendar",
+   "rd",
+   ""
+  ],
+  [
+   "governance",
+   "models",
+   "wr",
+   "gmm_vN 승격"
+  ],
+  [
+   "regime",
+   "models",
+   "rd",
+   "활성 모델 로드"
+  ],
+  [
+   "webapp_py",
+   "webdata",
+   "imp",
+   ""
+  ],
+  [
+   "webdata",
+   "analysis_view",
+   "imp",
+   ""
+  ],
+  [
+   "webdata",
+   "ui_common",
+   "imp",
+   ""
+  ],
+  [
+   "webdata",
+   "db_file",
+   "rd",
+   "집계 쿼리만"
+  ],
+  [
+   "webdata",
+   "nodes_json",
+   "rd",
+   "라벨 페어링"
+  ],
+  [
+   "tests",
+   "webapp_py",
+   "imp",
+   "계약 단언"
+  ],
+  [
+   "webapp_py",
+   "w_index",
+   "http",
+   "정적 서빙 · /diagnosis 302"
+  ],
+  [
+   "w_index",
+   "w_router",
+   "imp",
+   ""
+  ],
+  [
+   "w_index",
+   "w_app",
+   "imp",
+   ""
+  ],
+  [
+   "w_index",
+   "w_charts",
+   "imp",
+   ""
+  ],
+  [
+   "w_index",
+   "w_home",
+   "imp",
+   ""
+  ],
+  [
+   "w_index",
+   "w_mon",
+   "imp",
+   ""
+  ],
+  [
+   "w_index",
+   "w_dx",
+   "imp",
+   ""
+  ],
+  [
+   "w_index",
+   "w_admin",
+   "imp",
+   ""
+  ],
+  [
+   "w_app",
+   "webapp_py",
+   "http",
+   "/api/* 60s 폴 <50KB"
+  ]
  ],
  "dbs": [
-  {"id": "sd", "name": "sensor_data.db (WAL)",
+  {
+   "id": "sd",
+   "name": "sensor_data.db (WAL)",
    "writer": "hub.py → readings·occupancy / analyst.py(aq.db) → analysis·actuator_state — 테이블 소유권 분리",
-   "readers": ["webapp.py (webdata, 읽기 전용)", "analyst.py (readings 읽기)"],
+   "readers": [
+    "webapp.py (webdata, 읽기 전용)",
+    "analyst.py (readings 읽기)"
+   ],
    "tables": [
-    {"n": "readings", "pk": "id", "d": "환경 노드 5분 버킷 — 수집 원본, 불가침",
-     "cols": [["ts", "TEXT · 노드가 만든 UTC 5분 버킷"], ["node", "TEXT · node_XXXXXX"],
-              ["pm1p0·pm2p5·pm4p0·pm10p0", "REAL · SEN55"], ["voc · nox", "REAL · SEN55 지수"],
-              ["co2 · scd_temp · scd_hum", "REAL · SCD30 (대표 온습도)"],
-              ["sen_temp · sen_hum", "REAL · SEN55 (비교용)"], ["n", "INTEGER · 버킷 내 샘플 수"]]},
-    {"n": "occupancy", "pk": "id", "d": "비전 노드 재실 통계 — 영상 없음, 숫자와 좌표만",
-     "cols": [["ts", "TEXT · UTC 5분 버킷 (readings와 조인 키)"], ["node", "TEXT"],
-              ["occ · occ_med · occ_max · occ_last", "REAL/INT · 버킷 통계"],
-              ["c", "TEXT · 최대 인원 시점 centroid JSON"], ["w", "INT · 좌표계 폭"], ["n", "INT · 유효 샘플"]]},
-    {"n": "analysis", "pk": "id", "d": "추론 결과 — analyst.py의 유일한 출력",
-     "cols": [["run_at", "TEXT · 실행 시각"], ["kind", "TEXT · hourly/daily/weekly"],
-              ["scope", "TEXT · all 또는 node id"], ["win_start · win_end", "TEXT · 판정 창"],
-              ["model_ver", "TEXT · gmm_vN"], ["payload", "TEXT · JSON (aq/schemas 계약)"]]},
-    {"n": "actuator_state", "pk": "node·device", "d": "장치 상태 기억 — 히스테리시스의 이전 상태",
-     "cols": [["node", "TEXT"], ["device", "TEXT · fan/purifier"],
-              ["state", "INTEGER · 0/1"], ["since", "TEXT"]]}
-   ]}
+    {
+     "n": "readings",
+     "pk": "id",
+     "d": "환경 노드 5분 버킷 — 수집 원본, 불가침",
+     "cols": [
+      [
+       "ts",
+       "TEXT · 노드가 만든 UTC 5분 버킷"
+      ],
+      [
+       "node",
+       "TEXT · node_XXXXXX"
+      ],
+      [
+       "pm1p0·pm2p5·pm4p0·pm10p0",
+       "REAL · SEN55"
+      ],
+      [
+       "voc · nox",
+       "REAL · SEN55 지수"
+      ],
+      [
+       "co2 · scd_temp · scd_hum",
+       "REAL · SCD30 (대표 온습도)"
+      ],
+      [
+       "sen_temp · sen_hum",
+       "REAL · SEN55 (비교용)"
+      ],
+      [
+       "n",
+       "INTEGER · 버킷 내 샘플 수"
+      ]
+     ]
+    },
+    {
+     "n": "occupancy",
+     "pk": "id",
+     "d": "비전 노드 재실 통계 — 영상 없음, 숫자와 좌표만",
+     "cols": [
+      [
+       "ts",
+       "TEXT · UTC 5분 버킷 (readings와 조인 키)"
+      ],
+      [
+       "node",
+       "TEXT"
+      ],
+      [
+       "occ · occ_med · occ_max · occ_last",
+       "REAL/INT · 버킷 통계"
+      ],
+      [
+       "c",
+       "TEXT · 최대 인원 시점 centroid JSON"
+      ],
+      [
+       "w",
+       "INT · 좌표계 폭"
+      ],
+      [
+       "n",
+       "INT · 유효 샘플"
+      ]
+     ]
+    },
+    {
+     "n": "analysis",
+     "pk": "id",
+     "d": "추론 결과 — analyst.py의 유일한 출력",
+     "cols": [
+      [
+       "run_at",
+       "TEXT · 실행 시각"
+      ],
+      [
+       "kind",
+       "TEXT · hourly/daily/weekly"
+      ],
+      [
+       "scope",
+       "TEXT · all 또는 node id"
+      ],
+      [
+       "win_start · win_end",
+       "TEXT · 판정 창"
+      ],
+      [
+       "model_ver",
+       "TEXT · gmm_vN"
+      ],
+      [
+       "payload",
+       "TEXT · JSON (aq/schemas 계약)"
+      ]
+     ]
+    },
+    {
+     "n": "actuator_state",
+     "pk": "node·device",
+     "d": "장치 상태 기억 — 히스테리시스의 이전 상태",
+     "cols": [
+      [
+       "node",
+       "TEXT"
+      ],
+      [
+       "device",
+       "TEXT · fan/purifier"
+      ],
+      [
+       "state",
+       "INTEGER · 0/1"
+      ],
+      [
+       "since",
+       "TEXT"
+      ]
+     ]
+    }
+   ]
+  }
  ],
  "rels": [
-  ["sd.readings", "sd.occupancy", "같은 라벨(nodes.json 페어링) × 같은 5분 버킷 ts"],
-  ["sd.readings", "sd.analysis", "scope=node · 판정 창(win_start~win_end)"],
-  ["sd.analysis", "sd.actuator_state", "제어 판단 결과 → 상태 갱신 (analyst만)"]
+  [
+   "sd.readings",
+   "sd.occupancy",
+   "같은 라벨(nodes.json 페어링) × 같은 5분 버킷 ts"
+  ],
+  [
+   "sd.readings",
+   "sd.analysis",
+   "scope=node · 판정 창(win_start~win_end)"
+  ],
+  [
+   "sd.analysis",
+   "sd.actuator_state",
+   "제어 판단 결과 → 상태 갱신 (analyst만)"
+  ]
  ],
- "glossary": true
+ "glossary": true,
+ "glossary_label": "핵심 기술 · 용어",
+ "glossary_html": "<div class='flow'>\n <div><b>5분 버킷</b>시각은 노드가 만든다 — 교실 간 조인의 기초</div>\n <div><b>발행 계약</b>MQTT 토픽·JSON 고정 — 노드가 늘어도 hub 무수정</div>\n <div><b>단일 원본</b>SQLite WAL 한 파일 — 테이블 소유권으로 계층 분리</div>\n <div class='hl'><b>서버 집계</b>브라우저엔 숫자 몇 개만 (60s 폴 &lt;50KB)</div>\n <div><b>버전 게이트</b>데이터가 바뀔 때만 다시 그림 — 유휴 재렌더 0</div>\n</div>\n<h2>채택 기술 — 무엇을, 왜 이 선택인지</h2>\n<table class='cols'>\n<tr><td>GMM 하이브리드 3층</td><td>비지도 GMM이 상태(레짐)를 발견하고, 최종 제어는 검증 가능한 규칙이 결정. \"나쁨\"의 정답 라벨이 없는 문제라 비지도를 쓰되, ML을 그대로 믿지 않는 구조.</td></tr>\n<tr><td>고정 스케일 좌표계</td><td>CO₂/400 · VOC/100 — 축이 물리 상수라 재학습해도 4분면 의미가 안 변해 \"지난주와 비교\"가 성립.</td></tr>\n<tr><td>히스테리시스 밴드</td><td>ON 1,000 / OFF 700 + 최소 가동 — 임계 근처에서 장치가 껐다켰다 떨리는 것을 구조로 차단.</td></tr>\n<tr><td>QC 게이트 · 보간 금지</td><td>노드×일 CO₂ 유효율 95% 미달이면 '판정 보류'. 결측을 그럴듯한 값으로 메우면 보류가 잘못된 확신이 된다 — 모르는 것은 모른다고 표시.</td></tr>\n<tr><td>물리범위 필터</td><td>PM 5,995 같은 센서 동결 값은 이상치가 아니라 무효 측정 — 통계 집계에서 배제(원시 시계열 뷰는 진단용으로 유지).</td></tr>\n<tr><td>FOMO 온디바이스</td><td>사람 탐지를 카메라 안에서 끝내고 인원·좌표만 발행 — 영상은 저장도 전송도 없음. 교실에 둘 수 있는 AI의 조건(프라이버시 by design).</td></tr>\n<tr><td>격주 모델 거버넌스</td><td>재학습 후보가 4분면 유지 ∧ (로그우도 +2% ∨ 중심 이동 ≥0.25)를 통과해야 gmm_vN 승격 — 모델도 심사를 받고, 모든 판정에 model_ver가 남는다.</td></tr>\n<tr><td>워치독 + 자가 복구 (fw v3)</td><td>워치독 선무장 · 데드엔드 제거 · 연속 실패 자가 리셋 — 현장에서 겪은 \"영구 다운\"을 \"수 초 재부팅\"으로 바꾼 무인 운용 보험.</td></tr>\n<tr><td>stdlib HTTP + 바닐라 JS</td><td>프레임워크 0, 손 SVG 차트 14종 — 보드에서 가볍고, 의존성 없이 git pull 한 경로로 배포.</td></tr>\n<tr><td>컬러맵 문법</td><td>CO₂ = YlOrRd · VOC = matter — 게이지·히트맵·boxen·초과율 막대가 전부 \"밝음→깊음 = 낮음→높음\" 한 문법을 쓴다.</td></tr>\n<tr><td>boxen (letter-value)</td><td>이상치 점 구름 대신 50→75→87.5→93.75% 계단 상자 — 무거운 꼬리 자체를 구조로 보여준다.</td></tr>\n</table>\n<h2>도메인 용어</h2>\n<table class='cols'>\n<tr><td>레짐</td><td>교실 공기의 4상태 — 청정 / 물질(먼지·VOC) / 인체(CO₂·재실) / 복합</td></tr>\n<tr><td>절대 레짐</td><td>고정 스케일 GMM 판정(층위 2, 진단) — 화면의 기본 판정</td></tr>\n<tr><td>상대 레짐</td><td>RobustScaling 상대 좌표(층위 1, 탐색) — 보는 도구, 판정에 쓰지 않음</td></tr>\n<tr><td>제어 판단</td><td>레짐 게이트 + 임계 규칙의 최종 출력 — 환풍기·공청기 ON/OFF (구 '행동지침')</td></tr>\n<tr><td>스위칭 밴드</td><td>하루를 레짐 색 띠로 — 몇 교시에 어느 교실이 왜 나빠지는지가 색으로 보인다</td></tr>\n<tr><td>판정 보류</td><td>QC 미달 — 데이터 부족을 정직하게 표시하는 상태</td></tr>\n<tr><td>버킷</td><td>5분 floor 정렬 시각 — 모든 테이블의 조인 키</td></tr>\n<tr><td>model_ver</td><td>그 판정을 만든 모델 버전(gmm_vN) — analysis 행마다 기록</td></tr>\n</table>\n<div class='note'><b>가장 오해하기 쉬운 것</b> — 임계(CO₂ 1,000 · VOC 200)는 데이터에서 학습한 값이 아니라 <b>건강·규정 기준에 앵커된 고정값</b>입니다. 규칙은 피해 기준에 고정하고, 적응은 ML 게이트와 거버넌스가 담당합니다.</div>"
 }
