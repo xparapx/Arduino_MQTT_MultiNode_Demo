@@ -39,26 +39,21 @@
       + `<div class="panel"><div class="radar-grid">${cards}</div></div>`;
   }
 
-  // boxen 읽는 법 — 정형화된 샘플에 단계(누적 커버 비율)·중앙값·▲ 표기 (분포 행 마지막 타일)
+  // boxen 범례 — 가로형 정형화 샘플 + 수치만 (분포 섹션 하단 중앙)
   function boxenLegend() {
-    const dim = css("--dim"), ink = css("--ink"), cink = css("--chart-ink") || ink;
-    const X = 34;
-    const lab = (y, t, b) => `<text x="64" y="${y}" font-size="6.5" fill="${b ? ink : dim}"${b ? ' font-weight="600"' : ""}>${t}</text>`;
-    const seg = (y0, y1, w, op) => `<rect x="${X - w / 2}" y="${y0}" width="${w}" height="${y1 - y0}" rx="1.5" fill="${dim}" fill-opacity="${op}"/>`;
-    return `<svg class="chart" viewBox="0 0 170 130">`
-      + `<text x="${X}" y="12" font-size="6.5" fill="${dim}" text-anchor="middle">▲ n · max</text>`
-      + seg(18, 26, 5, 0.22) + seg(104, 112, 5, 0.22)
-      + seg(26, 40, 8, 0.36) + seg(90, 104, 8, 0.36)
-      + seg(40, 52, 13, 0.55) + seg(78, 90, 13, 0.55)
-      + seg(52, 78, 20, 0.8)
-      + `<line x1="${X - 13}" x2="${X + 13}" y1="65" y2="65" stroke="${cink}" stroke-width="2.5"/>`
-      + lab(14, "바깥 극단값 요약")
-      + lab(24, "93.75%") + lab(36, "87.5%") + lab(48, "75%")
-      + lab(63, "중앙 50% 상자", true)
-      + lab(74, "— 중앙값")
-      + lab(94, "숫자 = 상자 누적 커버 비율")
-      + lab(104, "바깥(좁은 상자)일수록 드문 값")
-      + lab(114, "▲ = 그림만 생략 · 통계 포함")
+    const dim = css("--dim"), cink = css("--chart-ink") || css("--ink");
+    const CY = 19;
+    const seg = (x0, x1, h, op) => `<rect x="${x0}" y="${CY - h / 2}" width="${x1 - x0}" height="${h}" rx="1.5" fill="${dim}" fill-opacity="${op}"/>`;
+    const lab = (x, y, t, b) => `<text x="${x}" y="${y}" font-size="7.5" fill="${dim}"${b ? ' font-weight="600"' : ""} text-anchor="middle">${t}</text>`;
+    return `<svg class="chart" viewBox="0 0 420 48" style="max-width:440px;margin:0 auto">`
+      + seg(82, 100, 4.5, 0.22) + seg(320, 338, 4.5, 0.22)
+      + seg(100, 128, 7, 0.36) + seg(292, 320, 7, 0.36)
+      + seg(128, 170, 11, 0.55) + seg(250, 292, 11, 0.55)
+      + seg(170, 250, 16, 0.8)
+      + `<line x1="210" x2="210" y1="9" y2="29" stroke="${cink}" stroke-width="2.5"/>`
+      + `<text x="348" y="22" font-size="7.5" fill="${dim}">▲ n · max</text>`
+      + lab(210, 41, "중앙 50%", true) + lab(271, 41, "75%")
+      + lab(306, 8, "87.5%") + lab(334, 41, "93.75%")
       + `</svg>`;
   }
 
@@ -87,8 +82,7 @@
       h += `<div class="grid g2">${bars("co2", "--cyan", "ppm")}${bars("voc", "--green", "idx")}</div>`;
     }
     const boxes = Object.entries(d.box).map(([k, st]) => `<div class="bx"><div class="tt" style="margin-bottom:4px;${st.target ? `color:${cc(k)}` : ""}">${esc(st.label)}${st.target ? " ★" : ""} <span style="opacity:.7">(${esc(st.unit)})</span></div>${CH.box(st, k)}</div>`).join("");
-    el.innerHTML = h + `<div class="panel" style="margin-top:12px"><div class="tt" style="margin-bottom:8px">변수별 분포 — 최근 ${d.box_days || d.days}일</div><div class="boxrow">${boxes}<div class="bx"><div class="tt" style="margin-bottom:4px">읽는 법</div>${boxenLegend()}</div></div></div>`
-      + '<p class="note">분포 = boxen(letter-value): 중앙 50% 상자 → 75 · 87.5 · 93.75% 꼬리 세그먼트, 그 밖 극단값은 ▲로 생략 표기(물리범위 밖 무효 측정은 집계 제외). 초과율 임계 = 제어 규칙 계층의 ON 임계와 동일. 상관 히트맵 · 레짐 산점도는 <b>진단 &amp; 추론</b>에서.</p>';
+    el.innerHTML = h + `<div class="panel" style="margin-top:12px"><div class="tt" style="margin-bottom:8px">변수별 분포 — 최근 ${d.box_days || d.days}일</div><div class="boxrow">${boxes}</div><div style="text-align:center;margin-top:10px">${boxenLegend()}</div></div>`;
   }
 
   // ---- 시계열&비전 -------------------------------------------------------------------
