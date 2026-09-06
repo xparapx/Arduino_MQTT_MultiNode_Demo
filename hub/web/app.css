@@ -236,7 +236,10 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .nav a.on.g-dx .n { background: var(--purple); }
 .nav a.on.g-act .n { background: var(--red); }
 .nav a.on.g-admin .n { background: var(--orange); }
-/* 기류 유선 타일 — 타이틀 밴드 배경·서브탭 스윕 마스크 공용, 480px 주기 무이음 사인 곡선 4겹 */
+/* 기류 유선 타일(소프트) — 타이틀 밴드 배경: 블러 리본 3겹이 공간에 번지고 얇은 유선 2겹이 결을 잡음 */
+:root { --wave-soft: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='64'%3E%3Cdefs%3E%3Cfilter id='b' x='-20%25' y='-80%25' width='140%25' height='260%25'%3E%3CfeGaussianBlur stdDeviation='5'/%3E%3C/filter%3E%3C/defs%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cpath d='M0 34C120 16 120 50 240 34C360 16 360 50 480 34' stroke='rgba(147,197,253,0.22)' stroke-width='26' filter='url(%23b)'/%3E%3Cpath d='M0 38C120 12 120 58 240 38C360 12 360 58 480 38' stroke='rgba(56,189,248,0.28)' stroke-width='15' filter='url(%23b)'/%3E%3Cpath d='M0 27C120 47 120 8 240 27C360 47 360 8 480 27' stroke='rgba(96,165,250,0.24)' stroke-width='11' filter='url(%23b)'/%3E%3Cpath d='M0 33C120 15 120 51 240 33C360 15 360 51 480 33' stroke='rgba(165,220,252,0.5)' stroke-width='1.3'/%3E%3Cpath d='M0 28C120 44 120 10 240 28C360 44 360 10 480 28' stroke='rgba(96,165,250,0.35)' stroke-width='1'/%3E%3C/g%3E%3C/svg%3E"); }
+
+/* 기류 유선 타일 — 서브탭 스윕 마스크용(크리스프), 480px 주기 무이음 사인 곡선 4겹 */
 :root { --wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='60'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cpath d='M0 32C120 12 120 52 240 32C360 12 360 52 480 32' stroke='rgba(125,200,247,0.55)' stroke-width='1.4'/%3E%3Cpath d='M0 25C120 43 120 7 240 25C360 43 360 7 480 25' stroke='rgba(96,165,250,0.4)' stroke-width='1.1'/%3E%3Cpath d='M0 37C120 21 120 51 240 37C360 21 360 51 480 37' stroke='rgba(56,189,248,0.35)' stroke-width='2.2'/%3E%3Cpath d='M0 30C120 14 120 48 240 30C360 14 360 48 480 30' stroke='rgba(147,197,253,0.18)' stroke-width='5'/%3E%3C/g%3E%3C/svg%3E"); }
 
 .subtabs { position: sticky; top: 0; z-index: 30; display: flex; gap: 8px; margin: 0 0 6px;
@@ -279,16 +282,16 @@ svg.chart .hb-over { animation: hb-blink 2.2s ease-in-out infinite; }
   h1 { font-size: 17px; } .sub { font-size: 12px; }
   /* 모바일 Home: 좌우 꽉 찬 상단 밴드 안에 중앙 정렬 제목 (메타 없음) */
   :root[data-screen="home"] main > h1 { display: block; text-align: center;
-    margin: -12px -12px 12px; padding: 13px 12px; font-size: 16px;
+    margin: -12px -12px 12px; padding: 18px 12px; font-size: 16px;
     background: var(--panel); border-bottom: 1px solid var(--grid);
     position: relative; overflow: hidden; }
   /* 밴드 배경: 유선 2겹이 서로 다른 속도로 흘러가는 은은한 기류 */
   :root[data-screen="home"] main > h1 span { position: relative; z-index: 1; }
   :root[data-screen="home"] main > h1::before,
   :root[data-screen="home"] main > h1::after { content: ""; position: absolute; top: 0; bottom: 0;
-    left: 0; width: calc(100% + 480px); background: var(--wave) 0 50% / 480px 100% repeat-x;
-    opacity: .55; animation: airflow 26s linear infinite; pointer-events: none; }
-  :root[data-screen="home"] main > h1::after { background-size: 340px 100%; opacity: .3;
+    left: 0; width: calc(100% + 480px); background: var(--wave-soft) 0 50% / 480px 100% repeat-x;
+    opacity: .8; animation: airflow 26s linear infinite; pointer-events: none; }
+  :root[data-screen="home"] main > h1::after { background-size: 340px 118%; opacity: .45;
     animation: airflow-2 15s linear infinite; }
   @keyframes airflow { to { transform: translateX(-480px); } }
   @keyframes airflow-2 { to { transform: translateX(-340px); } }
