@@ -46,7 +46,7 @@
     const seg = (x0, x1, h, op) => `<rect x="${x0}" y="${CY - h / 2}" width="${x1 - x0}" height="${h}" rx="1.5" fill="${dim}" fill-opacity="${op}"/>`;
     const M = matchMedia("(max-width: 899.98px)").matches;
     const lab = (x, t) => `<text x="${x}" y="${CY + 2.5}" font-size="7" font-weight="700" text-anchor="middle" fill="${ink}" stroke="${panel}" stroke-width="2" style="paint-order:stroke">${t}</text>`;
-    return `<svg class="chart" viewBox="60 7 306 24" style="max-width:340px;margin:0 auto">`
+    return `<svg class="chart" viewBox="60 7 306 24" style="max-width:${M ? "225px" : "340px"};margin:0 auto">`
       + seg(68, 94, 4.5, 0.22) + seg(326, 358, 4.5, 0.22)
       + seg(94, 126, 7, 0.36) + seg(294, 326, 7, 0.36)
       + seg(126, 170, 11, 0.55) + seg(250, 294, 11, 0.55)
