@@ -39,19 +39,20 @@
       + `<div class="panel"><div class="radar-grid">${cards}</div></div>`;
   }
 
-  // boxen 범례 — 가로형 정형화 샘플 + 수치만 (분포 섹션 하단 중앙)
+  // boxen 범례 — 가로형 정형화 샘플 + 수치만 (분포 섹션 하단 중앙, 모바일은 크롭+큰 폰트)
   function boxenLegend() {
     const dim = css("--dim"), cink = css("--chart-ink") || css("--ink");
-    const CY = 19;
+    const M = matchMedia("(max-width: 899.98px)").matches;
+    const F = M ? 10 : 7.5, CY = 19;
     const seg = (x0, x1, h, op) => `<rect x="${x0}" y="${CY - h / 2}" width="${x1 - x0}" height="${h}" rx="1.5" fill="${dim}" fill-opacity="${op}"/>`;
-    const lab = (x, y, t, b) => `<text x="${x}" y="${y}" font-size="7.5" fill="${dim}"${b ? ' font-weight="600"' : ""} text-anchor="middle">${t}</text>`;
-    return `<svg class="chart" viewBox="0 0 420 48" style="max-width:440px;margin:0 auto">`
+    const lab = (x, y, t, b) => `<text x="${x}" y="${y}" font-size="${F}" fill="${dim}"${b ? ' font-weight="600"' : ""} text-anchor="middle">${t}</text>`;
+    return `<svg class="chart" viewBox="${M ? "70 0 340 50" : "0 0 420 48"}" style="max-width:${M ? "100%" : "440px"};margin:0 auto">`
       + seg(82, 100, 4.5, 0.22) + seg(320, 338, 4.5, 0.22)
       + seg(100, 128, 7, 0.36) + seg(292, 320, 7, 0.36)
       + seg(128, 170, 11, 0.55) + seg(250, 292, 11, 0.55)
       + seg(170, 250, 16, 0.8)
       + `<line x1="210" x2="210" y1="9" y2="29" stroke="${cink}" stroke-width="2.5"/>`
-      + `<text x="348" y="22" font-size="7.5" fill="${dim}">▲ n · max</text>`
+      + `<text x="348" y="22" font-size="${F}" fill="${dim}">▲ n · max</text>`
       + lab(210, 41, "중앙 50%", true) + lab(271, 41, "75%")
       + lab(306, 8, "87.5%") + lab(334, 41, "93.75%")
       + `</svg>`;
