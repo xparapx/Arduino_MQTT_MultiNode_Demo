@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "multinode_aq — 데이터 파이프라인",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1068,
+      640
+    ]
+  },
+  "stages": [
+    {
+      "label": "센서 발행"
+    },
+    {
+      "label": "전송"
+    },
+    {
+      "label": "수집"
+    },
+    {
+      "label": "저장 · 진단"
+    },
+    {
+      "label": "제공"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "env-nodes",
+      "type": "external",
+      "label": "환경 노드",
+      "sublabel": "UNO R4 ×5",
+      "stage": 0,
+      "row": 0
+    },
+    {
+      "id": "vision-node",
+      "type": "external",
+      "label": "비전 노드",
+      "sublabel": "Nicla Vision",
+      "stage": 0,
+      "row": 2
+    },
+    {
+      "id": "hivemq",
+      "type": "messagebus",
+      "label": "HiveMQ Cloud",
+      "sublabel": "MQTT · TLS",
+      "stage": 1,
+      "row": 1
+    },
+    {
+      "id": "hub",
+      "type": "backend",
+      "label": "hub.py",
+      "sublabel": "구독 · 검증 · 저장",
+      "stage": 2,
+      "row": 1,
+      "tag": "유일 writer"
+    },
+    {
+      "id": "sensordb",
+      "type": "database",
+      "label": "sensor_data.db",
+      "sublabel": "SQLite · WAL",
+      "stage": 3,
+      "row": 1,
+      "tag": "readings 외 3 테이블"
+    },
+    {
+      "id": "analyst",
+      "type": "backend",
+      "label": "analyst.py",
+      "sublabel": "레짐 · 밴드 진단",
+      "stage": 3,
+      "row": 3,
+      "tag": "daily · weekly 타이머"
+    },
+    {
+      "id": "webapp",
+      "type": "backend",
+      "label": "webapp.py",
+      "sublabel": ":8501 · :8502",
+      "stage": 4,
+      "row": 0,
+      "tag": "관리자 · 공용 분리"
+    },
+    {
+      "id": "browser",
+      "type": "frontend",
+      "label": "브라우저 SPA",
+      "sublabel": "교실 태블릿 · 모바일",
+      "stage": 4,
+      "row": 3
+    }
+  ],
+  "flows": [
+    {
+      "from": "env-nodes",
+      "to": "hivemq",
+      "label": "CO₂·VOC·온습도",
+      "variant": "emphasis"
+    },
+    {
+      "from": "vision-node",
+      "to": "hivemq",
+      "label": "재실 인원"
+    },
+    {
+      "from": "hivemq",
+      "to": "hub",
+      "label": "MQTT 구독",
+      "variant": "emphasis"
+    },
+    {
+      "from": "hub",
+      "to": "sensordb",
+      "label": "readings·occupancy INSERT",
+      "variant": "emphasis",
+      "labelDy": -23
+    },
+    {
+      "from": "sensordb",
+      "to": "analyst",
+      "label": "최근 데이터",
+      "route": "vertical-channel",
+      "labelDx": -60
+    },
+    {
+      "from": "analyst",
+      "to": "sensordb",
+      "label": "analysis·actuator_state 기록",
+      "route": "vertical-channel",
+      "labelDx": 84
+    },
+    {
+      "from": "sensordb",
+      "to": "webapp",
+      "label": "SELECT · 60s/5min 캐시",
+      "variant": "emphasis",
+      "labelDx": -14
+    },
+    {
+      "from": "webapp",
+      "to": "browser",
+      "label": "SPA + JSON API",
+      "variant": "emphasis",
+      "route": "vertical-channel"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "수집 원칙",
+      "items": [
+        "hub.py 만 readings·occupancy 에 기록",
+        "노드 장애는 수신 지연으로 감지"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "진단 주기",
+      "items": [
+        "analyst.py 는 systemd daily·weekly 타이머로 실행",
+        "결과는 analysis·actuator_state 테이블에만 기록"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "제공 예산",
+      "items": [
+        "웹은 DB 를 직접 읽고 60s/5min 캐시로 응답",
+        "관리자(:8501)와 공용(:8502) 인스턴스 분리"
+      ]
+    }
+  ]
+}

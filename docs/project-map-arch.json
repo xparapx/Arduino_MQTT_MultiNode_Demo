@@ -1,0 +1,220 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "multinode_aq — 교실 공기질 모니터",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "env-nodes",
+      "type": "external",
+      "label": "환경 노드",
+      "sublabel": "UNO R4 WiFi ×5",
+      "pos": [
+        40,
+        140
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "vision-node",
+      "type": "external",
+      "label": "비전 노드",
+      "sublabel": "Nicla Vision",
+      "pos": [
+        40,
+        320
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "hivemq",
+      "type": "messagebus",
+      "label": "HiveMQ Cloud",
+      "sublabel": "MQTT · TLS :8883",
+      "pos": [
+        300,
+        230
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "hub",
+      "type": "backend",
+      "label": "hub.py",
+      "sublabel": "MQTT 구독 · 저장",
+      "pos": [
+        540,
+        230
+      ],
+      "size": [
+        130,
+        64
+      ]
+    },
+    {
+      "id": "sensordb",
+      "type": "database",
+      "label": "sensor_data.db",
+      "sublabel": "SQLite · WAL",
+      "pos": [
+        790,
+        230
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "analyst",
+      "type": "backend",
+      "label": "analyst.py",
+      "sublabel": "daily·weekly 진단",
+      "pos": [
+        790,
+        40
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "webapp",
+      "type": "backend",
+      "label": "webapp.py",
+      "sublabel": ":8501 관리자 · :8502 공용",
+      "pos": [
+        790,
+        470
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "browser",
+      "type": "frontend",
+      "label": "브라우저 SPA",
+      "sublabel": "교실 태블릿 · 모바일",
+      "pos": [
+        1060,
+        470
+      ],
+      "size": [
+        140,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "UNO Q 보드 (aqhub) · systemd",
+      "wraps": [
+        "hub",
+        "sensordb",
+        "analyst",
+        "webapp"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "env-publish",
+      "from": "env-nodes",
+      "to": "hivemq",
+      "label": "CO₂·VOC·온습도 발행"
+    },
+    {
+      "id": "vision-publish",
+      "from": "vision-node",
+      "to": "hivemq",
+      "label": "재실 인원 발행"
+    },
+    {
+      "id": "hub-subscribe",
+      "from": "hivemq",
+      "to": "hub",
+      "label": "구독",
+      "variant": "emphasis"
+    },
+    {
+      "id": "hub-write",
+      "from": "hub",
+      "to": "sensordb",
+      "label": "readings·occupancy 기록",
+      "variant": "emphasis",
+      "labelDy": -26
+    },
+    {
+      "id": "analyst-read",
+      "from": "sensordb",
+      "to": "analyst",
+      "label": "최근 데이터 읽기",
+      "labelDx": -62
+    },
+    {
+      "id": "analyst-write",
+      "from": "analyst",
+      "to": "sensordb",
+      "label": "analysis 기록",
+      "labelDx": 66,
+      "labelDy": 24
+    },
+    {
+      "id": "web-read",
+      "from": "sensordb",
+      "to": "webapp",
+      "label": "SELECT · 60s/5min 캐시",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "web-serve",
+      "from": "webapp",
+      "to": "browser",
+      "label": "SPA + JSON API",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "수집",
+      "items": [
+        "환경 5노드 + 비전 노드가 HiveMQ 로 발행",
+        "hub.py 가 readings·occupancy 의 유일한 writer"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "진단",
+      "items": [
+        "analyst.py 가 systemd 타이머(daily·weekly)로 레짐·밴드 진단",
+        "결과는 analysis·actuator_state 테이블에만 기록"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "제공 · 배포",
+      "items": [
+        "webapp.py 2 인스턴스: :8501 관리자, :8502 공용",
+        "배포는 GitHub main → 보드 git pull (보드 직접 수정 금지)"
+      ]
+    }
+  ]
+}
