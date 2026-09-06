@@ -47,17 +47,6 @@ def get(url, raw=False):
         return (r, body) if raw else json.loads(body)
 
 
-def test_constants_match_ui_common():
-    """webdata duplicates the page-1 tables to stay streamlit-free; keep them equal."""
-    from aq import ui_common
-
-    assert {k: v[:2] + v[3:] for k, v in ui_common.METRICS.items()} == \
-        {k: (v[0], v[1], v[2], v[3]) for k, v in webdata.METRICS.items()}
-    assert ui_common.GAUGE_KEYS == webdata.GAUGE_KEYS
-    assert ui_common.NODE_PALETTE == webdata.NODE_PALETTE
-    assert ui_common.STATS_DAYS == webdata.STATS_DAYS
-
-
 def test_webdata_empty_db(tmp_path):
     w = webdata.WebData(tmp_path / "none.db", tmp_path / "nodes.json", tmp_path)
     assert w.live()["nodes"] == [] and w.stats()["box"] == {}

@@ -3,7 +3,8 @@
 | unit | role | started by |
 |---|---|---|
 | `multinode_aq_hub.service` | MQTT → SQLite collector (`hub.py`) | boot, `Restart=always` |
-| `multinode_aq_dashboard.service` | Streamlit dashboard :8501 | boot, `Restart=always` |
+| `multinode_aq_web.service` | admin web app :8501 (`webapp.py`) | boot, `Restart=always` |
+| `multinode_aq_web_public.service` | public web app :8502 (`webapp.py --public`) | boot, `Restart=always` |
 | `multinode_aq_analyst_hourly.timer` → `.service` | `analyst.py run --mode hourly` | every hour at :05 UTC |
 | `multinode_aq_analyst_daily.timer` → `.service` | `analyst.py run --mode daily` | 06:00 UTC daily |
 | `multinode_aq_analyst_weekly.timer` → `.service` | `analyst.py run --mode weekly` | 1st/3rd Sunday 06:30 UTC (biweekly, user decision 2026-09-05) |
@@ -12,7 +13,10 @@ The analyst units are `Type=oneshot`, `TimeoutStartSec=300`, `Nice=10`, no
 `EnvironmentFile` (no broker credentials needed). They read `readings` /
 `occupancy` read-only and write only `analysis` / `actuator_state`
 (`sensor_data.db` is in WAL mode, so hub.py inserts are never blocked).
-hub / dashboard units are not touched by Phase 6.
+hub / web units are not touched by Phase 6. (The old Streamlit
+`multinode_aq_dashboard.service` was retired 2026-09-06 — unit archived in
+`legacy/streamlit/`; on the board: `sudo systemctl disable --now
+multinode_aq_dashboard` + remove the unit file, see legacy/README.md.)
 
 ## Install (Phase 6, run as the user — needs sudo)
 

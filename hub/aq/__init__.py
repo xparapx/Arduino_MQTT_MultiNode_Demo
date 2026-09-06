@@ -1,4 +1,4 @@
-"""aq -- analysis package shared by analyst.py and the Streamlit dashboard.
+"""aq -- analysis package shared by analyst.py and the web API (webapp.py).
 
 Rules (see docs/plan/CLAUDE_CODE_PLAN.md section 2):
 - readings / occupancy are read-only here; only analyst.py writes, and only to
@@ -12,7 +12,6 @@ __all__ = [
     "db",
     "schemas",
     "explore",
-    "analysis_view",
     "qc",
     "regime",
     "rules",
@@ -20,7 +19,6 @@ __all__ = [
     "forecast",
     "occ_co2",
     "summary",
-    "plots",
-    "ui_common",
+    "webdata",
 ]
 __version__ = "0.1.0"

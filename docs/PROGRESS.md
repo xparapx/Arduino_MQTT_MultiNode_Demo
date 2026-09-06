@@ -191,3 +191,7 @@ turbo 단일맵 → plotly 기준 변수별 시퀀셜 맵으로 교체(값 크�
 ## 1차 내비 개편 — 제어·경보 독립 화면 + dock 4항목 + 아이콘 재작성 (2026-09-06)
 
 진단 그룹에서 `dx-action`(제어·경보)을 1차 내비 독립 그룹 `act`로 분리(해시 `#dx-action` 불변 — 북마크 유지). 공용 기준 하단 dock = Home · 모니터 · 진단 · 제어·경보 4개(관리자 +관리), 진단 서브탭 = 레짐·탐색/밴드·전이 2개(관리자 +유효범위/모델이력). 아이콘: 모니터 = 화면 안 막대+스파크라인, 제어·경보 = 톱니+경고 삼각형(신규 alertgear). dock 라벨 11→13px(서브탭과 동일)·아이콘 24→26px·높이 56→62px. 활성색: act=red(dock·사이드바 배지). 10 passed, webtest 모바일 375px(공용/관리 게이팅)·1280px 사이드바 확인. 정적 파일만 — 재시작 불요.
+
+## Streamlit 구세대 스택 아카이브 — legacy/ 신설 (2026-09-06)
+
+운영에서 실행되지 않는 구판을 `legacy/`로 이동(git mv, 히스토리 보존): dashboard.py·pages/2_diagnosis.py·aq/{plots,ui_common,analysis_view}.py·scripts/{perf_probe,plot_check}.py·dashboard.service·en/(로컬 브로커 v1)·hub_cloud.py(구 토픽 초판). manual.html 학습판 서사가 참조하므로 삭제 대신 아카이브(legacy/README.md에 경위·대체물·실행법 기록). 의존성 정리: **streamlit·streamlit-autorefresh·plotly 제거** — uv.lock에서 40여 패키지 제거(보드 .venv 경량화). 부수 정리: aq/__init__ __all__ 정돈, deploy.sh dash 분기 제거, systemd/README 표를 현행(web·web_public)으로, Streamlit 전용 테스트 2종 + ui_common 상수 결합 테스트 삭제. 113 passed. 남은 1회 작업(sudo, 사용자): 보드 dashboard.service 유닛 파일 제거 — legacy/README.md 참조.
