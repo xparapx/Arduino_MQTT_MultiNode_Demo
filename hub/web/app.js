@@ -18,8 +18,7 @@ const AQ = (() => {
     listeners.forEach((fn) => fn(t));
   }
   function initTheme() {
-    // 저장된 선택이 없으면: 데스크톱 = 다크, 모바일(<900px) = 라이트 디폴트
-    let t = matchMedia("(max-width: 899.98px)").matches ? "light" : "dark";
+    let t = "dark";                     // 디폴트 = 다크 (모바일 포함 — 2026-09-06 재확정)
     try { t = localStorage.getItem("aq-theme") || t; } catch (e) { /* ignore */ }
     document.documentElement.setAttribute("data-theme", t);
     document.querySelectorAll(".theme button").forEach((b) => {
