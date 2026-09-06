@@ -57,8 +57,8 @@ fi
 git pull -q --ff-only origin "$BRANCH"
 "$UV" sync --frozen
 "$PY" -m py_compile hub.py
-"$PY" -c "import aq, dashboard, webapp" >/dev/null 2>&1 && echo "import   : aq, dashboard, webapp OK" || {
-  echo "ERROR: import check failed - NOT safe to restart" >&2; "$PY" -c "import aq, dashboard, webapp"; exit 1; }
+"$PY" -c "import aq, webapp" >/dev/null 2>&1 && echo "import   : aq, webapp OK" || {
+  echo "ERROR: import check failed - NOT safe to restart" >&2; "$PY" -c "import aq, webapp"; exit 1; }
 echo "deployed : $(git rev-parse --short HEAD)"
 if [ ${#restart[@]} -gt 0 ]; then
   echo
