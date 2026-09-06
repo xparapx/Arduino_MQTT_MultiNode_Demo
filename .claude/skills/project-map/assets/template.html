@@ -5,46 +5,66 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>__TITLE__</title>
 <style>
-/* tokens: multinode_aq dashboard 팔레트 (training_manual_v1 컨셉) — 다크 기본 + 라이트 토글 */
+/* tokens: multinode_aq dashboard 팔레트 · 레이아웃: training_manual_v1 (사이드 패널 + 메인) */
 :root, :root[data-theme=dark]{
-  --paper:#1a1d24; --surface:#242832; --sand:#2b303b; --line:#3a414e;
-  --ink:#e6e8ec; --ink2:#aab2bd;
+  --paper:#1a1d24; --side:#14171d; --surface:#242832; --sand:#2b303b; --line:#3a414e;
+  --ink:#e6e8ec; --ink2:#aab2bd; --foot:#6b7482;
   --teal:#12CBC4; --teal-t:rgba(18,203,196,.15);
   --melon:#ED4C67; --melon-t:rgba(237,76,103,.16);
   --sky:#a1c9f4; --sky-t:rgba(161,201,244,.13);
   --gold:#FFB300; --gold-t:rgba(255,179,0,.13);
+  --green:#8de5a1; --purple:#d0bbff; --cyan:#b9f2f0; --orange:#ffb482; --badge-ink:#111;
+  --l0:#8de5a1; --l1:#b9f2f0; --l2:#ffb482; --l3:#a1c9f4; --l4:#d0bbff; --l5:#FFB300;
   --shc:rgba(0,0,0,.32);
   --r:14px; color-scheme:dark;
 }
 :root[data-theme=light]{
-  --paper:#f5f6f8; --surface:#ffffff; --sand:#eef0f3; --line:#d9dde3;
-  --ink:#1a1d24; --ink2:#5b6472;
+  --paper:#f5f6f8; --side:#eaedf1; --surface:#ffffff; --sand:#eef0f3; --line:#d9dde3;
+  --ink:#1a1d24; --ink2:#5b6472; --foot:#8a929e;
   --teal:#0fa8a2; --teal-t:rgba(15,168,162,.12);
   --melon:#d63f5a; --melon-t:rgba(214,63,90,.11);
   --sky:#3d7cc9; --sky-t:rgba(61,124,201,.11);
   --gold:#b87a00; --gold-t:rgba(184,122,0,.12);
+  --green:#1f9d8a; --purple:#8b6fd6; --cyan:#2aa3a0; --orange:#d97a2e; --badge-ink:#fff;
+  --l0:#1f9d8a; --l1:#2aa3a0; --l2:#d97a2e; --l3:#3d7cc9; --l4:#8b6fd6; --l5:#b87a00;
   --shc:rgba(51,49,45,.07);
   color-scheme:light;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 "Noto Sans KR","Pretendard",system-ui,sans-serif}
-header{padding:24px 32px 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-#thm{background:var(--surface);border:1px solid var(--line);color:var(--ink2);width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:16px;flex:none;box-shadow:0 1px 2px var(--shc)}
+
+/* ---- shell: 사이드 패널 + 메인 (training_manual_v1 골격) ---- */
+.app{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
+.sidebar{background:var(--side);border-right:1px solid var(--line);padding:20px 14px;position:sticky;top:0;height:100vh;overflow:auto;display:flex;flex-direction:column}
+.brand{padding:2px 8px 14px;border-bottom:1px solid var(--line)}
+.brand small{display:block;font-size:11px;color:var(--foot);letter-spacing:.04em}
+.brand b{display:block;font-size:15.5px;font-weight:700;line-height:1.4;margin-top:3px}
+.tabs{display:flex;flex-direction:column;gap:4px;margin-top:18px}
+.tabs button{display:flex;gap:10px;align-items:center;text-align:left;border:0;background:transparent;color:var(--ink2);font:inherit;font-size:13.5px;font-weight:600;padding:9px 10px;border-radius:9px;cursor:pointer}
+.tabs button .n{flex:0 0 22px;height:20px;border-radius:6px;display:grid;place-items:center;background:var(--line);color:var(--ink);font-size:11px;font-weight:700}
+.tabs button:hover{background:var(--surface);color:var(--ink)}
+.tabs button[aria-selected=true]{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.tabs button[data-tab=ov][aria-selected=true] .n{background:var(--l0);color:var(--badge-ink)}
+.tabs button[data-tab=map][aria-selected=true] .n{background:var(--l1);color:var(--badge-ink)}
+.tabs button[data-tab=db][aria-selected=true] .n{background:var(--l3);color:var(--badge-ink)}
+.tabs button[data-tab=gloss][aria-selected=true] .n{background:var(--l5);color:var(--badge-ink)}
+.tabs button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.sidefoot{margin-top:auto;padding:14px 8px 2px;font-size:11px;color:var(--foot);line-height:1.6}
+#thm{display:flex;align-items:center;gap:8px;width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink2);font:inherit;font-size:12px;padding:7px 12px;border-radius:9px;cursor:pointer;margin-bottom:10px}
 #thm .m{display:none}
 :root[data-theme=light] #thm .s{display:none}
 :root[data-theme=light] #thm .m{display:inline}
-h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
-h1 small{font-weight:400;color:var(--ink2);font-size:14px;margin-left:10px}
-.tabs{display:flex;gap:8px;padding:0 32px 16px;flex-wrap:wrap}
-.tabs button{border:0;background:var(--sand);color:var(--ink);font:inherit;font-weight:600;padding:9px 18px;border-radius:999px;cursor:pointer}
-.tabs button[aria-selected=true]{background:var(--ink);color:var(--paper)}
-.tabs button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+main{min-width:0;padding:26px 34px 60px}
+main h1{margin:0 0 18px;font-size:21px;font-weight:700;letter-spacing:-.01em}
+main h1 small{font-weight:400;color:var(--ink2);font-size:13.5px;margin-left:10px}
 section[hidden]{display:none}
-.wrap{display:grid;grid-template-columns:1fr 320px;gap:20px;padding:0 32px 40px}
+
+/* ---- 지도/스키마 공용: 무대 + 우측 상세 패널 ---- */
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px}
 @media(max-width:1100px){.wrap{grid-template-columns:1fr}}
-.stage{background:var(--surface);border-radius:var(--r);box-shadow:0 1px 2px var(--shc),0 8px 24px var(--shc);padding:16px;overflow:auto}
+.stage{background:var(--surface);border-radius:var(--r);border:1px solid var(--line);box-shadow:0 1px 2px var(--shc),0 8px 24px var(--shc);padding:16px;overflow:auto}
 svg{display:block;width:100%;height:auto;font-family:inherit}
-.panel{background:var(--surface);border-radius:var(--r);box-shadow:0 1px 2px var(--shc),0 8px 24px var(--shc);padding:20px;position:sticky;top:16px;align-self:start;min-height:200px}
+.panel{background:var(--surface);border-radius:var(--r);border:1px solid var(--line);box-shadow:0 1px 2px var(--shc),0 8px 24px var(--shc);padding:20px;position:sticky;top:16px;align-self:start;min-height:200px}
 .panel h2{font-size:16px;margin:0 0 4px}
 .panel .path{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:var(--ink2);word-break:break-all}
 .panel p{margin:10px 0 0;font-size:14px}
@@ -54,19 +74,20 @@ svg{display:block;width:100%;height:auto;font-family:inherit}
 .panel li b{font-weight:600}
 .chip{display:inline-block;font-size:12px;padding:2px 10px;border-radius:999px;margin:2px 4px 2px 0;background:var(--sand)}
 .chip.w{background:var(--melon-t);color:var(--melon)}.chip.r{background:var(--teal-t);color:var(--teal)}.chip.t{background:var(--gold-t);color:var(--gold)}
-.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--ink2);padding:6px 4px 0}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--ink2);padding:8px 4px 0}
 .legend span::before{content:"";display:inline-block;width:22px;height:0;border-top:3px solid;margin-right:6px;vertical-align:middle}
 .legend .call::before{border-color:var(--ink)}.legend .imp::before{border-color:var(--ink2);border-top-style:dashed}
 .legend .wr::before{border-color:var(--melon)}.legend .rd::before{border-color:var(--teal)}.legend .http::before{border-color:var(--sky)}
-/* overview */
-.ov{padding:0 32px 40px}
-.ov p{max-width:760px;margin:0 0 16px}
-.lane{display:flex;align-items:center;gap:6px;margin:0 0 10px;flex-wrap:wrap}
-.lane em{font-style:normal;font-size:12px;color:var(--ink2);width:120px;flex:none;font-weight:600}
-.lane .n{background:var(--surface);border-radius:12px;padding:8px 14px;box-shadow:0 1px 2px var(--shc);min-width:120px}
+
+/* ---- 설계 맵: 레인별 색상 ---- */
+.ov p.intro{max-width:900px;margin:0 0 20px;font-size:15px;color:var(--ink2)}
+.lane{display:flex;align-items:stretch;gap:8px;margin:0 0 12px;flex-wrap:wrap;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--lc,var(--line));border-radius:12px;box-shadow:0 1px 2px var(--shc)}
+.lane em{font-style:normal;font-size:12.5px;color:var(--lc,var(--ink2));width:118px;flex:none;font-weight:700;align-self:center}
+.lane .n{background:var(--sand);border-radius:10px;border-top:3px solid var(--lc,var(--line));padding:8px 14px;min-width:150px;flex:1 1 0}
 .lane .n b{display:block;font-size:13px}.lane .n span{font-size:11.5px;color:var(--ink2)}
-.lane i{font-style:normal;color:var(--ink2);font-size:14px}
-/* svg nodes */
+.lane i{font-style:normal;color:var(--foot);font-size:15px;align-self:center}
+
+/* ---- 연결 지도 SVG ---- */
 .node{cursor:pointer}
 .node rect{fill:var(--surface);stroke:var(--line);stroke-width:1.2;rx:10}
 .node.on rect{stroke:var(--ink);stroke-width:2}
@@ -82,44 +103,59 @@ svg{display:block;width:100%;height:auto;font-family:inherit}
 .edge.on{opacity:1;stroke-width:2.6}.edge.dim{opacity:.05}
 .edge-label{font-size:10px;fill:var(--ink2);pointer-events:none;opacity:0}
 .edge-label.on{opacity:1}
-/* db view */
+
+/* ---- DB 스키마 ---- */
+#dbsvg{margin:0 auto}
 .db .side{fill:var(--line)}.db .top{fill:var(--sand)}.db .face{fill:var(--surface);stroke:var(--line)}
-.db .title{font-size:13px;font-weight:700}
+.db .title{font-size:14px;font-weight:700;fill:var(--ink)}
 .tbl{cursor:pointer}
 .tbl rect{fill:var(--sand);stroke:none;rx:6}
-.tbl.on rect{fill:var(--teal)}.tbl.on text{fill:var(--paper)}
+.tbl.on rect{fill:var(--teal)}.tbl.on text{fill:var(--badge-ink)}
 .tbl text{font-size:11.5px;fill:var(--ink)}
 .rel{fill:none;stroke:var(--teal);stroke-width:1.6;stroke-dasharray:5 4;opacity:0;pointer-events:none}
 .rel.on{opacity:1}
-.writer{font-size:11px;fill:var(--melon);font-weight:600}
+.writer{font-size:10.5px;fill:var(--melon);font-weight:600}
 .reader{font-size:11px;fill:var(--teal);font-weight:600}
+.db text{fill:var(--ink2)}
 table.cols{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
 table.cols td{padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:top}
 table.cols td:first-child{font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all;max-width:180px}
-/* glossary */
-.gloss{padding:0 32px 48px;max-width:860px}
-.gloss h2{font-size:18px;margin:8px 0 6px}
+
+/* ---- 핵심 기술 · 용어 ---- */
+.gloss{max-width:980px}
+.gloss h2{font-size:18px;margin:18px 0 6px}
 .gloss .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:14px 0}
-.gloss .flow div{background:var(--surface);border-radius:12px;padding:10px 12px;font-size:13px;box-shadow:0 1px 2px var(--shc);position:relative}
+.gloss .flow div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;box-shadow:0 1px 2px var(--shc);position:relative}
 .gloss .flow div b{display:block;font-size:12px;color:var(--ink2);font-weight:600;margin-bottom:2px}
 .gloss .flow div.hl{outline:2px solid var(--teal)}
-.gloss .flow div+div::before{content:"→";position:absolute;left:-13px;top:14px;color:var(--ink2)}
+.gloss .flow div+div::before{content:"→";position:absolute;left:-13px;top:14px;color:var(--foot)}
 .gloss p{margin:8px 0}
 .gloss code,.panel code{background:var(--sand);padding:1px 6px;border-radius:6px;font-size:13px}
-.note{background:var(--melon-t);border-radius:12px;padding:12px 16px;margin-top:14px;font-size:14px}
+.note{border-left:3px solid var(--melon);background:var(--melon-t);border-radius:0 12px 12px 0;padding:12px 16px;margin-top:16px;font-size:14px}
 @media(max-width:700px){.gloss .flow{grid-template-columns:1fr 1fr}.gloss .flow div+div::before{display:none}}
+@media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{position:static;height:auto}.tabs{flex-direction:row;flex-wrap:wrap}main{padding:18px 16px 50px}}
 @media(prefers-reduced-motion:no-preference){.edge,.node,.tbl rect,.rel{transition:opacity .18s,stroke-width .18s,fill .18s}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('pm-theme')||'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
 </head>
 <body>
-<header><h1 id="title"></h1><button id="thm" type="button" aria-label="테마 전환"><span class="s">☀</span><span class="m">🌙</span></button></header>
-<div class="tabs" role="tablist">
-  <button role="tab" aria-selected="true" data-tab="ov">설계 맵 (큰 그림)</button>
-  <button role="tab" aria-selected="false" data-tab="map">스크립트 연결 지도</button>
-  <button role="tab" aria-selected="false" data-tab="db">DB 스키마</button>
-  <button role="tab" aria-selected="false" data-tab="gloss" id="glossbtn">핵심 기술 · 용어</button>
-</div>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand"><small>project-map</small><b id="brand"></b></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="ov"><span class="n">1</span>설계 맵 (큰 그림)</button>
+    <button role="tab" aria-selected="false" data-tab="map"><span class="n">2</span>스크립트 연결 지도</button>
+    <button role="tab" aria-selected="false" data-tab="db"><span class="n">3</span>DB 스키마</button>
+    <button role="tab" aria-selected="false" data-tab="gloss" id="glossbtn"><span class="n">4</span><span id="glosslabel">핵심 기술 · 용어</span></button>
+  </nav>
+  <div class="sidefoot">
+    <button id="thm" type="button" aria-label="테마 전환"><span class="s">☀</span><span class="m">🌙</span><span>테마 전환</span></button>
+    <span id="foot"></span>
+  </div>
+</aside>
+<main>
+<h1 id="title"></h1>
 
 <section id="ov"><div class="ov" id="ovbody"></div></section>
 
@@ -144,7 +180,7 @@ table.cols td:first-child{font-family:ui-monospace,Menlo,Consolas,monospace;word
   <div class="wrap">
     <div class="stage">
       <svg id="dbsvg" role="img" aria-label="DB 스키마"></svg>
-      <div class="legend"><span class="wr">유일한 쓰기 주체 (writer)</span><span class="rd">읽기만 (reader)</span><span class="imp">테이블 클릭 → 컬럼 + 같은 키로 이어지는 테이블</span></div>
+      <div class="legend"><span class="wr">쓰기 주체 (writer)</span><span class="rd">읽기만 (reader)</span><span class="imp">테이블 클릭 → 컬럼 + 같은 키로 이어지는 테이블</span></div>
     </div>
     <aside class="panel" id="dbpanel">
       <h2>테이블을 선택하세요</h2>
@@ -156,7 +192,7 @@ table.cols td:first-child{font-family:ui-monospace,Menlo,Consolas,monospace;word
 
 <section id="gloss" hidden><div class="gloss" id="glossbody">
     <h2>"API" 는 스크립트도, DB 호출도 아닙니다</h2>
-    <p>API 는 "서버가 클라이언트에게 약속한 <b>주소와 응답 모양</b>" 입니다. 어떤 스크립트가 만들었는지, 뒤에서 DB 를 읽는지 JSON 파일을 읽는지는 약속에 들어가지 않습니다. 그래서 문서 제목이 "API <b>계약</b>" 입니다.</p>
+    <p>API 는 "서버가 클라이언트에게 약속한 <b>주소와 응답 모양</b>" 입니다. 어떤 스크립트가 만들었는지, 뒤에서 DB 를 읽는지 JSON 파일을 읽는지는 약속에 들어가지 않습니다.</p>
     <div class="flow">
       <div><b>실행 주체</b>타이머 / 서비스</div>
       <div><b>스크립트</b>계산해서 저장</div>
@@ -164,41 +200,43 @@ table.cols td:first-child{font-family:ui-monospace,Menlo,Consolas,monospace;word
       <div class="hl"><b>엔드포인트</b>서버가 여는 문<br><code>GET /api/…</code></div>
       <div><b>소비자</b>브라우저가 fetch</div>
     </div>
-    <h2>엔드포인트 = 파이프라인의 끝이 아니라 서버 쪽 "문"</h2>
-    <p>엔드포인트는 HTTP 요청이 도착하는 주소 하나(<code>메서드 + 경로</code>)입니다. 배치 파이프라인(타이머→스크립트→파일)의 출력이 아니라, 그와 별개의 요청–응답 축에서 서버가 열어 둔 입구입니다. 라우터 파일 안의 <code>@router.get("/api/…")</code> 함수 하나가 엔드포인트 하나이고, 요청이 올 때마다 실행되어 그때 파일이나 DB 를 읽습니다.</p>
     <table class="cols">
       <tr><td>API</td><td>추상적 약속. "이 주소에 이런 JSON 이 온다"</td></tr>
       <tr><td>엔드포인트</td><td>그 약속의 한 줄. 메서드+경로 하나 = 라우터 함수 하나</td></tr>
-      <tr><td>라우터</td><td>엔드포인트를 묶은 파일</td></tr>
       <tr><td>스크립트 / 잡</td><td>타이머가 돌리는 독립 프로세스. HTTP 와 무관, 파일을 남기고 종료</td></tr>
     </table>
-    <div class="note"><b>혼동이 생기는 이유</b> — 스크립트가 남의 API(NEIS, Guardian…)를 호출할 때 우리 스크립트는 <b>클라이언트</b>입니다. API 계약에서는 방향이 반대로 우리 서버가 내주는 쪽입니다. "스크립트 = 클라이언트 쪽, 엔드포인트 = 서버 쪽"으로 자리를 나누면 헷갈리지 않습니다.</div>
+    <div class="note"><b>안내</b> — 이 탭은 <code>glossary_html</code> 로 프로젝트 맞춤 내용(핵심 구현 기술 + 용어)으로 교체하도록 설계되어 있습니다.</div>
 </div></section>
+</main>
+</div>
 
 <script>
 const DATA = /*__DATA__*/{};
 document.getElementById('title').innerHTML=(DATA.title||'프로젝트 지도')+(DATA.subtitle?`<small>${DATA.subtitle}</small>`:'');
+document.getElementById('brand').textContent=DATA.title||'프로젝트 지도';
+document.getElementById('foot').textContent=DATA.subtitle||'';
 document.title=DATA.title||'프로젝트 지도';
 if(DATA.glossary_html)document.getElementById('glossbody').innerHTML=DATA.glossary_html;
-if(DATA.glossary_label)document.getElementById('glossbtn').textContent=DATA.glossary_label;
+if(DATA.glossary_label)document.getElementById('glosslabel').textContent=DATA.glossary_label;
 if(DATA.glossary===false)document.getElementById('glossbtn').hidden=true;
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  document.querySelectorAll('main>section').forEach(s=>s.hidden = s.id!==b.dataset.tab);
+}));
 document.getElementById('thm').addEventListener('click',()=>{
   const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
   document.documentElement.setAttribute('data-theme',t);
   try{localStorage.setItem('pm-theme',t)}catch(e){}
 });
-document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
-  document.querySelectorAll('section').forEach(s=>s.hidden = s.id!==b.dataset.tab);
-}));
 const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
-/* ---------- 설계 맵 ---------- */
+/* ---------- 설계 맵: 레인별 색상 ---------- */
 (function(){
   const ov=DATA.overview||{};const el=document.getElementById('ovbody');
-  let h=ov.intro?`<p>${esc(ov.intro)}</p>`:'';
-  (ov.lanes||[]).forEach(l=>{
-    h+=`<div class="lane"><em>${esc(l.label)}</em>`+l.items.map((it,i)=>{const [b,s]=String(it).split('|');return (i?'<i>→</i>':'')+`<div class="n"><b>${esc(b)}</b><span>${esc(s||'')}</span></div>`}).join('')+'</div>';
+  let h=ov.intro?`<p class="intro">${esc(ov.intro)}</p>`:'';
+  (ov.lanes||[]).forEach((l,li)=>{
+    h+=`<div class="lane" style="--lc:var(--l${li%6})"><em>${esc(l.label)}</em>`
+      +l.items.map((it,i)=>{const [b,s]=String(it).split('|');return (i?'<i>→</i>':'')+`<div class="n"><b>${esc(b)}</b><span>${esc(s||'')}</span></div>`}).join('')+'</div>';
   });
   el.innerHTML=h||'<p>overview.lanes 가 비어 있습니다.</p>';
 })();
@@ -210,7 +248,6 @@ const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
   const svg=document.getElementById('mapsvg'),NS='http://www.w3.org/2000/svg';
   const el=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e};
   const colIdx=Object.fromEntries(COLS.map((c,i)=>[c.id,i]));
-  // row 배정: 명시된 row 우선, 없으면 열 안에서 다음 빈 줄
   const used={};let maxRow=0;
   Object.values(NODES).forEach(n=>{if(n.row!=null){(used[n.c]??=new Set()).add(n.row);maxRow=Math.max(maxRow,n.row)}});
   Object.values(NODES).forEach(n=>{if(n.row==null){let r=0;const u=(used[n.c]??=new Set());while(u.has(r))r++;u.add(r);n.row=r;maxRow=Math.max(maxRow,r)}});
@@ -258,11 +295,16 @@ const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
   const DBS=DATA.dbs||[],RELS=DATA.rels||[];
   const svg=document.getElementById('dbsvg'),NS='http://www.w3.org/2000/svg';
   const el=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e};
-  const W=280,TH=26,GAP=8,OFF=14,COLW=340,PER=3;
-  // 자동 배치: 3열, 열마다 y 누적
+  const W=340,TH=26,GAP=8,OFF=14,COLW=400,PER=3;
+  // writer 문자열 줄바꿈 (실린더 폭 안에서)
+  const wrap=(s,n)=>{const out=[];let cur='';String(s).split(/\s+/).forEach(w=>{if((cur+' '+w).trim().length>n){if(cur)out.push(cur);cur=w}else cur=(cur+' '+w).trim()});if(cur)out.push(cur);return out};
   const colY=[60,60,60];let maxY=0;
-  DBS.forEach((d,i)=>{const H=64+d.tables.length*(TH+GAP)+8+(d.readers.length+1)*16;const c=i%PER;d._x=d.x??(30+c*COLW);d._y=d.y??colY[c];d._h=H;colY[c]=d._y+H+OFF+40;maxY=Math.max(maxY,d._y+H+OFF+20)});
-  svg.setAttribute('viewBox',`0 0 ${Math.max(1,Math.min(DBS.length,PER))*COLW+60} ${maxY+20}`);
+  DBS.forEach((d,i)=>{d._wl=wrap('writer · '+d.writer,52);
+    const H=48+d._wl.length*15+8+d.tables.length*(TH+GAP)+12+(d.readers.length+1)*16;
+    const c=i%PER;d._x=d.x??(30+c*COLW);d._y=d.y??colY[c];d._h=H;colY[c]=d._y+H+OFF+40;maxY=Math.max(maxY,d._y+H+OFF+20)});
+  const VW=Math.max(1,Math.min(DBS.length,PER))*COLW+60;
+  svg.setAttribute('viewBox',`0 0 ${VW} ${maxY+20}`);
+  svg.style.maxWidth=Math.min(VW*1.2,1500)+'px';           // 1-DB 소형 지도가 전폭으로 확대되는 것 방지
   const tpos={};const gDb=el('g',{}),gRel=el('g',{});svg.append(gDb,gRel);
   DBS.forEach(d=>{
     const H=d._h,x=d._x,y=d._y,g=el('g',{class:'db'});
@@ -270,9 +312,10 @@ const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
     g.appendChild(el('path',{class:'top',d:`M${x},${y+OFF} l${OFF},-${OFF} h${W} l-${OFF},${OFF} z`}));
     g.appendChild(el('rect',{class:'face',x,y:y+OFF,width:W,height:H,rx:6}));
     const tt=el('text',{x:x+14,y:y+OFF+24,class:'title'});tt.textContent='🗄 '+d.name;g.appendChild(tt);
-    const w=el('text',{x:x+14,y:y+OFF+44,class:'writer'});w.textContent='writer · '+d.writer;g.appendChild(w);
+    d._wl.forEach((ln,i)=>{const w=el('text',{x:x+14,y:y+OFF+42+i*15,class:'writer'});w.textContent=ln;g.appendChild(w)});
+    const tbase=y+OFF+48+d._wl.length*15+4;
     d.tables.forEach((t,i)=>{
-      const ty=y+OFF+56+i*(TH+GAP),id=d.id+'.'+t.n;
+      const ty=tbase+i*(TH+GAP),id=d.id+'.'+t.n;
       const tg=el('g',{class:'tbl','data-id':id,tabindex:0,role:'button'});
       tg.appendChild(el('rect',{x:x+14,y:ty,width:W-28,height:TH}));
       const tx=el('text',{x:x+24,y:ty+17});tx.textContent=t.n;tg.appendChild(tx);
@@ -281,7 +324,7 @@ const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
       const sel=()=>select(id);tg.addEventListener('click',sel);tg.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sel()}});
       g.appendChild(tg);
     });
-    let ry=y+OFF+56+d.tables.length*(TH+GAP)+12;
+    let ry=tbase+d.tables.length*(TH+GAP)+12;
     const rl=el('text',{x:x+14,y:ry,class:'reader'});rl.textContent='readers';g.appendChild(rl);
     d.readers.forEach(r=>{ry+=16;const t=el('text',{x:x+26,y:ry,'font-size':11});t.textContent='· '+r;g.appendChild(t)});
     gDb.appendChild(g);
