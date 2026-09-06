@@ -53,12 +53,12 @@ render 는 없는 노드를 가리키는 edge/rel 을 경고로 알려준다. �
   ```
   showcase 통과(아티팩트 체크 9개, composition 오류·경고 0) 후 deliver 가 최종 승인. 실패 시 진단된 subject 만 고쳐 재시도한다.
 - 산출물은 데이터 JSON 옆에 둔다: `docs/project-map-arch.html` + `docs/project-map-arch.json`(설계 맵), `docs/project-map-flow.html` + `docs/project-map-flow.json`(연결 흐름).
-- **역할 분담**: archify 판 = 발표·문서용 한눈 요약(정적·기하 검증). 노드 클릭 상세·DB 스키마·용어 탭은 여전히 `render.py` 의 out.html 이 담당한다. 둘 다 전달한다.
-- **단일 파일 번들**: 사용자가 파일 하나로 받길 원하면 데이터 JSON 에 `embeds` 를 선언한다 — archify HTML 이 out.html 의 추가 탭(iframe srcdoc, 첫 방문 시 lazy 로드)으로 내장되어 오프라인 단일 파일이 유지된다:
+- **역할 분담**: archify 판 = 큰 그림의 시각 자료(정적·기하 검증). 노드 클릭 상세·DB 스키마 컬럼/조인·용어 탭은 여전히 `render.py` 의 out.html 이 담당한다(archify 에는 ER 타입·클릭 상세가 없다).
+- **단일 파일 번들(기본)**: 데이터 JSON 에 `embeds` 를 선언하면 archify HTML 이 out.html 안에 iframe srcdoc 으로 내장되어(첫 방문 시 lazy 로드) 오프라인 단일 파일이 유지된다. **`into` 로 기존 탭 상단에 넣는 것을 기본으로 한다** — 설계 맵 탭(`ov`)에 architecture, 연결 지도 탭(`map`)에 dataflow 요약을 얹으면 "시각 요약 위 + 상세 아래" 구조가 되고 중복 탭이 생기지 않는다. `into` 를 빼면 별도 탭으로 추가된다:
   ```json
   "embeds": [
-    { "id": "arch", "label": "아키텍처 뷰", "file": "project-map-arch.html" },
-    { "id": "flow", "label": "파이프라인 뷰", "file": "project-map-flow.html" }
+    { "id": "arch", "label": "아키텍처 뷰 (archify)", "file": "project-map-arch.html", "into": "ov" },
+    { "id": "flow", "label": "파이프라인 뷰 (archify)", "file": "project-map-flow.html", "into": "map" }
   ]
   ```
   `file` 은 데이터 JSON 기준 상대경로. archify 산출물을 갱신했으면 render 를 다시 돌려야 내장본도 갱신된다.

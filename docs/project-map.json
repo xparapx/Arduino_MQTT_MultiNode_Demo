@@ -150,8 +150,8 @@
   "u_dash": {
    "c": "timer",
    "n": "multinode_aq_dashboard.service",
-   "s": "정지됨 (Streamlit 구판)",
-   "d": "구 Streamlit 대시보드 유닛. 2026-08-29 웹 전환으로 정지 — 코드 정리는 [ASK] 보류.",
+   "s": "퇴역 → legacy/",
+   "d": "구 Streamlit 대시보드 유닛. 2026-09-06 코드 전체를 legacy/streamlit/ 로 아카이브하고 streamlit 의존성 제거. 보드의 유닛 파일 삭제(sudo)만 남음.",
    "row": 6
   },
   "hub_py": {
@@ -265,20 +265,6 @@
    "s": "API 읽기 계층",
    "d": "웹이 쓰는 모든 집계(분위·히트맵·boxen lv·초과율)를 서버에서 계산. 물리범위(PLAUSIBLE) 필터로 무효 측정 배제. DB에는 읽기만.",
    "row": 11
-  },
-  "analysis_view": {
-   "c": "lib",
-   "n": "aq/analysis_view.py",
-   "s": "analysis 읽기",
-   "d": "analysis payload를 화면용으로 푸는 읽기 전용 계층 + 서비스 상태 요약.",
-   "row": 12
-  },
-  "ui_common": {
-   "c": "lib",
-   "n": "aq/ui_common.py",
-   "s": "METRICS · 팔레트",
-   "d": "변수 정의·노드 팔레트·라벨 페어링 등 화면 공통 상수. webdata와 표를 공유(테스트로 결합 확인).",
-   "row": 13
   },
   "db_file": {
    "c": "data",
@@ -556,18 +542,6 @@
   ],
   [
    "webdata",
-   "analysis_view",
-   "imp",
-   ""
-  ],
-  [
-   "webdata",
-   "ui_common",
-   "imp",
-   ""
-  ],
-  [
-   "webdata",
    "db_file",
    "rd",
    "집계 쿼리만"
@@ -795,13 +769,15 @@
  "embeds": [
   {
    "id": "arch",
-   "label": "아키텍처 뷰",
-   "file": "project-map-arch.html"
+   "label": "아키텍처 뷰 (archify)",
+   "file": "project-map-arch.html",
+   "into": "ov"
   },
   {
    "id": "flow",
-   "label": "파이프라인 뷰",
-   "file": "project-map-flow.html"
+   "label": "파이프라인 뷰 (archify)",
+   "file": "project-map-flow.html",
+   "into": "map"
   }
  ]
 }

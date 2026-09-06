@@ -20,10 +20,12 @@
  "glossary_html": "<h2>…</h2>",  // 탭 본문 — 프로젝트 핵심 구현 기술(왜 이 선택인지) + 도메인 용어.
                                 // 비우면 일반 API/엔드포인트 해설이 기본으로 나온다.
                                 // 쓸 수 있는 클래스: .flow(카드 흐름, .hl 강조) · table.cols · .note
- "embeds": [                    // 선택 — 외부 단일 HTML(예: archify 다이어그램)을 추가 탭으로 내장
-   { "id": "arch", "label": "아키텍처 뷰", "file": "project-map-arch.html" }
+ "embeds": [                    // 선택 — 외부 단일 HTML(예: archify 다이어그램)을 내장
+   { "id": "arch", "label": "아키텍처 뷰", "file": "project-map-arch.html", "into": "ov" }
  ]                              // file 은 이 JSON 기준 상대경로. render 시 iframe srcdoc 으로
                                 // 본문에 흡수되어 산출물은 여전히 오프라인 파일 하나다.
+                                // into: 기존 탭 section id("ov"/"map"/"db"/"gloss") 상단에 삽입(권장).
+                                // into 생략 시 별도 탭으로 추가된다.
 }
 ```
 

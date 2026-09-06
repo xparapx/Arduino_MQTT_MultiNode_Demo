@@ -50,6 +50,7 @@ html,body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 "Noto 
 .tabs button[data-tab=gloss][aria-selected=true] .n{background:var(--l5);color:var(--badge-ink)}
 .tabs button[data-tab^="em-"][aria-selected=true] .n{background:var(--l4);color:var(--badge-ink)}
 .embed-frame{display:block;width:100%;height:calc(100vh - 150px);min-height:540px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.embed-frame.inline{height:68vh;min-height:460px;margin-bottom:20px}
 .tabs button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .sidefoot{margin-top:auto;padding:14px 8px 2px;font-size:11px;color:var(--foot);line-height:1.6}
 #thm{display:flex;align-items:center;gap:8px;width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink2);font:inherit;font-size:12px;padding:7px 12px;border-radius:9px;cursor:pointer;margin-bottom:10px}
@@ -222,16 +223,24 @@ if(DATA.glossary_html)document.getElementById('glossbody').innerHTML=DATA.glossa
 if(DATA.glossary_label)document.getElementById('glosslabel').textContent=DATA.glossary_label;
 if(DATA.glossary===false)document.getElementById('glossbtn').hidden=true;
 (DATA.embeds||[]).forEach(e=>{
+  const f=document.createElement('iframe');f.className='embed-frame';f.title=e.label;
+  let loaded=false;  // 무거운 내장 문서는 첫 방문 때만 파싱
+  const load=()=>{if(!loaded){f.srcdoc=e.html;loaded=true}};
+  if(e.into){  // 기존 탭(section id) 상단에 삽입 — 요약 시각 자료 먼저, 상세는 아래
+    const s=document.getElementById(e.into); if(!s) return;
+    f.classList.add('inline'); s.prepend(f);
+    if(!s.hidden) load();
+    else{const b=document.querySelector('.tabs button[data-tab='+e.into+']'); b&&b.addEventListener('click',load);}
+    return;
+  }
   const nav=document.querySelector('.tabs');
   const b=document.createElement('button');
   b.setAttribute('role','tab');b.setAttribute('aria-selected','false');b.dataset.tab='em-'+e.id;
   const n=document.createElement('span');n.className='n';n.textContent=nav.children.length+1;
   b.append(n,e.label);nav.append(b);
   const s=document.createElement('section');s.id='em-'+e.id;s.hidden=true;
-  const f=document.createElement('iframe');f.className='embed-frame';f.title=e.label;
   s.append(f);document.querySelector('main').append(s);
-  let loaded=false;  // 무거운 내장 문서는 첫 방문 때만 파싱
-  b.addEventListener('click',()=>{if(!loaded){f.srcdoc=e.html;loaded=true}});
+  b.addEventListener('click',load);
 });
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
