@@ -237,7 +237,9 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .nav a.on.g-act .n { background: var(--red); }
 .nav a.on.g-admin .n { background: var(--orange); }
 /* 기류 유선 타일(소프트) — 타이틀 밴드 배경: 블러 리본 3겹이 공간에 번지고 얇은 유선 2겹이 결을 잡음 */
-:root { --wave-soft: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='64'%3E%3Cdefs%3E%3Cfilter id='b' x='-20%25' y='-80%25' width='140%25' height='260%25'%3E%3CfeGaussianBlur stdDeviation='5'/%3E%3C/filter%3E%3C/defs%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cpath d='M0 34C120 16 120 50 240 34C360 16 360 50 480 34' stroke='rgba(147,197,253,0.22)' stroke-width='26' filter='url(%23b)'/%3E%3Cpath d='M0 38C120 12 120 58 240 38C360 12 360 58 480 38' stroke='rgba(56,189,248,0.28)' stroke-width='15' filter='url(%23b)'/%3E%3Cpath d='M0 27C120 47 120 8 240 27C360 47 360 8 480 27' stroke='rgba(96,165,250,0.24)' stroke-width='11' filter='url(%23b)'/%3E%3Cpath d='M0 33C120 15 120 51 240 33C360 15 360 51 480 33' stroke='rgba(165,220,252,0.5)' stroke-width='1.3'/%3E%3Cpath d='M0 28C120 44 120 10 240 28C360 44 360 10 480 28' stroke='rgba(96,165,250,0.35)' stroke-width='1'/%3E%3C/g%3E%3C/svg%3E"); }
+:root { --wave-soft: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='64'%3E%3Cdefs%3E%3Cfilter id='b' x='-20%25' y='-80%25' width='140%25' height='260%25'%3E%3CfeGaussianBlur stdDeviation='6'/%3E%3C/filter%3E%3C/defs%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cpath d='M0 34C120 8 120 58 240 34C360 8 360 58 480 34' stroke='rgba(147,197,253,0.24)' stroke-width='34' filter='url(%23b)'/%3E%3Cpath d='M0 40C120 8 120 62 240 40C360 8 360 62 480 40' stroke='rgba(56,189,248,0.3)' stroke-width='20' filter='url(%23b)'/%3E%3Cpath d='M0 26C120 52 120 4 240 26C360 52 360 4 480 26' stroke='rgba(96,165,250,0.26)' stroke-width='14' filter='url(%23b)'/%3E%3Cpath d='M0 33C120 9 120 55 240 33C360 9 360 55 480 33' stroke='rgba(165,220,252,0.5)' stroke-width='1.3'/%3E%3Cpath d='M0 27C120 47 120 7 240 27C360 47 360 7 480 27' stroke='rgba(96,165,250,0.35)' stroke-width='1'/%3E%3C/g%3E%3C/svg%3E");
+  /* 분출 부채꼴 — 서브탭 활성: 중앙 상단 분출점에서 앞(아래·양옆)으로 퍼지는 유선 9가닥 */
+  --fan: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='64'%3E%3Cdefs%3E%3Cfilter id='b' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeGaussianBlur stdDeviation='1.4'/%3E%3C/filter%3E%3C/defs%3E%3Cg fill='none' stroke='white' stroke-linecap='round' filter='url(%23b)'%3E%3Cpath d='M120 10C112 34 70 46 10 52' stroke-opacity='0.4' stroke-width='2.6'/%3E%3Cpath d='M120 10C128 34 170 46 230 52' stroke-opacity='0.4' stroke-width='2.6'/%3E%3Cpath d='M120 10C113 32 80 42 34 46' stroke-opacity='0.55' stroke-width='2.6'/%3E%3Cpath d='M120 10C127 32 160 42 206 46' stroke-opacity='0.55' stroke-width='2.6'/%3E%3Cpath d='M120 10C115 30 92 38 58 41' stroke-opacity='0.7' stroke-width='2.6'/%3E%3Cpath d='M120 10C125 30 148 38 182 41' stroke-opacity='0.7' stroke-width='2.6'/%3E%3Cpath d='M120 10C117 28 103 34 80 36' stroke-opacity='0.85' stroke-width='2.6'/%3E%3Cpath d='M120 10C123 28 137 34 160 36' stroke-opacity='0.85' stroke-width='2.6'/%3E%3Cpath d='M120 10C120 24 120 32 120 42' stroke-opacity='0.95' stroke-width='3'/%3E%3C/g%3E%3C/svg%3E"); }
 
 /* 기류 유선 타일 — 서브탭 스윕 마스크용(크리스프), 480px 주기 무이음 사인 곡선 4겹 */
 :root { --wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='60'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cpath d='M0 32C120 12 120 52 240 32C360 12 360 52 480 32' stroke='rgba(125,200,247,0.55)' stroke-width='1.4'/%3E%3Cpath d='M0 25C120 43 120 7 240 25C360 43 360 7 480 25' stroke='rgba(96,165,250,0.4)' stroke-width='1.1'/%3E%3Cpath d='M0 37C120 21 120 51 240 37C360 21 360 51 480 37' stroke='rgba(56,189,248,0.35)' stroke-width='2.2'/%3E%3Cpath d='M0 30C120 14 120 48 240 30C360 14 360 48 480 30' stroke='rgba(147,197,253,0.18)' stroke-width='5'/%3E%3C/g%3E%3C/svg%3E"); }
@@ -251,12 +253,13 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .subtabs a svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2;
   stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
 .subtabs a.on { background: var(--panel); border-color: var(--c, var(--cyan)); color: var(--ink); }
-/* 활성 스윕 = 유선(--wave)을 타고 지나가는 바람 — 마스크 미지원 브라우저는 밋밋한 스윕으로 폴백 */
-.subtabs a.on::after { content: ""; position: absolute; top: 0; bottom: 0; width: 58%; left: -70%;
-  background: linear-gradient(105deg, transparent, color-mix(in srgb, var(--c, var(--cyan)) 55%, transparent), transparent);
-  -webkit-mask: var(--wave) 0 50% / 240px 100% repeat; mask: var(--wave) 0 50% / 240px 100% repeat;
-  animation: subtab-sweep 2.8s linear infinite; pointer-events: none; }
-@keyframes subtab-sweep { from { left: -70%; } to { left: 115%; } }
+/* 활성 = 중앙 분출점에서 앞으로 퍼져 나오는 기류(--fan) — 커지며 옅어지는 호흡 */
+.subtabs a.on::after { content: ""; position: absolute; inset: 0;
+  background: radial-gradient(closest-side at 50% 30%, color-mix(in srgb, var(--c, var(--cyan)) 70%, transparent), color-mix(in srgb, var(--c, var(--cyan)) 30%, transparent) 75%, transparent);
+  -webkit-mask: var(--fan) 50% 62% / auto 170% no-repeat; mask: var(--fan) 50% 62% / auto 170% no-repeat;
+  transform-origin: 50% 25%; animation: air-out 2.6s ease-out infinite; pointer-events: none; }
+@keyframes air-out { 0% { transform: scale(.5); opacity: 0; }
+  30% { opacity: .9; } 100% { transform: scale(1.28); opacity: 0; } }
 .subtabs a:hover:not(.on) { color: var(--ink); border-color: var(--dim); }
 
 .radar-card[data-go] { cursor: pointer; }
