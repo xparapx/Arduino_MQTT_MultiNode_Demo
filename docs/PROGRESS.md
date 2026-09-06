@@ -183,3 +183,7 @@ turbo 단일맵 → plotly 기준 변수별 시퀀셜 맵으로 교체(값 크�
 컬러맵 체계(322c925~): CO₂ YlOrRd·VOC matter 전면 적용(게이지/스트립/히트맵/초과율/단일색=중앙값), 보조 변수 plotly 4색(#636EFA/#AB63FA/#00CC96/#19D3F3), boxen 폭 -40%·모바일 2행4열·높이 -20%, 초과율 막대 = 진행 그라디언트+외곽선(두께 16), 히트맵 초과 셀 점멸, 게이지·스트립 불투명도 0.75 + 트레이스 2.2px 패널 케이싱 + 임계 점선 패널색, --chart-ink(라이트 차콜).
 상태·레이아웃: 장치 ON=green 트랙(폭 8)·OFF=연회색(적색안은 철회), 구간 칩(.zc) 제거(정보는 수치 툴팁), 수치 = 카드 상단 우측. 헤더 정리: 데스크톱 메인 h1·meta 전체 삭제(사이드바 브랜드가 제목), 모바일 Home만 "교실 공기질 모니터" 중앙 밴드. 모바일: 라이트 디폴트, 테마 플로팅 버튼, 서브탭 13px 볼드 동일(활성=스윕만), 요일 히트맵 슬라이더 제거(컴팩트 지오메트리).
 **타이포: IBM Plex Mono 전면 폐기 — 전 UI IBM Plex Sans KR 단일**(메타·수치·칩 포함, app.css 17곳).
+
+## project-map 스킬 도입 + 프로젝트 지도 생성 (2026-09-06)
+
+`project-map.skill`을 프로젝트(.claude/skills/)와 사용자 전역(~/.claude/skills/) 두 곳에 설치(전 세션 사용 가능). scan 초안 위에 수작업 작성으로 `docs/project-map.json`(정본, 갱신 시 이 파일 수정) → `docs/project-map.html`(43노드·43간선·6열·5레인·DB 4테이블) 생성. 발견: ① scan이 nodes.json writer를 3곳으로 오탐 — 실제는 코드가 쓰지 않는 수동 관리 파일(라벨 페어링 정본) ② sensor_data.db writer 2개는 테이블 소유권 분리로 의도됨 ③ Streamlit 구판 잔재(dashboard.py·pages/·plots·en/·hub_cloud.py·정지된 dashboard.service)는 어디서도 실행 안 됨 — 정리 [ASK] 유지.
