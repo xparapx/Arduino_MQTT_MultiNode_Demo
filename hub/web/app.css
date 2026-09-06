@@ -234,6 +234,7 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .nav a .n svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.2;
   stroke-linecap: round; stroke-linejoin: round; }
 .nav a.on.g-dx .n { background: var(--purple); }
+.nav a.on.g-act .n { background: var(--red); }
 .nav a.on.g-admin .n { background: var(--orange); }
 .subtabs { position: sticky; top: 0; z-index: 30; display: flex; gap: 8px; margin: 0 0 6px;
   padding: 8px 0; background: var(--bg); }
@@ -269,22 +270,23 @@ svg.chart .hb-over { animation: hb-blink 2.2s ease-in-out infinite; }
   html, body { font-size: 13px; }
   .app { grid-template-columns: 1fr; }
   .side { display: none; }              /* 상태 요약은 Home · 시스템 상세는 관리 화면에서 */
-  main { padding: 12px 12px calc(70px + env(safe-area-inset-bottom)); max-width: none; }
+  main { padding: 12px 12px calc(76px + env(safe-area-inset-bottom)); max-width: none; }
   h1 { font-size: 17px; } .sub { font-size: 12px; }
   /* 모바일 Home: 좌우 꽉 찬 상단 밴드 안에 중앙 정렬 제목 (메타 없음) */
   :root[data-screen="home"] main > h1 { display: block; text-align: center;
     margin: -12px -12px 12px; padding: 13px 12px; font-size: 16px;
     background: var(--panel); border-bottom: 1px solid var(--grid); }
   .dock { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-    height: calc(56px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
+    height: calc(62px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
     background: var(--side); border-top: 1px solid var(--grid); }
   .dock a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 3px; color: var(--dim); text-decoration: none; -webkit-tap-highlight-color: transparent; }
-  .dock a svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.8;
+  .dock a svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 1.8;
     stroke-linecap: round; stroke-linejoin: round; }
-  .dock a span { font-size: 11px; font-weight: 700; }
+  .dock a span { font-size: 13px; font-weight: 700; }   /* 상단 서브탭과 동일 크기 */
   .dock a.on { color: var(--cyan); }
   .dock a.on.g-dx { color: var(--purple); }
+  .dock a.on.g-act { color: var(--red); }
   .dock a.on.g-admin { color: var(--orange); }
   .sec { margin: 18px 0 10px; flex-wrap: wrap; gap: 8px; }
   .sec .chip { padding: 6px 12px 6px 10px; gap: 8px; width: 100%; } .sec .chip svg { width: 16px; height: 16px; } .sec h2 { font-size: 12px; }

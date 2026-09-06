@@ -161,9 +161,9 @@
   const renderScope = (el) => renderInto(el, [secA]);
   const renderHistory = (el) => renderInto(el, [secI]);
 
-  function screen(name, label, icon, color, render, admin) {
+  function screen(name, label, icon, color, render, admin, group = "dx") {
     AQ.router.register({
-      name, group: "dx", label, icon, color, admin: !!admin,
+      name, group, label, icon, color, admin: !!admin,
       activate() { this.un = store.sub("/api/analysis", 60000, (d) => { A = d; render(this.el); }); },
       deactivate() { if (this.un) { this.un(); this.un = null; } },
       repaint() { render(this.el); },
@@ -171,7 +171,8 @@
   }
   screen("dx-regime", "레짐·탐색", "plane", "cyan", renderRegime);
   screen("dx-band", "밴드·전이", "band", "orange", renderBand);
-  screen("dx-action", "제어·경보", "action", "red", renderAction);
+  // 제어·경보는 1차 내비(하단 dock)의 독립 화면 — 해시는 #dx-action 그대로 유지
+  screen("dx-action", "제어·경보", "action", "red", renderAction, false, "act");
   screen("dx-scope", "유효범위", "shield", "green", renderScope, true);
   screen("dx-history", "모델이력", "history", "purple", renderHistory, true);
 })();

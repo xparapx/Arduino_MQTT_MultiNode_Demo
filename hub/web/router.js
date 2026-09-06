@@ -11,6 +11,7 @@ AQ.router = (() => {
     home: { label: "Home", short: "Home", icon: "home", cls: "g-home" },
     mon: { label: "모니터링", short: "모니터", icon: "monitor", cls: "g-mon" },
     dx: { label: "진단 & 추론", short: "진단", icon: "diagnose", cls: "g-dx" },
+    act: { label: "제어 & 경보", short: "제어·경보", icon: "alertgear", cls: "g-act" },
     admin: { label: "관리", short: "관리", icon: "gear", cls: "g-admin", admin: true },
   };
   const reg = [], byName = {};

@@ -187,3 +187,7 @@ turbo 단일맵 → plotly 기준 변수별 시퀀셜 맵으로 교체(값 크�
 ## project-map 스킬 도입 + 프로젝트 지도 생성 (2026-09-06)
 
 `project-map.skill`을 프로젝트(.claude/skills/)와 사용자 전역(~/.claude/skills/) 두 곳에 설치(전 세션 사용 가능). scan 초안 위에 수작업 작성으로 `docs/project-map.json`(정본, 갱신 시 이 파일 수정) → `docs/project-map.html`(43노드·43간선·6열·5레인·DB 4테이블) 생성. 발견: ① scan이 nodes.json writer를 3곳으로 오탐 — 실제는 코드가 쓰지 않는 수동 관리 파일(라벨 페어링 정본) ② sensor_data.db writer 2개는 테이블 소유권 분리로 의도됨 ③ Streamlit 구판 잔재(dashboard.py·pages/·plots·en/·hub_cloud.py·정지된 dashboard.service)는 어디서도 실행 안 됨 — 정리 [ASK] 유지.
+
+## 1차 내비 개편 — 제어·경보 독립 화면 + dock 4항목 + 아이콘 재작성 (2026-09-06)
+
+진단 그룹에서 `dx-action`(제어·경보)을 1차 내비 독립 그룹 `act`로 분리(해시 `#dx-action` 불변 — 북마크 유지). 공용 기준 하단 dock = Home · 모니터 · 진단 · 제어·경보 4개(관리자 +관리), 진단 서브탭 = 레짐·탐색/밴드·전이 2개(관리자 +유효범위/모델이력). 아이콘: 모니터 = 화면 안 막대+스파크라인, 제어·경보 = 톱니+경고 삼각형(신규 alertgear). dock 라벨 11→13px(서브탭과 동일)·아이콘 24→26px·높이 56→62px. 활성색: act=red(dock·사이드바 배지). 10 passed, webtest 모바일 375px(공용/관리 게이팅)·1280px 사이드바 확인. 정적 파일만 — 재시작 불요.
