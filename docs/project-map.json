@@ -771,13 +771,15 @@
    "id": "arch",
    "label": "아키텍처 뷰 (archify)",
    "file": "project-map-arch.html",
-   "into": "ov"
+   "into": "ov",
+   "css": ".header{visibility:hidden}"
   },
   {
    "id": "flow",
    "label": "파이프라인 뷰 (archify)",
    "file": "project-map-flow.html",
-   "into": "map"
+   "into": "map",
+   "css": ".header{visibility:hidden}"
   }
  ]
 }

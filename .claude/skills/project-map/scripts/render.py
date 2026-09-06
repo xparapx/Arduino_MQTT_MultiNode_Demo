@@ -19,6 +19,14 @@ def main(src, dst):
         p = (src_dir / e.pop("file")).resolve()
         if p.exists(): e["html"] = p.read_text(encoding="utf-8")
         else: print(f"경고: embed 파일 없음 {p}", file=sys.stderr); e["html"] = ""
+        # 내장 시에만 적용할 조정 — hide: 요소 제거(display:none), css: 자유 CSS
+        # (레이아웃 자리를 지켜야 하면 hide 대신 css 로 visibility:hidden 을 쓴다)
+        extra = ""
+        if e.get("hide"): extra += f'{e.pop("hide")}{{display:none!important}}'
+        if e.get("css"): extra += e.pop("css")
+        if extra and e["html"]:
+            css = f"<style>{extra}</style>"
+            e["html"] = e["html"].replace("</body>", css + "</body>", 1) if "</body>" in e["html"] else e["html"] + css
     tpl = (HERE.parent / "assets" / "template.html").read_text(encoding="utf-8")
     payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     html = tpl.replace("/*__DATA__*/{}", payload).replace("__TITLE__", data.get("title", "프로젝트 지도"))

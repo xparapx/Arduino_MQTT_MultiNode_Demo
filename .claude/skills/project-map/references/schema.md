@@ -26,6 +26,9 @@
                                 // 본문에 흡수되어 산출물은 여전히 오프라인 파일 하나다.
                                 // into: 기존 탭 section id("ov"/"map"/"db"/"gloss") 상단에 삽입(권장).
                                 // into 생략 시 별도 탭으로 추가된다.
+                                // hide: CSS 셀렉터 — 내장본에서만 display:none (예: 중복 타이틀).
+                                // css: 자유 CSS — 자리를 지켜야 하면 ".header{visibility:hidden}" 처럼
+                                //      hide 대신 이걸 쓴다(archify 는 툴바가 겹치므로 css 권장).
 }
 ```
 
