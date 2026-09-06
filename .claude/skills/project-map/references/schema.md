@@ -17,9 +17,13 @@
  "rels": [ ["dbid.table", "dbid.table", "조인 키 라벨"] ],
  "glossary": true,             // false 면 탭 숨김
  "glossary_label": "핵심 기술 · 용어",  // 탭 이름 (기본 "핵심 기술 · 용어")
- "glossary_html": "<h2>…</h2>"  // 탭 본문 — 프로젝트 핵심 구현 기술(왜 이 선택인지) + 도메인 용어.
+ "glossary_html": "<h2>…</h2>",  // 탭 본문 — 프로젝트 핵심 구현 기술(왜 이 선택인지) + 도메인 용어.
                                 // 비우면 일반 API/엔드포인트 해설이 기본으로 나온다.
                                 // 쓸 수 있는 클래스: .flow(카드 흐름, .hl 강조) · table.cols · .note
+ "embeds": [                    // 선택 — 외부 단일 HTML(예: archify 다이어그램)을 추가 탭으로 내장
+   { "id": "arch", "label": "아키텍처 뷰", "file": "project-map-arch.html" }
+ ]                              // file 은 이 JSON 기준 상대경로. render 시 iframe srcdoc 으로
+                                // 본문에 흡수되어 산출물은 여전히 오프라인 파일 하나다.
 }
 ```
 

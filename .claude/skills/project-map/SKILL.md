@@ -40,12 +40,35 @@ python scripts/render.py data.json out.html
 ```
 render 는 없는 노드를 가리키는 edge/rel 을 경고로 알려준다. 가능하면 헤드리스 브라우저로 캡처해 열이 잘리지 않는지, 노드가 겹치지 않는지 본다(노드 45개·열 6개 기준으로 맞춰져 있다. 노드가 훨씬 많으면 열을 늘리거나 서브시스템별로 JSON 을 나눈다).
 
+### 3b. archify 다이어그램 — 설계 맵·연결 흐름 고품질판
+전역 스킬 **archify** 가 설치되어 있으면(`node ~/.claude/skills/archify/bin/archify.mjs doctor` 로 확인) 설계 맵(큰 그림)과 연결 흐름 플로우차트는 archify 로도 만든다. 미설치면 이 단계를 건너뛰고 기존 경로만 쓴다.
+
+- **설계 맵(큰 그림)** → archify `architecture` 타입. `overview.lanes` 를 경계(boundary)로, 실행 주체·핵심 모듈·DB 를 **12개 이하 주요 노드**로 집약한다.
+- **연결 흐름 플로우차트** → 데이터 파이프라인 성격이면 `dataflow`, 절차·게이트 성격이면 `workflow`(신규는 schema v2).
+- project-map JSON 의 nodes/edges/dbs 는 **사실 근거로만** 쓴다. archify 스펙은 archify SKILL.md 의 fast authoring path 를 따라 새로 작성한다(타입별 schema + 예시 1개 읽기 → 후보 작성 → validate → deliver). 45개 노드를 기계적으로 옮기지 말 것 — showcase 검증에 실패하고, 상세도는 어차피 out.html 담당이다.
+- 명령:
+  ```
+  node ~/.claude/skills/archify/bin/archify.mjs validate <type> <spec>.json --quality showcase --json
+  node ~/.claude/skills/archify/bin/archify.mjs deliver <type> <spec>.json <out>.html --quality showcase --json
+  ```
+  showcase 통과(아티팩트 체크 9개, composition 오류·경고 0) 후 deliver 가 최종 승인. 실패 시 진단된 subject 만 고쳐 재시도한다.
+- 산출물은 데이터 JSON 옆에 둔다: `docs/project-map-arch.html` + `docs/project-map-arch.json`(설계 맵), `docs/project-map-flow.html` + `docs/project-map-flow.json`(연결 흐름).
+- **역할 분담**: archify 판 = 발표·문서용 한눈 요약(정적·기하 검증). 노드 클릭 상세·DB 스키마·용어 탭은 여전히 `render.py` 의 out.html 이 담당한다. 둘 다 전달한다.
+- **단일 파일 번들**: 사용자가 파일 하나로 받길 원하면 데이터 JSON 에 `embeds` 를 선언한다 — archify HTML 이 out.html 의 추가 탭(iframe srcdoc, 첫 방문 시 lazy 로드)으로 내장되어 오프라인 단일 파일이 유지된다:
+  ```json
+  "embeds": [
+    { "id": "arch", "label": "아키텍처 뷰", "file": "project-map-arch.html" },
+    { "id": "flow", "label": "파이프라인 뷰", "file": "project-map-flow.html" }
+  ]
+  ```
+  `file` 은 데이터 JSON 기준 상대경로. archify 산출물을 갱신했으면 render 를 다시 돌려야 내장본도 갱신된다.
+
 ### 4. 전달
-- `out.html` 을 사용자에게 준다. 저장소가 있으면 `docs/` 에 넣고, 데이터 JSON 도 옆에 두어(`docs/project-map.json`) 다음에 갱신할 수 있게 한다.
+- `out.html` 을 사용자에게 준다. 저장소가 있으면 `docs/` 에 넣고, 데이터 JSON 도 옆에 두어(`docs/project-map.json`) 다음에 갱신할 수 있게 한다. archify 산출물(3b)이 있으면 함께 전달한다.
 - 만들면서 발견한 구조적 문제(writer 중복, 어디서도 부르지 않는 스크립트, 문서와 코드 불일치)를 짧게 보고한다. 이것이 이 지도의 진짜 가치다.
 
 ## 갱신할 때
-기존 `project-map.json` 이 있으면 새로 만들지 말고 그 파일을 고친다. 노드 id 를 유지해야 사용자가 익숙한 배치가 흔들리지 않는다.
+기존 `project-map.json` 이 있으면 새로 만들지 말고 그 파일을 고친다. 노드 id 를 유지해야 사용자가 익숙한 배치가 흔들리지 않는다. archify 스펙(`project-map-arch.json` 등)도 같은 원칙 — 기존 스펙의 노드 id 를 유지한 채 고치고 validate→deliver 를 다시 돈다.
 
 ## 파일
 - `scripts/scan.py` — 저장소 → 초안 JSON
