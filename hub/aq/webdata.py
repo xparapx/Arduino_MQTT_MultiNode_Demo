@@ -343,8 +343,9 @@ class WebData:
                                "last_kst": v["recv_time"]})
             vnodes.sort(key=lambda x: self._sort_key(x["room"]))
             vn = next((v for v in latest["node"] if labels.get(v, v) == lbl), None)
-            if vn is None:
-                return {"available": False, "reason": "no vision node", "label": lbl}
+            if vn is None:      # chips still list every vision node for the header row
+                return {"available": False, "reason": "no vision node", "label": lbl,
+                        "nodes": vnodes}
             row = latest[latest["node"] == vn].iloc[0]
             hist = pd.read_sql_query(
                 "SELECT datetime(ts,'+9 hours') AS recv_time, occ, occ_max, n FROM occupancy "

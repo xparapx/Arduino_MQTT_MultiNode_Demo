@@ -92,7 +92,7 @@
     const thr = { co2: 1000, voc: 200 };
     const charts = Object.entries(d.series).map(([k, vals]) => { const m = d.metrics[k]; return `<div><div class="tt" style="${m.target ? `color:${cc(k)}` : ""}">${esc(m.label)} (${esc(m.unit)})${m.target ? " ★" : ""}</div>${CH.line(d.times, vals, cc(k), { threshold: thr[k], unit: m.unit, target: m.target, glow: m.target })}</div>`; }).join("");
     el.innerHTML = secMeta("재실 탐지 포함 · 60 s 갱신 · 선택 상태 유지 · 최근 60 버킷 = 5시간")
-      + `<div class="panel"><div class="row" style="margin-bottom:10px"><span class="tt">노드 선택</span><select id="node-sel">${opts}</select><span class="tt">최근 ${d.times.length} 버킷</span></div>`
+      + `<div class="panel"><div class="row" style="margin-bottom:10px"><span class="tt">노드 선택</span><select id="node-sel">${opts}</select><span class="tt">최근 ${d.times.length} 버킷</span>${visionChips((d.occupancy || {}).nodes)}</div>`
       + (d.times.length ? `<div class="grid g6">${charts}</div>` : '<div class="empty">이 노드의 행이 없습니다</div>')
       + `<div style="margin-top:12px">${visionPanel(d.occupancy, d.label)}</div>`
       + '<p class="note">같은 교실(라벨) 비전 노드의 재실 탐지 — 깜빡이는 조준선은 최근 버킷 최대 인원 시점의 위치, 수치는 5분 버킷 통계(평균/중앙값/최대). 영상은 전송·저장되지 않습니다(좌표만 수집).</p></div>';
@@ -110,10 +110,15 @@
     }
     const cross = o.cents.length ? o.cents.map((c, i) => `<div class="ch" style="left:${(c[0] / o.w * 100).toFixed(1)}%;top:${(c[1] / o.w * 100).toFixed(1)}%;animation-delay:${(i * 0.15).toFixed(2)}s"><b></b></div>`).join("") : '<div class="none">버킷 내 탐지 없음</div>';
     const chips = `<div class="chips"><div class="c2 acc"><div class="v">${num(o.occ, 1)}</div><div class="l">5분 평균</div></div><div class="c2"><div class="v">${num(o.occ_med)}</div><div class="l">중앙값</div></div><div class="c2"><div class="v">${num(o.occ_max)}</div><div class="l">최대</div></div><div class="c2"><div class="v">${num(o.n)}</div><div class="l">샘플 n</div></div></div>`;
-    const vns = o.nodes || [];
-    const vnodes = vns.length ? `<div class="tt" style="margin-bottom:6px">비전 노드 상태 (${vns.filter((v) => v.on).length}/${vns.length} ON)</div><div class="vnodes">${vns.map((v) => `<span class="vnc${v.on ? " on" : ""}" data-tip="${esc(v.node)} · 마지막 ${esc((v.last_kst || "—").slice(5, 16))} KST">${esc(v.room)}<i></i>${v.on ? "ON" : "OFF"}</span>`).join("")}</div>` : "";
     return `<div class="vp"><div class="hd"><span>재실 탐지 — ${esc(o.label)} <span style="color:var(--dim)">(${esc(o.vision_node)})</span></span><span class="live" style="color:${o.stale ? "var(--red)" : "var(--green)"}">${o.stale ? `지연 · 마지막 ${esc(o.recv_time.slice(5, 16))}` : "LIVE"}</span></div>`
-      + `<div class="maprow"><div class="map">${cross}<span class="tag">CAMERA VIEW 4:3 · coords /${o.w}</span></div><div class="side2">${chips}${vnodes}<div class="tt" style="margin-bottom:6px">최근 버킷 추이 (평균 인원)</div><div class="bars">${CH.occBars(o.hist)}</div><div class="ft">조준선 = 최대 인원(${num(o.occ_max)}) 시점 위치 (4:3 프레임 상대좌표) · 버킷 ${esc(o.recv_time)} KST<br>영상 비전송 · 좌표만 수집 (온디바이스 추론)</div></div></div></div>`;
+      + `<div class="maprow"><div class="map">${cross}<span class="tag">CAMERA VIEW 4:3 · coords /${o.w}</span></div><div class="side2">${chips}<div class="tt" style="margin-bottom:6px">최근 버킷 추이 (평균 인원)</div><div class="bars">${CH.occBars(o.hist)}</div><div class="ft">조준선 = 최대 인원(${num(o.occ_max)}) 시점 위치 (4:3 프레임 상대좌표) · 버킷 ${esc(o.recv_time)} KST<br>영상 비전송 · 좌표만 수집 (온디바이스 추론)</div></div></div></div>`;
+  }
+  // vision node ON/OFF chips -- right end of the node-select row, every vision node
+  // regardless of which env node is selected (on = bucket within STALE_MIN)
+  function visionChips(vns) {
+    if (!vns || !vns.length) return "";
+    const on = vns.filter((v) => v.on).length;
+    return `<div class="vnodes"><span class="tt">비전 노드 ${on}/${vns.length} ON</span>${vns.map((v) => `<span class="vnc${v.on ? " on" : ""}" data-tip="${esc(v.node)} · 마지막 ${esc((v.last_kst || "—").slice(5, 16))} KST">${esc(v.room)}<i></i>${v.on ? "ON" : "OFF"}</span>`).join("")}</div>`;
   }
 
   // ---- 최근기록 (admin) --------------------------------------------------------------
