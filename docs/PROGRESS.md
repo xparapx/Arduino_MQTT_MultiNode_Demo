@@ -195,3 +195,11 @@ turbo 단일맵 → plotly 기준 변수별 시퀀셜 맵으로 교체(값 크�
 ## Streamlit 구세대 스택 아카이브 — legacy/ 신설 (2026-09-06)
 
 운영에서 실행되지 않는 구판을 `legacy/`로 이동(git mv, 히스토리 보존): dashboard.py·pages/2_diagnosis.py·aq/{plots,ui_common,analysis_view}.py·scripts/{perf_probe,plot_check}.py·dashboard.service·en/(로컬 브로커 v1)·hub_cloud.py(구 토픽 초판). manual.html 학습판 서사가 참조하므로 삭제 대신 아카이브(legacy/README.md에 경위·대체물·실행법 기록). 의존성 정리: **streamlit·streamlit-autorefresh·plotly 제거** — uv.lock에서 40여 패키지 제거(보드 .venv 경량화). 부수 정리: aq/__init__ __all__ 정돈, deploy.sh dash 분기 제거, systemd/README 표를 현행(web·web_public)으로, Streamlit 전용 테스트 2종 + ui_common 상수 결합 테스트 삭제. 113 passed. 남은 1회 작업(sudo, 사용자): 보드 dashboard.service 유닛 파일 제거 — legacy/README.md 참조.
+
+## 2026-09-10 — 비전 v3 현장 진단 · 환경 유령 노드 교정 (main 직접 커밋)
+
+비전 노드(v3, `wi_cne_class_S_2.4G`) 하루 추적: CLASS_01·03·05가 "부팅 → 5분 뒤 1버킷 발행 → 사망 → 재부팅"을 각 6~13회 반복(사망 간격 20분의 배수 = 발행 3회 실패 후 자가 리셋 주기). 카메라 n=28~30 정상, 부팅 직후 WiFi·MQTT 정상. 배제: NTP(mbed Nicla/Portenta 코어 `WiFi.getTime()`은 `return 0` 스텁 — 비전 노드 전 이력 정렬 0.0%, 원래부터 fallback 발행), 자격증명(9/9 원인이던 MQTT_PASS 대소문자는 수정됨), TLS 지연(학교망 실측 1초대), `endMessage()` 판정. 유력 가설: `_2.4G`(BSSID 6개 로밍, ch 사용률 65%)에서 Murata 1DX/mbed WHD가 5~10분 뒤 연결을 잃고 재접속 실패 — v2가 며칠 버틴 숨김 `wi_cne_class_S`와의 A/B 테스트로 판별 예정. CLASS_02·08 비전, CLASS_04 환경(`8C8B35`, 9/9 09:20 UTC~)은 무발행 — 전원 확인 필요.
+
+환경 노드: 8대 중 7대 R4 v3(`t` 필드)로 정상. 발견 2건 → v3.1 예정: ① `connectWiFi()` 직후 `makeNodeId()` — WiFi 미연결 시 쓰레기 MAC으로 `node_000500` 생성(CLASS_08 재부팅 시 2행) → MAC 유효할 때까지 재시도; ② 부팅 워밍업 중 `"nox":nan`(voc/nox 미가드) → 허브 `parse failed`(위치 산술로 확정, 24h 7건) → NaN은 `null`로.
+
+**불변식 예외(사용자 승인 "B 진행")**: `readings` id 137442·137449의 node를 `node_000500` → `node_B80DC8`로 교정(2행, 백업 출력 후 UPDATE, 검증 distinct 8). 사용자가 직접 실행(자동 모드 분류기가 보드 DB 쓰기 차단). 이후 `/api/status` env_total 8 확인.
