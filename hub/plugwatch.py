@@ -114,25 +114,27 @@ def write_state():
     os.replace(tmp, STATE_PATH)
 
 
-def run_command(client):
-    """Execute + delete plug_cmd.json (webapp writes it in manual mode only)."""
+def run_command(client) -> bool:
+    """Execute + delete plug_cmd.json (webapp writes it in manual mode only).
+    Returns True when a command was executed (caller boosts state writes)."""
     if not os.path.isfile(CMD_PATH):
-        return
+        return False
     try:
         with open(CMD_PATH, encoding="utf-8") as f:
             cmd = json.load(f)
     except (OSError, ValueError) as e:
         print(f"cmd parse failed: {e}")
         os.remove(CMD_PATH)
-        return
+        return False
     os.remove(CMD_PATH)
     if cmd.get("action") == "all":
         payload = "on" if cmd.get("on") else "off"
         for mac in MAC2LOC:
             client.publish(f"shellyplugsg3-{mac}/command/switch:0", payload, qos=1)
         print(f"command: ALL {payload.upper()} -> {len(MAC2LOC)} plugs")
-    else:
-        print(f"command ignored (unknown action): {cmd}")
+        return True
+    print(f"command ignored (unknown action): {cmd}")
+    return False
 
 
 def on_connect(client, userdata, flags, reason_code, properties):
@@ -183,11 +185,18 @@ client.connect(BROKER, PORT, keepalive=60)
 client.loop_start()
 
 print(f"plugwatch: {len(MAC2LOC)} plugs, poll {POLL_S}s, state -> {STATE_PATH}")
+# 명령 체크는 2초 주기(반응성), 상태 기록은 평시 15초 / 명령 직후 45초간 3초(SD 마모 억제)
 last_poll = 0.0
+last_write = 0.0
+boost_until = 0.0
 while True:
-    if time.monotonic() - last_poll >= POLL_S:
-        last_poll = time.monotonic()
+    now = time.monotonic()
+    if now - last_poll >= POLL_S:
+        last_poll = now
         poll(client)
-    run_command(client)
-    write_state()
-    time.sleep(WRITE_S)
+    if run_command(client):
+        boost_until = now + 45
+    if now - last_write >= (3 if now < boost_until else WRITE_S):
+        last_write = now
+        write_state()
+    time.sleep(2)

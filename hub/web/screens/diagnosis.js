@@ -178,6 +178,10 @@
       if (!r.ok) { AQ.toast(j.error || `실패 (${r.status})`); return; }
       if (P) P.mode = j.mode;
       AQ.toast(body.all ? `전체 ${body.all.toUpperCase()} 명령 전송 — 15초 내 반영` : `${j.mode === "auto" ? "자동" : "수동"} 제어로 전환`);
+      if (body.all) {                       // 명령 직후 60초간 5초 간격 부스트 (기본 폴링은 60 s)
+        let n = 0;
+        const t = setInterval(() => { store.refresh("/api/plugs"); if (++n >= 12) clearInterval(t); }, 5000);
+      }
     } catch (e) { AQ.toast(`요청 실패: ${e}`); }
   }
   function secCtl() {
