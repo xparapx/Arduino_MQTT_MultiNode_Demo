@@ -54,3 +54,11 @@ _phase0_backup/
 # pytest-cov
 .coverage
 docs/pitch/
+
+# plugwatch/control runtime files (board-side, next to hub code)
+hub/plug_state.json
+hub/plug_state.json.tmp
+hub/plug_cmd.json
+hub/plug_cmd.json.tmp
+hub/control.json
+hub/control.json.tmp
