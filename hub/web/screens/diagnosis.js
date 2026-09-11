@@ -91,7 +91,7 @@
     const val = v === null || v === undefined ? "<span>—</span>" : `<b data-tip="${esc(`${CH.ZONE_KO[z]} · 하한 ${c.off} · 상한 ${c.on}`)}">${c.var} ${num(Math.round(v))}</b>${c.unit ? `<span>${c.unit}</span>` : ""}`;
     const series = dev === "fan" ? b.co2 : b.voc;
     const body = series && series.length ? CH.bandGauge(c, v) + CH.bandStrip(c, b, dev, ko) : `<div class="empty">${b.hours || 24}h 수신 없음</div>`;
-    return `<div class="dev"><div class="lbl"><span class="nm">${ko} ${st}</span><span class="val">${val}</span></div>${body}</div>`;
+    return `<div class="dev"><div class="lbl"><span class="nm">${ko} ${st}${fanChip(dev, x)}</span><span class="val">${val}</span></div>${body}</div>`;
   }
 
   // ---- F: 예측 · 경보 ----------------------------------------------------------------
@@ -158,24 +158,54 @@
   }
   const renderBand = (el) => renderInto(el, [secC, secD]);
 
-  // ---- P: 플러그 전원 (Shelly) — /api/plugs, 판정(A)과 독립 -------------------------
+  // ---- 플러그 상태(P = /api/plugs) — 장치 칩·제어 배너, 판정(A)과 독립 ----------------
   let P = null;
-  function secP() {
-    const meta = P && P.updated_kst ? `plugwatch 60 s 갱신 · 마지막 ${esc(P.updated_kst)} KST` : "plugwatch 대기";
-    let h = sec("action", "green", "플러그 전원 — 공기청정기", meta);
-    if (!P) return h + '<div class="info">플러그 상태 불러오는 중…</div>';
-    if (P.watcher_stale) h += '<div class="info">plugwatch 서비스가 멈췄거나 아직 설치되지 않았습니다 — 아래 상태는 최신이 아닐 수 있습니다.</div>';
-    const card = (r) => {
-      const run = r.apower !== null && r.apower > 30;      // SS-3631PW 정격 52 W, 대기 < 5 W
-      const [col, big, sub] = !r.online ? ["var(--dim)", "미접속", r.last_kst ? `마지막 ${r.last_kst}` : "통전·설정 대기"]
-        : r.output ? ["var(--green)", run ? "ON · 가동" : "ON · 대기전력", `${num(r.apower, 1)} W`]
-        : ["var(--red)", "OFF", "릴레이 차단"];
-      return `<div class="metric" data-tip="${esc(r.mac)}${r.last_kst ? ` · 마지막 ${esc(r.last_kst)} KST` : ""}"><div class="l">${esc(r.room)}</div><div class="v" style="color:${col}">${big}</div><div class="d">${sub}</div></div>`;
-    };
-    return h + `<div class="panel"><div class="grid g4" style="gap:10px">${P.rooms.map(card).join("")}</div>`
-      + `<p class="note">${P.n_online}/${P.rooms.length} 접속 · 가동 판별 = 유효전력 &gt; 30 W (정격 52 W · 대기 &lt; 5 W) · 상태 수집만 하며 제어(발행)는 actuator 단계에서.</p></div>`;
+  AQ.plugState = () => P;                       // monitor/energy 화면과 공유 (store가 중복 fetch 방지)
+  function fanChip(dev, x) {
+    // 판정 칩 옆의 "실물" 칩: 플러그가 보고하는 물리 상태 (스핀 = 실제 가동)
+    if (!P || P.watcher_stale) return "";
+    const room = x.label, d = (P.rooms.find((r) => r.room === room) || {})[dev];
+    if (!d || !d.online) return "";
+    const cls = d.running ? "run" : d.output ? "" : "cut";
+    const txt = d.running ? `${num(d.apower, 1)}W` : d.output ? "대기" : "차단";
+    const tip = `플러그 실측 — ${d.output ? (d.running ? "가동중" : "통전·대기전력") : "릴레이 차단"} · ${num(d.apower, 1)} W`;
+    return ` <span class="fanchip ${cls}" data-tip="${esc(tip)}"><svg viewBox="0 0 24 24">${AQ.icons.fan}</svg>${txt}</span>`;
   }
-  const renderAction = (el) => { if (!A) return; el.innerHTML = secP() + (A.empty ? EMPTY : [secE, secF].map((f) => f()).join("")); };
+  async function postControl(body) {
+    try {
+      const r = await fetch("/api/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const j = await r.json();
+      if (!r.ok) { AQ.toast(j.error || `실패 (${r.status})`); return; }
+      if (P) P.mode = j.mode;
+      AQ.toast(body.all ? `전체 ${body.all.toUpperCase()} 명령 전송 — 15초 내 반영` : `${j.mode === "auto" ? "자동" : "수동"} 제어로 전환`);
+    } catch (e) { AQ.toast(`요청 실패: ${e}`); }
+  }
+  function secCtl() {
+    if (AQ.mode.public || !P) return "";
+    const manual = P.mode === "manual";
+    const n = `${P.n_online}/${P.n_plugs} 플러그 접속 · 가동 ${P.n_running}`;
+    return `<div class="panel ctlbar" style="margin-bottom:12px"><div class="modes" role="group">`
+      + `<button class="auto${manual ? "" : " on"}" data-ctl-mode="auto">● 자동 제어</button>`
+      + `<button class="manual${manual ? " on" : ""}" data-ctl-mode="manual">✋ 수동 제어</button></div>`
+      + (manual ? `<button class="btn" data-ctl-all="on">전체 ON</button><button class="btn danger" data-ctl-all="off">전체 OFF</button>` : "")
+      + `<span class="tt" style="margin-left:auto">${n}${P.watcher_stale ? " · <span style=\"color:var(--orange)\">plugwatch 정지</span>" : ""}</span></div>`;
+  }
+  function wireCtl(el, rerender) {
+    el.querySelectorAll("[data-ctl-mode]").forEach((b) => b.addEventListener("click", async () => {
+      if (!P || b.dataset.ctlMode === P.mode) return;
+      await postControl({ mode: b.dataset.ctlMode });
+      rerender();
+    }));
+    el.querySelectorAll("[data-ctl-all]").forEach((b) => b.addEventListener("click", () => {
+      const on = b.dataset.ctlAll === "on";
+      if (confirm(`정말 전체 플러그를 ${on ? "ON" : "OFF"} 할까요? 접속 중인 ${P ? P.n_online : "?"}대에 즉시 발행됩니다.`)) postControl({ all: b.dataset.ctlAll });
+    }));
+  }
+  const renderAction = (el) => {
+    if (!A) return;
+    el.innerHTML = secCtl() + (A.empty ? EMPTY : [secE, secF].map((f) => f()).join(""));
+    wireCtl(el, () => renderAction(el));
+  };
   const renderScope = (el) => renderInto(el, [secA]);
   const renderHistory = (el) => renderInto(el, [secI]);
 

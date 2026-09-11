@@ -111,22 +111,52 @@ def test_plugs(site, tmp_path):
     d = site["data"]
     p = d.plugs()                                       # repo config, no state file yet
     assert len(p["rooms"]) == 8 and p["watcher_stale"] and p["n_online"] == 0
+    assert p["mode"] == "auto" and p["n_plugs"] == 8    # purifiers configured, fans not yet
     assert [r["room"] for r in p["rooms"]] == [f"CLASS_0{i}" for i in range(1, 9)]
-    assert all(r["online"] is False and r["output"] is None for r in p["rooms"])
-    # with a fresh state file: one plug on and drawing power
+    assert all(r["purifier"] and r["purifier"]["online"] is False and r["fan"] is None
+               for r in p["rooms"])
+    # with a fresh state file: CLASS_04 purifier running, with a 24h history tail
     from datetime import UTC, datetime
-    now = datetime.now(UTC).replace(tzinfo=None).strftime(webdata.TS_FMT)
-    st = {"updated": now, "plugs": {"CLASS_04": {"mac": "80b54e28d094", "last": now,
-          "online": True, "output": True, "apower": 51.8, "voltage": 223.0, "tC": 37.7}}}
+    now_dt = datetime.now(UTC).replace(tzinfo=None)
+    now = now_dt.strftime(webdata.TS_FMT)
+    b = int(now_dt.timestamp()) // 300 * 300
+    st = {"updated": now, "plugs": {"CLASS_04": {"purifier": {
+        "mac": "80b54e28d094", "last": now, "online": True, "output": True,
+        "apower": 51.8, "voltage": 223.0, "tC": 37.7,
+        "hist": [[b - 300, 3.1], [b, 51.8]]}, "fan": None}}}
     (tmp_path / "plug_state.json").write_text(json.dumps(st), encoding="utf-8")
     w = webdata.WebData(site["dir"] / "sensor_data.db", site["dir"] / "nodes.json", HUB / "models",
                         plug_state_path=tmp_path / "plug_state.json")
     p = w.plugs()
-    assert not p["watcher_stale"] and p["n_online"] == 1
-    c4 = next(r for r in p["rooms"] if r["room"] == "CLASS_04")
-    assert c4["online"] and c4["output"] and c4["apower"] == 51.8 and c4["last_kst"]
+    assert not p["watcher_stale"] and p["n_online"] == 1 and p["n_running"] == 1
+    c4 = next(r for r in p["rooms"] if r["room"] == "CLASS_04")["purifier"]
+    assert c4["online"] and c4["output"] and c4["running"] and len(c4["hist"]) == 2
     body = get(f"{site['url']}/api/plugs")               # endpoint wired
-    assert len(body["rooms"]) == 8
+    assert len(body["rooms"]) == 8 and body["run_w"]["purifier"] == 30.0
+
+
+def _post(url, body):
+    req = urllib.request.Request(url, data=json.dumps(body).encode(),
+                                 method="POST", headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read())
+
+
+def test_control(site):
+    url, base = site["url"], site["dir"]
+    with pytest.raises(urllib.error.HTTPError) as e:      # bulk needs manual mode
+        _post(f"{url}/api/control", {"all": "on"})
+    assert e.value.code == 409
+    assert _post(f"{url}/api/control", {"mode": "manual"})["mode"] == "manual"
+    assert json.loads((base / "control.json").read_text())["mode"] == "manual"
+    assert site["data"].plugs()["mode"] == "manual"
+    _post(f"{url}/api/control", {"all": "off"})
+    cmd = json.loads((base / "plug_cmd.json").read_text())
+    assert cmd == {"action": "all", "on": False, "ts": cmd["ts"]}
+    with pytest.raises(urllib.error.HTTPError) as e:      # bad values rejected
+        _post(f"{url}/api/control", {"mode": "x"})
+    assert e.value.code == 400
+    assert _post(f"{url}/api/control", {"mode": "auto"})["mode"] == "auto"   # restore
 
 
 def test_status(site):
@@ -238,6 +268,9 @@ def test_public_instance_is_monitoring_only(site):
         with pytest.raises(urllib.error.HTTPError) as e:
             urllib.request.urlopen(req, timeout=30)
         assert e.value.code == 403 and _rows(site["dir"] / "sensor_data.db") == before
+        with pytest.raises(urllib.error.HTTPError) as e:          # control blocked too
+            _post(f"{url}/api/control", {"mode": "manual"})
+        assert e.value.code == 403
     finally:
         srv.shutdown()
     assert get(f"{site['url']}/api/status")["public"] is False        # admin instance untouched

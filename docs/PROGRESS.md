@@ -213,3 +213,12 @@ turbo 단일맵 → plotly 기준 변수별 시퀀셜 맵으로 교체(값 크�
 ## 2026-09-11 — 플러그 상태 파이프라인 (plugwatch + /api/plugs + 제어·경보 화면)
 
 플러그 설치 즉시 대시보드 자동 반영을 위한 수집 계층: `config/plugs.json`(교실↔MAC 정본, plug_setup.html §7과 동일) · `plugwatch.py`(신규 서비스 — status/online 구독 + 60 s GetStatus 폴, `plug_state.json` 원자적 기록, **명령 발행 없음**) · `webdata.plugs()`+`/api/plugs` · 제어·경보 화면 상단 "플러그 전원" 카드 8칸(미접속/OFF/ON·대기전력/ON·가동, 가동 판별 = apower > 30 W — C04 실기동 51.8 W 실측 기반). deploy.sh 재시작 매핑에 plugwatch 추가. ruff 신규 0 · 114 passed(+`test_plugs`). 보드에 유닛 설치 필요(사용자 sudo).
+
+## 2026-09-12 — 전력 UI 개편 + 수동/자동 제어 1단계 (main 직접 커밋)
+
+사용자 결정: 전역 토글 1개(자동↔수동, 개별 오버라이드는 추후), "에너지"는 1차 내비 독립 화면.
+- `config/plugs.json` v2: `{교실: {purifier, fan}}` (fan 슬롯 예약 — 환풍기 플러그 추가 시 자동 노출).
+- `plugwatch.py` v2: 장치별 24h 전력 이력(5분 버킷 링, 재시작 시 복원) + **명령 채널**(`plug_cmd.json` 실행 후 삭제 — 발행 유일 경로). `control.json` = 전역 모드.
+- `POST /api/control` (관리 전용, 공개 403): `{mode}` 저장 / `{all:on|off}` 일괄 발행 큐(수동 모드에서만, 아니면 409).
+- UI: ① 제어·경보 상단 제어 배너(자동/수동 토글 + 수동 시 전체 ON/OFF·확인창) ② 판정 칩 옆 **팬 회전 칩**(플러그 실측: 회전=가동, 대기, 차단 — 판정 vs 실물 분리 표시) ③ 모니터링 레이더 하단 전력 표 ④ 신규 "에너지" 화면(교실×장치 현재 W + 24h 바차트, 색 = 장치 정체성 fan=--rg-human/purifier=--rg-matter, 점선=가동 임계 공청기 30 W·환풍기 10 W — C04 실측 51.8 W 근거).
+- 검증: ruff 신규 0 · **115 passed**(+test_control: 409/400/403 가드) · 픽스처 시각 확인(토글 왕복·칩·바차트).

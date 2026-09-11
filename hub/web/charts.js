@@ -208,6 +208,24 @@ const CH = (() => {
     return hist.map((h, i) => `<i${i === hist.length - 1 ? ' class="now"' : ""} style="height:${Math.max(3, Math.round((h.occ || 0) / top * 100))}%" data-tip="${esc(h.recv_time)}\n평균 ${num(h.occ, 1)} · 최대 ${num(h.occ_max)}"></i>`).join("");
   }
 
+  /* 24h plug power bars: hist = [[bucket_epoch_utc, mean_W], ...] (5-min buckets,
+     gaps = no sample). Device identity colours (fan = --rg-human, purifier =
+     --rg-matter), dashed line at the running threshold. */
+  function powerBars(hist, dev, runW) {
+    const W = 288, H = 52, color = css(dev === "fan" ? "--rg-human" : "--rg-matter");
+    const now = Math.floor(Date.now() / 1000 / 300) * 300, start = now - 287 * 300;
+    const slots = new Array(288).fill(null);
+    for (const [b, w] of hist || []) { const i = (b - start) / 300; if (i >= 0 && i < 288) slots[i] = w; }
+    const top = Math.max(60, ...slots.filter((v) => v !== null).map((v) => v * 1.1));
+    const y = (v) => H * (1 - v / top);
+    let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px">`;
+    s += `<line x1="0" y1="${f1(y(runW))}" x2="${W}" y2="${f1(y(runW))}" stroke="${color}" stroke-width="0.7" stroke-dasharray="3,3" opacity="0.55"/>`;
+    slots.forEach((v, i) => { if (v !== null) s += `<rect x="${i}" y="${f1(y(v))}" width="1" height="${f1(Math.max(0.8, H - y(v)))}" fill="${color}" fill-opacity="${i === 287 ? 1 : 0.75}"/>`; });
+    s += "</svg>";
+    // 축 라벨은 SVG 밖 (preserveAspectRatio=none 이 글자를 늘리므로)
+    return s + `<div style="display:flex;justify-content:space-between;font-size:10px;color:${css("--dim")};font-family:'IBM Plex Mono',monospace;margin-top:2px"><span>-24h</span><span>-12h</span><span>지금</span></div>`;
+  }
+
   // ---- page 2 ---------------------------------------------------------------------------
   const SLOTS = [["middle", 0, -12], ["middle", 0, 20], ["start", 12, 4], ["end", -12, 4], ["start", 10, -10], ["end", -10, 16], ["end", -10, -10], ["start", 10, 16]];
   function labelSlots(pts, near) {
@@ -449,5 +467,5 @@ const CH = (() => {
     return s + "</svg>";
   }
 
-  return { radar, box, hbars, trend, pbars, dowheat, weekbars, line, occBars, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO, cvar, varColor };
+  return { radar, box, hbars, trend, pbars, dowheat, weekbars, line, occBars, powerBars, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO, cvar, varColor };
 })();

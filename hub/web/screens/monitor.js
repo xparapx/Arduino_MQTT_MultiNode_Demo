@@ -3,8 +3,9 @@
    (version-gated, active screen only). Export/reset moved to screens/admin.js. */
 "use strict";
 (() => {
-  const { $, esc, css, num, sec, secMeta, dot, getJSON, table, store } = AQ;
+  const { $, esc, css, num, sec, secMeta, dot, getJSON, table, store, devChip } = AQ;
   const S = { live: null, stats: null, series: null, seriesKey: null, node: null };
+  let PW = null;                     // /api/plugs — 전력 모니터링 섹션 (레이더 하단)
   try { S.node = localStorage.getItem("aq-node"); } catch (e) { /* ignore */ }
 
   const fmtAge = (m) => m === null ? "" : m < 90 ? `${Math.round(m)}분` : m < 48 * 60 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`;
@@ -36,7 +37,14 @@
     }
     const cards = d.nodes.map((n) => `<div class="radar-card${n.down ? " down" : ""}" data-go="mon-live/${esc(n.node)}"><div class="h">${dot(n.color)}${esc(n.label)}</div>${n.down ? `<div class="dn">${n.recv_time ? `지연 ${fmtAge(n.age_min)} · 마지막 ${esc(n.recv_time.slice(5, 16))}` : "수신 없음"}</div>` : ""}${CH.radar(n)}</div>`).join("");
     el.innerHTML = secMeta("6변수 정규화 · 60 s 갱신 · 이름표 숫자순 · ★ = ML 타깃 · 카드 탭 = 확대")
-      + `<div class="panel"><div class="radar-grid">${cards}</div></div>`;
+      + `<div class="panel"><div class="radar-grid">${cards}</div></div>` + powerSection();
+  }
+  // 레이더 하단: 환풍기·공청기 실물 전력 한눈에 (상세·시계열은 에너지 화면)
+  function powerSection() {
+    if (!PW || !PW.rooms || !PW.rooms.length) return "";
+    const rows = PW.rooms.map((r) => ({ cells: [esc(r.room), devChip(r.purifier), devChip(r.fan)] }));
+    return sec("energy", "green", "전력 모니터링 — 환풍기 · 공청기", `plugwatch 60 s · ${PW.n_online}/${PW.n_plugs} 접속 · 가동 ${PW.n_running}${PW.watcher_stale ? " · 수집 정지" : ""}`)
+      + `<div class="panel">${table(["교실", "공청기", "환풍기"], rows)}<p class="note">회전 = 실제 가동(유효전력 &gt; 공청기 ${num((PW.run_w || {}).purifier)} W / 환풍기 ${num((PW.run_w || {}).fan)} W) · 시계열·에너지는 <a href="#energy" data-go="energy">에너지</a> 화면</p></div>`;
   }
 
   // boxen 범례 — 가로형 정형화 샘플, 각 단계 상자 안에 커버 비율 숫자만 (분포 섹션 하단 중앙)
@@ -137,8 +145,10 @@
       this.p = param || null;
       if (this.un) this.un();
       this.un = store.sub("/api/live", 60000, (d) => { onLive(d); renderLive(this.el, this.p); });
+      if (this.unp) this.unp();
+      this.unp = store.sub("/api/plugs", 60000, (d) => { PW = d; renderLive(this.el, this.p); });
     },
-    deactivate() { if (this.un) { this.un(); this.un = null; } },
+    deactivate() { if (this.un) { this.un(); this.un = null; } if (this.unp) { this.unp(); this.unp = null; } },
     repaint() { renderLive(this.el, this.p); },
   });
   AQ.router.register({

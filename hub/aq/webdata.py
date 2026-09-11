@@ -370,10 +370,13 @@ class WebData:
                           "occ_max": _num(r["occ_max"])} for _, r in hist.iterrows()]}
 
     # ---- plugs (Shelly actuator roster) --------------------------------------------------
+    RUN_W = {"purifier": 30.0, "fan": 10.0}   # apower above this = device actually running
+
     def plugs(self) -> dict:
-        """Room -> plug mapping (config/plugs.json) merged with the live state file
-        plugwatch.py maintains. No DB involved; cheap enough to skip memoisation.
-        A plug appears as online the moment it is powered and provisioned."""
+        """Room -> {purifier, fan} plug mapping (config/plugs.json) merged with the
+        live state file plugwatch.py maintains (latest values + 24 h apower buckets).
+        No DB involved; cheap enough to skip memoisation. A plug appears as online
+        the moment it is powered and provisioned."""
         try:
             with open(self.plugs_path, encoding="utf-8") as f:
                 rooms_cfg = json.load(f)
@@ -384,26 +387,40 @@ class WebData:
                 st = json.load(f)
         except (OSError, ValueError):
             st = {}
+        try:
+            with open(Path(self.plug_state_path).parent / "control.json", encoding="utf-8") as f:
+                mode = json.load(f).get("mode", "auto")
+        except (OSError, ValueError):
+            mode = "auto"
         now = datetime.now(UTC).replace(tzinfo=None)
         updated = st.get("updated")
         try:
             stale = (now - datetime.strptime(updated, TS_FMT)).total_seconds() > 300 if updated else True
         except (ValueError, TypeError):
             stale = True
-        rooms = []
-        for room in sorted(rooms_cfg, key=self._sort_key):
-            s = (st.get("plugs") or {}).get(room) or {}
+
+        def device(room: str, dev: str):
+            mac = (rooms_cfg.get(room) or {}).get(dev)
+            if not mac:
+                return None
+            s = ((st.get("plugs") or {}).get(room) or {}).get(dev) or {}
             last = s.get("last")
-            try:
-                age = round((now - datetime.strptime(last, TS_FMT)).total_seconds() / 60, 1) if last else None
-            except (ValueError, TypeError):
-                age = None
-            rooms.append({"room": room, "mac": rooms_cfg[room],
-                          "online": bool(s.get("online")) and not stale,
-                          "output": s.get("output"), "apower": _num(s.get("apower")),
-                          "last_kst": kst(last, "%m-%d %H:%M") if last else None, "age_min": age})
+            p = _num(s.get("apower"))
+            online = bool(s.get("online")) and not stale
+            return {"mac": mac, "online": online, "output": s.get("output"), "apower": p,
+                    "running": bool(online and s.get("output") and p is not None
+                                    and p > self.RUN_W[dev]),
+                    "last_kst": kst(last, "%m-%d %H:%M") if last else None,
+                    "hist": s.get("hist") or []}          # [[bucket_epoch_utc, mean_W], ...]
+
+        rooms = [{"room": room, "purifier": device(room, "purifier"), "fan": device(room, "fan")}
+                 for room in sorted(rooms_cfg, key=self._sort_key)]
+        devs = [d for r in rooms for d in (r["purifier"], r["fan"]) if d]
         return {"updated_kst": kst(updated) if updated else None, "watcher_stale": stale,
-                "n_online": sum(1 for r in rooms if r["online"]), "rooms": rooms}
+                "mode": mode, "run_w": self.RUN_W,
+                "n_online": sum(1 for d in devs if d["online"]),
+                "n_running": sum(1 for d in devs if d["running"]),
+                "n_plugs": len(devs), "rooms": rooms}
 
     # ---- status (sidebar) ---------------------------------------------------------------
     def status(self) -> dict:

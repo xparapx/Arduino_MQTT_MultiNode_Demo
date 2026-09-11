@@ -140,7 +140,46 @@ class Handler(BaseHTTPRequestHandler):
             if self.public:
                 return self._error(403, "reset is disabled on the public instance")
             return self._reset(body)
+        if url.path == "/api/control":
+            if self.public:
+                return self._error(403, "control is disabled on the public instance")
+            return self._control(body)
         self._error(404, "not found")
+
+    def _control(self, body: dict) -> None:
+        """Manual control plane: {"mode": "auto"|"manual"} persists the global mode
+        (control.json); {"all": "on"|"off"} queues a bulk switch command
+        (plug_cmd.json, manual mode only) that plugwatch executes within ~15 s."""
+        base = Path(self.data.plug_state_path).parent
+        ts = int(datetime.now().timestamp())
+
+        def atomic(path: Path, doc: dict):
+            tmp = str(path) + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(doc, f, ensure_ascii=False)
+            os.replace(tmp, path)
+
+        mode_path = base / "control.json"
+        try:
+            with open(mode_path, encoding="utf-8") as f:
+                mode = json.load(f).get("mode", "auto")
+        except (OSError, ValueError):
+            mode = "auto"
+        if "mode" in body:
+            if body["mode"] not in ("auto", "manual"):
+                return self._error(400, "mode must be auto|manual")
+            mode = body["mode"]
+            atomic(mode_path, {"mode": mode, "changed": ts})
+            _log(f"[control] mode -> {mode}")
+        if "all" in body:
+            if body["all"] not in ("on", "off"):
+                return self._error(400, "all must be on|off")
+            if mode != "manual":
+                return self._error(409, "bulk switch needs manual mode")
+            atomic(base / "plug_cmd.json",
+                   {"action": "all", "on": body["all"] == "on", "ts": ts})
+            _log(f"[control] bulk {body['all']}")
+        return self._json({"ok": True, "mode": mode})
 
     # ---- static -------------------------------------------------------------------------
     def _static(self, rel: str) -> None:

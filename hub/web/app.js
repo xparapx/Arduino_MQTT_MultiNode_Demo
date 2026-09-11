@@ -94,7 +94,19 @@ const AQ = (() => {
     diagnose: '<circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="21" y2="21"/><polyline points="7,10.5 9,10.5 10,8 11.5,13 12.5,10.5 14,10.5"/>',
     gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/>',
     pulse: '<polyline points="3,12 8,12 10,7 13,17 15,12 21,12"/>',
+    energy: '<polygon points="13,2 5,13.5 11,13.5 10,22 19,10 12.5,10"/><line x1="3.5" y1="21" x2="9" y2="21"/><line x1="15" y1="21" x2="20.5" y2="21"/>',
+    fan: '<circle cx="12" cy="12" r="1.9"/><path d="M12 9.8c.2-3.8 1.8-5.6 4.4-5.3 1 2.7-.4 4.6-3 5.6M14.2 12c3.8.2 5.6 1.8 5.3 4.4-2.7 1-4.6-.4-5.6-3M12 14.2c-.2 3.8-1.8 5.6-4.4 5.3-1-2.7.4-4.6 3-5.6M9.8 12c-3.8-.2-5.6-1.8-5.3-4.4 2.7-1 4.6.4 5.6 3"/>',
   };
+  // plug device chip (fan spins while the device actually draws running power)
+  function devChip(d) {
+    if (!d) return '<span class="fanchip" style="opacity:.45">미설치</span>';
+    const fan = `<svg viewBox="0 0 24 24">${ICONS.fan}</svg>`;
+    if (!d.online) return `<span class="fanchip" data-tip="플러그 미접속${d.last_kst ? ` · 마지막 ${esc(d.last_kst)}` : ""}">${fan}미접속</span>`;
+    const w = `${(Math.round((d.apower || 0) * 10) / 10).toFixed(1)}W`;
+    if (d.running) return `<span class="fanchip run" data-tip="가동중 · ${w}">${fan}${w}</span>`;
+    if (d.output) return `<span class="fanchip" data-tip="통전 · 대기전력 ${w}">${fan}대기 ${w}</span>`;
+    return `<span class="fanchip cut" data-tip="릴레이 차단">${fan}OFF</span>`;
+  }
   const secMeta = (meta) => `<div class="sec"><div class="meta">${meta || ""}</div></div>`;
   function sec(icon, color, title, meta) {
     return `<div class="sec"><div class="chip" style="--c: var(--${color})"><svg viewBox="0 0 24 24">${ICONS[icon]}</svg><h2>${esc(title)}</h2></div><div class="meta">${meta || ""}</div></div>`;
@@ -178,5 +190,5 @@ const AQ = (() => {
   }
 
   return { $, esc, css, num, dash, theme, setTheme, initTheme, onTheme, getJSON, poll, initTip, toast, sec, secMeta, dot,
-           regime, chip, actionChip, regimeColor, REGIME_KO, table, initSidebar, mode, store, onStatus, icons: ICONS };
+           regime, chip, actionChip, regimeColor, REGIME_KO, table, initSidebar, mode, store, onStatus, icons: ICONS, devChip };
 })();

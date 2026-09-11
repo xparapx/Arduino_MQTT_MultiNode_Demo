@@ -1,10 +1,10 @@
 {
-  "CLASS_01": "80b54e292d24",
-  "CLASS_02": "48f6eeb63f44",
-  "CLASS_03": "80b54e31a8b4",
-  "CLASS_04": "80b54e28d094",
-  "CLASS_05": "80b54e31a7ec",
-  "CLASS_06": "80b54e31a718",
-  "CLASS_07": "48f6eeb4c0a0",
-  "CLASS_08": "80b54e31a76c"
+  "CLASS_01": { "purifier": "80b54e292d24", "fan": null },
+  "CLASS_02": { "purifier": "48f6eeb63f44", "fan": null },
+  "CLASS_03": { "purifier": "80b54e31a8b4", "fan": null },
+  "CLASS_04": { "purifier": "80b54e28d094", "fan": null },
+  "CLASS_05": { "purifier": "80b54e31a7ec", "fan": null },
+  "CLASS_06": { "purifier": "80b54e31a718", "fan": null },
+  "CLASS_07": { "purifier": "48f6eeb4c0a0", "fan": null },
+  "CLASS_08": { "purifier": "80b54e31a76c", "fan": null }
 }
