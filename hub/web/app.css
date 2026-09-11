@@ -217,7 +217,8 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .fanchip.run svg { animation: fanspin 1.1s linear infinite; transform-origin: 50% 50%; }
 .fanchip.cut { color: var(--red); border-color: var(--chip-ex); }
 @keyframes fanspin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .fanchip.run svg { animation: none; } }
+/* 회전 = "실가동" 상태 표시(정보)이므로 OS 모션 축소 설정에서도 유지 — 학교 PC는
+   Windows 애니메이션 효과가 꺼진 경우가 많아 여기서 죽으면 기능이 사라진다 */
 /* control banner (dx-action top) */
 .ctlbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .ctlbar .modes { display: inline-flex; border: 1px solid var(--grid); border-radius: 999px; overflow: hidden; }
