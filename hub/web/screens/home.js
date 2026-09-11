@@ -3,8 +3,8 @@
    신규 엔드포인트 없음: /api/status(전역) + /api/live + /api/analysis 재조합. */
 "use strict";
 (() => {
-  const { $, esc, num, sec, dot, regime, actionChip, chip, table, store, onStatus } = AQ;
-  let A = null, L = null;
+  const { $, esc, num, sec, dot, regime, actionChip, chip, table, store, onStatus, devChip } = AQ;
+  let A = null, L = null, P = null;
 
   const metric = (l, v, d, mc) => `<div class="metric${mc ? " mc" : ""}"${mc ? ` style="--mc:var(--${mc})"` : ""}><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d || ""}</div></div>`;
   const nm = (r) => `${dot(r.color)}${esc(r.label)}`;
@@ -23,9 +23,16 @@
 
   function roomsCard() {
     if (!A || A.empty || !A.rooms || !A.rooms.length) return sec("action", "red", "교실별 현재 레짐 · 제어", "") + '<div class="panel empty">analyst.py hourly 실행 후 표시됩니다.</div>';
-    const rows = A.rooms.map((x) => ({ cls: x.judged ? "" : "dim", cells: [nm(x), regime(x.regime), actionChip(x.action.kind, x.action.word), num(x.co2), num(x.voc)] }));
-    return sec("action", "red", "교실별 현재 레짐 · 제어", `hourly ${esc(A.action_run_at_kst || "—")} KST 판정`)
-      + `<div class="panel">${table(["교실", "레짐", "제어", "CO₂ (ppm)", "VOC (idx)"], rows)}<p class="note">자세한 근거(히스테리시스 밴드 · 24h 추이)는 <b>진단 &amp; 추론 → 제어·경보</b>에서.</p></div>`;
+    // 공청기·환풍기 열 = 플러그 실측 (회전 = 실가동); plugwatch 미가동 시 열 자체를 생략
+    const plugOf = (label, dev) => { const r = P && !P.watcher_stale ? P.rooms.find((p) => p.room === label) : null; return r ? r[dev] : undefined; };
+    const hasPlugs = !!(P && !P.watcher_stale && P.rooms && P.rooms.length);
+    const rows = A.rooms.map((x) => ({ cls: x.judged ? "" : "dim",
+      cells: [nm(x), regime(x.regime), actionChip(x.action.kind, x.action.word),
+              ...(hasPlugs ? [devChip(plugOf(x.label, "purifier")), devChip(plugOf(x.label, "fan"))] : []),
+              num(x.co2), num(x.voc)] }));
+    const head = ["교실", "레짐", "제어", ...(hasPlugs ? ["공청기", "환풍기"] : []), "CO₂ (ppm)", "VOC (idx)"];
+    return sec("action", "red", "교실별 현재 레짐 · 제어", `hourly ${esc(A.action_run_at_kst || "—")} KST 판정${hasPlugs ? ` · 플러그 ${P.n_online}/${P.n_plugs} 접속` : ""}`)
+      + `<div class="panel">${table(head, rows)}<p class="note">${hasPlugs ? "공청기·환풍기 = 플러그 실측(회전 = 가동) · " : ""}자세한 근거(히스테리시스 밴드 · 24h 추이)는 <b>진단 &amp; 추론 → 제어·경보</b>에서.</p></div>`;
   }
 
   function alertsCard() {
@@ -61,10 +68,12 @@
     activate() {
       this.unA = store.sub("/api/analysis", 60000, (d) => { A = d; render(this.el); });
       this.unL = store.sub("/api/live", 60000, (d) => { L = d; render(this.el); });
+      this.unP = store.sub("/api/plugs", 60000, (d) => { P = d; render(this.el); });
     },
     deactivate() {
       if (this.unA) { this.unA(); this.unA = null; }
       if (this.unL) { this.unL(); this.unL = null; }
+      if (this.unP) { this.unP(); this.unP = null; }
     },
     repaint() { render(this.el); },
   });
