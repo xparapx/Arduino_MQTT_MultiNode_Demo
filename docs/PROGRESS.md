@@ -222,3 +222,15 @@ turbo 단일맵 → plotly 기준 변수별 시퀀셜 맵으로 교체(값 크�
 - `POST /api/control` (관리 전용, 공개 403): `{mode}` 저장 / `{all:on|off}` 일괄 발행 큐(수동 모드에서만, 아니면 409).
 - UI: ① 제어·경보 상단 제어 배너(자동/수동 토글 + 수동 시 전체 ON/OFF·확인창) ② 판정 칩 옆 **팬 회전 칩**(플러그 실측: 회전=가동, 대기, 차단 — 판정 vs 실물 분리 표시) ③ 모니터링 레이더 하단 전력 표 ④ 신규 "에너지" 화면(교실×장치 현재 W + 24h 바차트, 색 = 장치 정체성 fan=--rg-human/purifier=--rg-matter, 점선=가동 임계 공청기 30 W·환풍기 10 W — C04 실측 51.8 W 근거).
 - 검증: ruff 신규 0 · **115 passed**(+test_control: 409/400/403 가드) · 픽스처 시각 확인(토글 왕복·칩·바차트).
+
+## 2026-09-11(오후)~09-12 — 수동 제어 실기동 검증 · 갱신/모션 버그 3종 · 반응성 개선
+
+수동 제어 경로 실사용 검증(교무실→4반): 수동 모드 → 전체 ON → **48초에 정격 51 W 실가동**(발행→릴레이 24s→기동 9.6 W→정격) → 전체 OFF 정상. Home 표에 공청기·환풍기 실측 열 추가(2c51248, plugwatch 미가동 시 열 숨김). 유닛 설치·재시작 후 3서비스 active, 공개(8502) `/api/plugs` 조회 가능·`/api/control` 403 확인.
+
+현장에서 잡힌 버그 3종과 수정:
+1. **store version 게이트**(b8d3d38): `/api/plugs`에 version 필드가 없어 첫 fetch 후 화면이 영구 미갱신(플러그 ON 후에도 OFF 표시). version = 상태파일 updated+mode. 교훈: 이 SPA의 모든 신규 API는 version 필수.
+2. **전역 reduced-motion 킬 스위치**(009a0a2→2215e8f 제거): 학교 데스크탑은 Windows 애니메이션 효과가 꺼져 있어 `*{animation:none!important}`가 임계 초과 점멸·팬 회전·조준선 등 정보성 모션 전부를 제거(모바일에서만 보이던 원인). 이 대시보드의 모션은 상태 표시이므로 전역 제거로 결정. 팬 칩 18px 확대(4c90d40).
+3. **deploy.sh clean-tree 가드 vs 런타임 파일**(bbfc8d3): plugwatch가 저장소 안에 쓰는 plug_state/plug_cmd/control.json을 gitignore(최초 1회는 보드 직접 `git pull`로 해소).
+
+반응성(5fdea4e): 명령 체크 15s→2s, 명령 후 45초간 상태기록 3s(평시 15s — SD 마모 억제), UI는 제어 직후 60초간 5s 폴링 — 체감 ~90초→~10초.
+운영 노트: Funnel(aqhub.taild5f11e.ts.net)=8502 조회 전용이 정석 — 제어는 테일넷 내부 `http://aqhub:8501`만. 8501을 Funnel에 태우지 말 것.
