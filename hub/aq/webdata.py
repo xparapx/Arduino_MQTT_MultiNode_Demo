@@ -416,7 +416,8 @@ class WebData:
         rooms = [{"room": room, "purifier": device(room, "purifier"), "fan": device(room, "fan")}
                  for room in sorted(rooms_cfg, key=self._sort_key)]
         devs = [d for r in rooms for d in (r["purifier"], r["fan"]) if d]
-        return {"updated_kst": kst(updated) if updated else None, "watcher_stale": stale,
+        return {"version": f"{updated or ''}:{mode}",   # store gate: state write마다 변경
+                "updated_kst": kst(updated) if updated else None, "watcher_stale": stale,
                 "mode": mode, "run_w": self.RUN_W,
                 "n_online": sum(1 for d in devs if d["online"]),
                 "n_running": sum(1 for d in devs if d["running"]),

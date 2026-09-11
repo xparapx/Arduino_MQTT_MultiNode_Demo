@@ -133,6 +133,7 @@ def test_plugs(site, tmp_path):
     assert c4["online"] and c4["output"] and c4["running"] and len(c4["hist"]) == 2
     body = get(f"{site['url']}/api/plugs")               # endpoint wired
     assert len(body["rooms"]) == 8 and body["run_w"]["purifier"] == 30.0
+    assert body["version"]                               # store gate needs a version field
 
 
 def _post(url, body):
