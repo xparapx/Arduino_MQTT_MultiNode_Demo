@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shelly Plug S Gen3 설정 매뉴얼 — multinode_aq</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root { --ink:#1e2430; --dim:#5b6472; --line:#dfe3ea; --panel:#f7f8fa; --acc:#0a7ea4; --warn-bg:#fff7ea; --warn-bd:#e8c890; --ok-bg:#eef7f0; --ok-bd:#bcd9c3; --bad-bg:#fdf0ef; --bad-bd:#e5b6b2; }
+* { box-sizing:border-box; }
+body { margin:0 auto; max-width:860px; padding:32px 20px 80px; color:var(--ink); background:#fff;
+  font-family:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif; font-size:15px; line-height:1.65; }
+h1 { font-size:24px; margin:0 0 4px; } h1 small { font-size:13px; color:var(--dim); font-weight:400; display:block; margin-top:4px; }
+h2 { font-size:18px; margin:40px 0 10px; padding:6px 0 6px 12px; border-left:4px solid var(--acc); }
+h3 { font-size:15px; margin:22px 0 6px; }
+code, .mono { font-family:"IBM Plex Mono",monospace; font-size:13px; background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:1px 6px; }
+table { border-collapse:collapse; width:100%; margin:10px 0; font-size:14px; }
+th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+th { background:var(--panel); font-weight:600; white-space:nowrap; }
+ol.steps { padding-left:22px; } ol.steps > li { margin:10px 0; }
+.box { border-radius:8px; padding:10px 14px; margin:12px 0; font-size:14px; }
+.warn { background:var(--warn-bg); border:1px solid var(--warn-bd); }
+.ok { background:var(--ok-bg); border:1px solid var(--ok-bd); }
+.bad { background:var(--bad-bg); border:1px solid var(--bad-bd); }
+.lbl { font-weight:700; display:block; margin-bottom:2px; }
+.chk { list-style:none; padding-left:2px; } .chk li { margin:6px 0; }
+.chk li::before { content:"☐ "; font-size:15px; }
+.fill { display:inline-block; min-width:190px; border-bottom:1px solid var(--ink); height:1.1em; }
+.note { color:var(--dim); font-size:13px; }
+@media print { body { padding:0 8mm; font-size:12.5px; } h2 { break-after:avoid; } table, .box { break-inside:avoid; } }
+</style>
+</head>
+<body>
+
+<h1>Shelly Plug S Gen3 설정 매뉴얼<small>multinode_aq 액추에이터 · 공기청정기/환풍기용 스마트플러그 프로비저닝 — 플러그 1대당 약 10분, 8대 일괄 작업 가능</small></h1>
+
+<div class="box ok"><span class="lbl">✅ 미리 알아둘 것</span>
+설정은 플러그별로 완전히 독립입니다. 교무실에서 8대를 전부 설정한 뒤 나중에 교실로 옮겨도 <b>재설정이 필요 없습니다</b>
+(학교 전체가 같은 SSID이고, 제어는 클라우드 브로커 경유라 플러그의 IP가 바뀌어도 무관). 유일하게 망가지기 쉬운 것은
+"어느 플러그가 어느 교실용인지"이므로 <b>7단계(스티커 + 매핑표)를 절대 건너뛰지 마세요.</b></div>
+
+<h2>0. 준비물 · 공통 입력값</h2>
+<table>
+<tr><th>WiFi SSID</th><td><code>wi_cne_class_S_2.4G</code> (2.4 GHz — Shelly는 5 GHz 불가)</td></tr>
+<tr><th>WiFi 비밀번호</th><td>환경 노드 펌웨어에 넣은 것과 <b>같은 값</b> <span class="note">(보안상 이 문서에는 기록하지 않음)</span></td></tr>
+<tr><th>MQTT Server</th><td><code>e311c7ffc26f4b7990382b5e43469c89.s1.eu.hivemq.cloud:8883</code></td></tr>
+<tr><th>MQTT Username</th><td><code>aqhub</code></td></tr>
+<tr><th>MQTT Password</th><td>허브 <code>secrets.env</code>와 같은 값 — <b>첫 글자 대문자 K</b> 주의 <span class="note">(2026-09-09 비전 노드 전멸의 원인이 이 대소문자 오타였음)</span></td></tr>
+<tr><th>기타</th><td>폰 또는 노트북(WiFi 전환용) · 유성펜/라벨 스티커 8장</td></tr>
+</table>
+<div class="box warn"><span class="lbl">⚠️ 비밀번호 입력 시</span>복사–붙여넣기를 권장합니다. 직접 타이핑할 경우 대소문자·숫자를 두 번 확인하세요.
+WiFi 비밀번호가 틀리면 플러그가 AP 모드로 되돌아오고, MQTT 비밀번호가 틀리면 <code>connected:false</code>에서 멈춥니다.</div>
+
+<h2>1. 전원 연결 → 임시 AP 확인</h2>
+<ol class="steps">
+<li>플러그를 콘센트에 꽂습니다. LED가 <b>파란색</b>으로 켜지면 미설정(AP 모드) 상태입니다.</li>
+<li>폰/PC의 WiFi 목록에 <code>ShellyPlugSG3-XXXXXXXXXXXX</code>가 나타나는지 확인합니다.
+뒤 12자리는 플러그 고유 MAC — <b>이 값이 곧 MQTT prefix가 되므로 지금 메모</b>해 두면 7단계가 편합니다.</li>
+</ol>
+
+<h2>2. 임시 AP 접속 → 설정 화면</h2>
+<ol class="steps">
+<li>폰/PC WiFi에서 <code>ShellyPlugSG3-…</code>에 연결합니다 (비밀번호 없음).</li>
+<li>"인터넷 연결 없음" 경고는 무시하고 <b>연결 유지</b>를 선택합니다 (폰이 데이터로 자동 전환하려 하면 거부).</li>
+<li>브라우저 주소창에 직접 입력: <code>http://192.168.33.1</code> (반드시 http — https 아님)</li>
+</ol>
+<div class="box warn"><span class="lbl">⚠️ PC로 할 경우</span>PC WiFi를 Shelly AP로 바꾸는 동안 학교망·인터넷이 끊깁니다. 작업 중인 것을 마친 뒤 진행하고,
+<b>4단계 후 PC WiFi를 학교망으로 되돌리는 것</b>을 잊지 마세요.</div>
+
+<h2>3. 학교 WiFi 등록</h2>
+<ol class="steps">
+<li>메뉴 <b>Settings → Wi-Fi</b> → <b>Wi-Fi 1 settings</b></li>
+<li>Network: <code>wi_cne_class_S_2.4G</code> (드롭다운에서 선택 또는 직접 입력) · Password 입력</li>
+<li><b>Enable Wi-Fi</b> 토글 ON → <b>Save settings</b></li>
+</ol>
+<div class="box bad"><span class="lbl">🔧 토글이 회색으로 잠겨 안 켜질 때 (흔한 UI 버그)</span>
+① Network 칸을 클릭해 값을 다시 타이핑하고 칸 <b>바깥을 한 번 클릭</b>해 입력을 확정한 뒤 토글 —
+② 그래도 안 되면 토글 꺼진 채로 <b>Save settings 먼저</b> 누르고 <b>F5 새로고침</b> → 토글이 풀려 있음 → 켜고 다시 Save.
+<span class="note">(실측: Save 먼저 방식으로 해결됨)</span></div>
+<ul class="chk"><li>Wi-Fi 2, Roaming(−80 / 60 s), Static IP는 <b>기본값 그대로</b> 둔다 (IP 고정은 나중에 라우터 DHCP 예약으로)</li></ul>
+
+<h2>4. 학교망 복귀 → 접속 확인</h2>
+<ol class="steps">
+<li>저장하면 플러그가 재부팅하며 학교망에 붙고, 폰/PC는 Shelly AP에서 자동으로 끊깁니다.</li>
+<li><b>폰/PC WiFi를 <code>wi_cne_class_S_2.4G</code>로 되돌립니다.</b></li>
+<li>브라우저에서 <code>http://shellyplugsg3-xxxxxxxxxxxx.local</code> (소문자, 1단계에서 메모한 MAC) 또는
+설정 화면에서 확인한 IP(예: <code>http://192.168.1.224</code>)로 접속되면 성공.</li>
+</ol>
+<p class="note">확인용 RPC (선택): <code>http://&lt;플러그IP&gt;/rpc/WiFi.GetStatus</code> → <code>"status":"got ip"</code>, rssi가 −70보다 크면(예: −47) 신호 양호.</p>
+
+<h2>5. MQTT 설정 (핵심)</h2>
+<p><b>Settings → MQTT</b>에서 아래 표대로. <b>모든 칸을 채운 뒤 Save 한 번</b>이면 됩니다.</p>
+<table>
+<tr><th>Enable</th><td>✅ 체크</td></tr>
+<tr><th>Connection type</th><td><b><code>Default TLS</code></b> — 내장 CA(<code>ca.pem</code>)로 서버 검증. <span class="note">No TLS·TLS no validation 금지, User TLS 불필요</span></td></tr>
+<tr><th>MQTT prefix</th><td>기본값 그대로 (<code>shellyplugsg3-…</code>) — 제어 토픽의 이름이 됨</td></tr>
+<tr><th>Use client certificate</th><td>⬜ 해제 그대로</td></tr>
+<tr><th>Enable 'MQTT Control'</th><td>✅ — <code>&lt;prefix&gt;/command/switch:0</code>에 <code>on</code>/<code>off</code>만 보내면 되는 제어 채널</td></tr>
+<tr><th>Enable RPC over MQTT</th><td>✅</td></tr>
+<tr><th>RPC status notifications</th><td>✅</td></tr>
+<tr><th>Generic status update over MQTT</th><td>✅ — 상태·전력(apower)이 <code>&lt;prefix&gt;/status/switch:0</code>으로 발행됨 (동작 검증·전력 로깅용)</td></tr>
+<tr><th>Server</th><td><code>e311c7ffc26f4b7990382b5e43469c89.s1.eu.hivemq.cloud:8883</code></td></tr>
+<tr><th>Client ID</th><td>기본값 그대로</td></tr>
+<tr><th>Username / Password</th><td><code>aqhub</code> / 공통값 (0장 참고, 대문자 K)</td></tr>
+</table>
+
+<h2>6. 재부팅 → MQTT 접속 확인</h2>
+<div class="box warn"><span class="lbl">⚠️ MQTT 설정은 저장만으로 적용되지 않습니다 — 재부팅 필수</span>
+Save 후에도 <code>connected:false</code>인 것이 정상입니다. 재부팅해야 새 설정으로 접속합니다.</div>
+<ol class="steps">
+<li>웹 UI에서 재부팅 (Settings 하단 <b>Reboot</b>) 하거나, 콘센트에서 뽑았다 다시 꽂습니다.</li>
+<li>약 30초 후 브라우저에서 <code>http://&lt;플러그IP&gt;/rpc/MQTT.GetStatus</code> 접속 →
+<b><code>{"connected":true}</code></b>가 나오면 성공.</li>
+</ol>
+<div class="box bad"><span class="lbl">🔧 connected:false가 계속될 때</span>
+① 비밀번호 대소문자 재확인 (첫 글자 K) ② Server 주소 끝 <code>:8883</code> 포함 여부 ③ Connection type이 Default TLS인지
+④ 다시 저장 → 재부팅. <span class="note">그래도 안 되면 관리자(Claude 세션)에게 — 허브에서 브로커 접속 로그로 원인을 좁힐 수 있음.</span></div>
+
+<h2>7. 라벨 부착 + 매핑표 기입 — 건너뛰기 금지</h2>
+<ol class="steps">
+<li>유성펜/스티커로 플러그 몸체에 <b>교실 번호</b>(예: <code>C01</code>)와 <b>MAC 뒤 4자리</b>를 적어 붙입니다.</li>
+<li>아래 표의 해당 행을 채웁니다 (prefix = <code>shellyplugsg3-</code> + MAC 12자리 소문자).</li>
+</ol>
+<table>
+<tr><th>교실</th><th>용도</th><th>MQTT prefix (shellyplugsg3-…)</th><th>설정일</th><th>MQTT ✔</th></tr>
+<tr><td>CLASS_01</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
+<tr><td>CLASS_02</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
+<tr><td>CLASS_03</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
+<tr><td>CLASS_04</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
+<tr><td>CLASS_05</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
+<tr><td>CLASS_06</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
+<tr><td>CLASS_07</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
+<tr><td>CLASS_08</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
+<tr><td colspan="5" class="note">파일럿 1호기(교무실 테스트, 2026-09-11): <span class="mono">shellyplugsg3-80b54e292d24</span> — 배치 교실 결정 시 위 표로 이동 기입</td></tr>
+</table>
+<p class="note">이 표가 곧 actuator.py의 교실↔플러그 매핑 config(<code>config/actuator.toml</code> 예정)의 원본이 됩니다.</p>
+
+<h2>8. 최종 동작 테스트 (플러그당 30초)</h2>
+<ol class="steps">
+<li>같은 망의 브라우저에서: <code>http://&lt;플러그IP&gt;/rpc/Switch.Toggle?id=0</code> → 릴레이 <b>딸깍</b> 소리 확인, 한 번 더 눌러 원복.</li>
+<li>원격(MQTT) 경로는 8대 설정 완료 후 관리자(Claude 세션)가 허브에서 일괄 검증:
+<code>&lt;prefix&gt;/command/switch:0</code>에 on/off 발행 → <code>status/switch:0</code> 피드백 확인.</li>
+</ol>
+
+<h2>9. 운용 투입 전 마무리 (교실 배치 시)</h2>
+<ul class="chk">
+<li><b>AP 모드 끄기</b> — Settings → Wi-Fi → Access Point 비활성. 켜둔 상태면 누구나 비밀번호 없이 설정 화면에 들어올 수 있음 <span class="note">(8대 설정이 전부 끝난 뒤에 끌 것 — 끄면 재설정 시 리셋 버튼 5초 필요)</span></li>
+<li>라우터에서 플러그 IP <b>DHCP 예약</b> (관리 편의용 — MQTT 제어에는 필수 아님)</li>
+<li>공기청정기 뒷면 전원을 <b>ON에 고정</b>하고 플러그에 연결 — SS-3631PW는 통전 복구형이라 플러그 ON=가동 (실측 확인 2026-09-01)</li>
+<li><b>환경 노드·비전 노드의 USB 전원은 이 플러그에 절대 같이 꽂지 않기</b> — OFF 판정 때 센서까지 꺼짐 (비전 노드용 재시작 플러그는 별도)</li>
+<li>펌웨어 자동 업데이트는 기본 꺼짐 — 수동 업데이트만 사용</li>
+</ul>
+
+<hr style="margin:40px 0 12px;border:0;border-top:1px solid var(--line)">
+<p class="note">multinode_aq · docs/plug_setup.html · 절차 실증: 2026-09-11 교무실 파일럿 (허브→HiveMQ→플러그 왕복 ~1초, docs/PROGRESS.md 참조)</p>
+
+</body>
+</html>
