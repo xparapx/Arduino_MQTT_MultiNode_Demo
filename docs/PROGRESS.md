@@ -203,3 +203,9 @@ turbo 단일맵 → plotly 기준 변수별 시퀀셜 맵으로 교체(값 크�
 환경 노드: 8대 중 7대 R4 v3(`t` 필드)로 정상. 발견 2건 → v3.1 예정: ① `connectWiFi()` 직후 `makeNodeId()` — WiFi 미연결 시 쓰레기 MAC으로 `node_000500` 생성(CLASS_08 재부팅 시 2행) → MAC 유효할 때까지 재시도; ② 부팅 워밍업 중 `"nox":nan`(voc/nox 미가드) → 허브 `parse failed`(위치 산술로 확정, 24h 7건) → NaN은 `null`로.
 
 **불변식 예외(사용자 승인 "B 진행")**: `readings` id 137442·137449의 node를 `node_000500` → `node_B80DC8`로 교정(2행, 백업 출력 후 UPDATE, 검증 distinct 8). 사용자가 직접 실행(자동 모드 분류기가 보드 DB 쓰기 차단). 이후 `/api/status` env_total 8 확인.
+
+## 2026-09-11 — Shelly Plug S Gen3 액추에이터 경로 실증 (교무실 파일럿)
+
+플러그 `shellyplugsg3-80b54e292d24` (S3PL-00112EU, fw 1.7.3) 프로비저닝: AP(192.168.33.1) → `wi_cne_class_S_2.4G`(192.168.1.224, RSSI −47) → MQTT = HiveMQ Cloud 8883 · Default TLS(ca.pem) · 계정 `aqhub` · MQTT Control + RPC + status_ntf 활성 (MQTT 설정은 재부팅 후 적용됨에 주의).
+검증 3단: ① 로컬 HTTP RPC `Switch.Set` 릴레이 왕복 + 계측(218.8 V·60 Hz·에너지·온도) ② 플러그 `MQTT connected:true` ③ **허브(집)에서 paho로 `<prefix>/command/switch:0`에 "on"/"off" 발행 → 릴레이 동작 + `<prefix>/status/switch:0` 피드백(output·apower·source=mqtt) 왕복 ~1초** — 추론→actuator_state→발행→플러그→상태 피드백 체인 중 코드만 남고 경로는 전부 실증.
+운용 전 할 일: 플러그 AP 모드 끄기(개방 설정창구), 라우터 DHCP 예약, 교실 배치 시 교실↔prefix 매핑 config. 다음 Phase = actuator.py (actuator_state READ-ONLY → 명령 발행 → apower 검증 로깅).
