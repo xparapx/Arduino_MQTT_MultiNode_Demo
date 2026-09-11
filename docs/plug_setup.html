@@ -124,15 +124,16 @@ Save 후에도 <code>connected:false</code>인 것이 정상입니다. 재부팅
 </ol>
 <table>
 <tr><th>교실</th><th>용도</th><th>MQTT prefix (shellyplugsg3-…)</th><th>설정일</th><th>MQTT ✔</th></tr>
-<tr><td>CLASS_01</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
-<tr><td>CLASS_02</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
-<tr><td>CLASS_03</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
-<tr><td>CLASS_04</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
-<tr><td>CLASS_05</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
-<tr><td>CLASS_06</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
-<tr><td>CLASS_07</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
-<tr><td>CLASS_08</td><td>공기청정기</td><td class="mono"></td><td></td><td></td></tr>
-<tr><td colspan="5" class="note">파일럿 1호기(교무실 테스트, 2026-09-11): <span class="mono">shellyplugsg3-80b54e292d24</span> — 배치 교실 결정 시 위 표로 이동 기입</td></tr>
+<tr><td>CLASS_01</td><td>공기청정기</td><td class="mono">shellyplugsg3-80b54e292d24</td><td>2026-09-11</td><td>✔ 09-11 (파일럿·허브 왕복)</td></tr>
+<tr><td>CLASS_02</td><td>공기청정기</td><td class="mono">shellyplugsg3-48f6eeb63f44</td><td></td><td></td></tr>
+<tr><td>CLASS_03</td><td>공기청정기</td><td class="mono">shellyplugsg3-80b54e31a8b4</td><td></td><td></td></tr>
+<tr><td>CLASS_04</td><td>공기청정기</td><td class="mono">shellyplugsg3-80b54e28d094</td><td>2026-09-11</td><td>✔ 09-11 (교실 실기동 51.8 W)</td></tr>
+<tr><td>CLASS_05</td><td>공기청정기</td><td class="mono">shellyplugsg3-80b54e31a7ec</td><td></td><td></td></tr>
+<tr><td>CLASS_06</td><td>공기청정기</td><td class="mono">shellyplugsg3-80b54e31a718</td><td></td><td></td></tr>
+<tr><td>CLASS_07</td><td>공기청정기</td><td class="mono">shellyplugsg3-48f6eeb4c0a0</td><td></td><td></td></tr>
+<tr><td>CLASS_08</td><td>공기청정기</td><td class="mono">shellyplugsg3-80b54e31a76c</td><td></td><td></td></tr>
+<tr><td colspan="5" class="note">교실 배정 확정 2026-09-11 (MAC은 기기 라벨 기준). 빈 칸은 해당 플러그 <b>통전·설정 후</b> 기입 —
+설정일과 MQTT ✔(허브에서 <code>Switch.GetStatus</code> 응답 확인)를 채울 것. CLASS_01 플러그는 교무실 파일럿에 쓰였던 그 기기.</td></tr>
 </table>
 <p class="note">이 표가 곧 actuator.py의 교실↔플러그 매핑 config(<code>config/actuator.toml</code> 예정)의 원본이 됩니다.</p>
 
