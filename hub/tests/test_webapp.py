@@ -107,6 +107,28 @@ def test_series_records_occupancy(site):
     assert w.series("nope")["times"] == []
 
 
+def test_plugs(site, tmp_path):
+    d = site["data"]
+    p = d.plugs()                                       # repo config, no state file yet
+    assert len(p["rooms"]) == 8 and p["watcher_stale"] and p["n_online"] == 0
+    assert [r["room"] for r in p["rooms"]] == [f"CLASS_0{i}" for i in range(1, 9)]
+    assert all(r["online"] is False and r["output"] is None for r in p["rooms"])
+    # with a fresh state file: one plug on and drawing power
+    from datetime import UTC, datetime
+    now = datetime.now(UTC).replace(tzinfo=None).strftime(webdata.TS_FMT)
+    st = {"updated": now, "plugs": {"CLASS_04": {"mac": "80b54e28d094", "last": now,
+          "online": True, "output": True, "apower": 51.8, "voltage": 223.0, "tC": 37.7}}}
+    (tmp_path / "plug_state.json").write_text(json.dumps(st), encoding="utf-8")
+    w = webdata.WebData(site["dir"] / "sensor_data.db", site["dir"] / "nodes.json", HUB / "models",
+                        plug_state_path=tmp_path / "plug_state.json")
+    p = w.plugs()
+    assert not p["watcher_stale"] and p["n_online"] == 1
+    c4 = next(r for r in p["rooms"] if r["room"] == "CLASS_04")
+    assert c4["online"] and c4["output"] and c4["apower"] == 51.8 and c4["last_kst"]
+    body = get(f"{site['url']}/api/plugs")               # endpoint wired
+    assert len(body["rooms"]) == 8
+
+
 def test_status(site):
     st = site["data"].status()
     assert st["env_total"] == 8 and st["vis_total"] == 5 and st["readings_rows"] > 0

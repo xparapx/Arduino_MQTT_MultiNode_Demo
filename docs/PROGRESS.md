@@ -209,3 +209,7 @@ turbo 단일맵 → plotly 기준 변수별 시퀀셜 맵으로 교체(값 크�
 플러그 `shellyplugsg3-80b54e292d24` (S3PL-00112EU, fw 1.7.3) 프로비저닝: AP(192.168.33.1) → `wi_cne_class_S_2.4G`(192.168.1.224, RSSI −47) → MQTT = HiveMQ Cloud 8883 · Default TLS(ca.pem) · 계정 `aqhub` · MQTT Control + RPC + status_ntf 활성 (MQTT 설정은 재부팅 후 적용됨에 주의).
 검증 3단: ① 로컬 HTTP RPC `Switch.Set` 릴레이 왕복 + 계측(218.8 V·60 Hz·에너지·온도) ② 플러그 `MQTT connected:true` ③ **허브(집)에서 paho로 `<prefix>/command/switch:0`에 "on"/"off" 발행 → 릴레이 동작 + `<prefix>/status/switch:0` 피드백(output·apower·source=mqtt) 왕복 ~1초** — 추론→actuator_state→발행→플러그→상태 피드백 체인 중 코드만 남고 경로는 전부 실증.
 운용 전 할 일: 플러그 AP 모드 끄기(개방 설정창구), 라우터 DHCP 예약, 교실 배치 시 교실↔prefix 매핑 config. 다음 Phase = actuator.py (actuator_state READ-ONLY → 명령 발행 → apower 검증 로깅).
+
+## 2026-09-11 — 플러그 상태 파이프라인 (plugwatch + /api/plugs + 제어·경보 화면)
+
+플러그 설치 즉시 대시보드 자동 반영을 위한 수집 계층: `config/plugs.json`(교실↔MAC 정본, plug_setup.html §7과 동일) · `plugwatch.py`(신규 서비스 — status/online 구독 + 60 s GetStatus 폴, `plug_state.json` 원자적 기록, **명령 발행 없음**) · `webdata.plugs()`+`/api/plugs` · 제어·경보 화면 상단 "플러그 전원" 카드 8칸(미접속/OFF/ON·대기전력/ON·가동, 가동 판별 = apower > 30 W — C04 실기동 51.8 W 실측 기반). deploy.sh 재시작 매핑에 plugwatch 추가. ruff 신규 0 · 114 passed(+`test_plugs`). 보드에 유닛 설치 필요(사용자 sudo).

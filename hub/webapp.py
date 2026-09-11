@@ -171,6 +171,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(d.time_bounds())
         if name == "analysis":
             return self._json(d.analysis())
+        if name == "plugs":
+            return self._json(d.plugs())
         if name == "export":
             if self.public:
                 return self._error(403, "export is disabled on the public instance")

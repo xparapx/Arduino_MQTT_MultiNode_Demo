@@ -75,10 +75,15 @@ class WebData:
     ``models_dir`` are taken as given (tests point them at a fixture copy)."""
 
     def __init__(self, db_path: str = "sensor_data.db", nodes_path: str = "nodes.json",
-                 models_dir: str | Path = "models", cfg: dict | None = None):
+                 models_dir: str | Path = "models", cfg: dict | None = None,
+                 plugs_path: str | Path | None = None, plug_state_path: str | Path | None = None):
         self.db_path = str(db_path)
         self.nodes_path = str(nodes_path)
         self.models_dir = Path(models_dir)
+        hub = Path(__file__).resolve().parent.parent
+        self.plugs_path = str(plugs_path if plugs_path is not None else hub / "config" / "plugs.json")
+        self.plug_state_path = str(plug_state_path if plug_state_path is not None
+                                   else Path(self.db_path).resolve().parent / "plug_state.json")
         self.cfg = cfg or config.load()
         self._cache: dict[str, tuple] = {}
         self._lock = threading.Lock()
@@ -363,6 +368,42 @@ class WebData:
                 "occ_max": _num(row["occ_max"]), "n": _num(row["n"]), "w": w, "cents": cents,
                 "hist": [{"recv_time": r["recv_time"], "occ": _num(r["occ"]),
                           "occ_max": _num(r["occ_max"])} for _, r in hist.iterrows()]}
+
+    # ---- plugs (Shelly actuator roster) --------------------------------------------------
+    def plugs(self) -> dict:
+        """Room -> plug mapping (config/plugs.json) merged with the live state file
+        plugwatch.py maintains. No DB involved; cheap enough to skip memoisation.
+        A plug appears as online the moment it is powered and provisioned."""
+        try:
+            with open(self.plugs_path, encoding="utf-8") as f:
+                rooms_cfg = json.load(f)
+        except (OSError, ValueError):
+            rooms_cfg = {}
+        try:
+            with open(self.plug_state_path, encoding="utf-8") as f:
+                st = json.load(f)
+        except (OSError, ValueError):
+            st = {}
+        now = datetime.now(UTC).replace(tzinfo=None)
+        updated = st.get("updated")
+        try:
+            stale = (now - datetime.strptime(updated, TS_FMT)).total_seconds() > 300 if updated else True
+        except (ValueError, TypeError):
+            stale = True
+        rooms = []
+        for room in sorted(rooms_cfg, key=self._sort_key):
+            s = (st.get("plugs") or {}).get(room) or {}
+            last = s.get("last")
+            try:
+                age = round((now - datetime.strptime(last, TS_FMT)).total_seconds() / 60, 1) if last else None
+            except (ValueError, TypeError):
+                age = None
+            rooms.append({"room": room, "mac": rooms_cfg[room],
+                          "online": bool(s.get("online")) and not stale,
+                          "output": s.get("output"), "apower": _num(s.get("apower")),
+                          "last_kst": kst(last, "%m-%d %H:%M") if last else None, "age_min": age})
+        return {"updated_kst": kst(updated) if updated else None, "watcher_stale": stale,
+                "n_online": sum(1 for r in rooms if r["online"]), "rooms": rooms}
 
     # ---- status (sidebar) ---------------------------------------------------------------
     def status(self) -> dict:

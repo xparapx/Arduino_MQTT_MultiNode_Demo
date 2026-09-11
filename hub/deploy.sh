@@ -18,7 +18,7 @@ LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse "origin/$BRANCH")
 CHANGED=$(git diff --name-only "$LOCAL" "$REMOTE" -- . | sed 's#^hub/##')
 
-need_hub=0; need_web=0
+need_hub=0; need_web=0; need_plugwatch=0
 while IFS= read -r f; do
   [ -z "$f" ] && continue
   case "$f" in
@@ -26,6 +26,9 @@ while IFS= read -r f; do
   esac
   case "$f" in
     webapp.py|nodes.json|pyproject.toml|uv.lock|aq/*|web/*|systemd/multinode_aq_web*.service) need_web=1 ;;
+  esac
+  case "$f" in
+    plugwatch.py|config/plugs.json|systemd/multinode_aq_plugwatch.service) need_plugwatch=1 ;;
   esac
 done <<< "$CHANGED"
 
@@ -39,6 +42,7 @@ else
 fi
 restart=()
 [ $need_hub  = 1 ] && restart+=(multinode_aq_hub)
+[ $need_plugwatch = 1 ] && systemctl list-unit-files multinode_aq_plugwatch.service >/dev/null 2>&1 && restart+=(multinode_aq_plugwatch)
 [ $need_web  = 1 ] && systemctl list-unit-files multinode_aq_web.service >/dev/null 2>&1 && restart+=(multinode_aq_web)
 [ $need_web  = 1 ] && systemctl list-unit-files multinode_aq_web_public.service >/dev/null 2>&1 && restart+=(multinode_aq_web_public)
 echo "restart  : ${restart[*]:-none}"

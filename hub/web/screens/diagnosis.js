@@ -157,22 +157,43 @@
     if (ws) ws.addEventListener("change", (e) => { within = e.target.value; renderRegime(el); });
   }
   const renderBand = (el) => renderInto(el, [secC, secD]);
-  const renderAction = (el) => renderInto(el, [secE, secF]);
+
+  // ---- P: 플러그 전원 (Shelly) — /api/plugs, 판정(A)과 독립 -------------------------
+  let P = null;
+  function secP() {
+    const meta = P && P.updated_kst ? `plugwatch 60 s 갱신 · 마지막 ${esc(P.updated_kst)} KST` : "plugwatch 대기";
+    let h = sec("action", "green", "플러그 전원 — 공기청정기", meta);
+    if (!P) return h + '<div class="info">플러그 상태 불러오는 중…</div>';
+    if (P.watcher_stale) h += '<div class="info">plugwatch 서비스가 멈췄거나 아직 설치되지 않았습니다 — 아래 상태는 최신이 아닐 수 있습니다.</div>';
+    const card = (r) => {
+      const run = r.apower !== null && r.apower > 30;      // SS-3631PW 정격 52 W, 대기 < 5 W
+      const [col, big, sub] = !r.online ? ["var(--dim)", "미접속", r.last_kst ? `마지막 ${r.last_kst}` : "통전·설정 대기"]
+        : r.output ? ["var(--green)", run ? "ON · 가동" : "ON · 대기전력", `${num(r.apower, 1)} W`]
+        : ["var(--red)", "OFF", "릴레이 차단"];
+      return `<div class="metric" data-tip="${esc(r.mac)}${r.last_kst ? ` · 마지막 ${esc(r.last_kst)} KST` : ""}"><div class="l">${esc(r.room)}</div><div class="v" style="color:${col}">${big}</div><div class="d">${sub}</div></div>`;
+    };
+    return h + `<div class="panel"><div class="grid g4" style="gap:10px">${P.rooms.map(card).join("")}</div>`
+      + `<p class="note">${P.n_online}/${P.rooms.length} 접속 · 가동 판별 = 유효전력 &gt; 30 W (정격 52 W · 대기 &lt; 5 W) · 상태 수집만 하며 제어(발행)는 actuator 단계에서.</p></div>`;
+  }
+  const renderAction = (el) => { if (!A) return; el.innerHTML = secP() + (A.empty ? EMPTY : [secE, secF].map((f) => f()).join("")); };
   const renderScope = (el) => renderInto(el, [secA]);
   const renderHistory = (el) => renderInto(el, [secI]);
 
-  function screen(name, label, icon, color, render, admin, group = "dx") {
+  function screen(name, label, icon, color, render, admin, group = "dx", plugs = false) {
     AQ.router.register({
       name, group, label, icon, color, admin: !!admin,
-      activate() { this.un = store.sub("/api/analysis", 60000, (d) => { A = d; render(this.el); }); },
-      deactivate() { if (this.un) { this.un(); this.un = null; } },
+      activate() {
+        this.un = store.sub("/api/analysis", 60000, (d) => { A = d; render(this.el); });
+        if (plugs) this.unp = store.sub("/api/plugs", 60000, (d) => { P = d; render(this.el); });
+      },
+      deactivate() { if (this.un) { this.un(); this.un = null; } if (this.unp) { this.unp(); this.unp = null; } },
       repaint() { render(this.el); },
     });
   }
   screen("dx-regime", "레짐·탐색", "plane", "cyan", renderRegime);
   screen("dx-band", "밴드·전이", "band", "orange", renderBand);
   // 제어·경보는 1차 내비(하단 dock)의 독립 화면 — 해시는 #dx-action 그대로 유지
-  screen("dx-action", "제어·경보", "action", "red", renderAction, false, "act");
+  screen("dx-action", "제어·경보", "action", "red", renderAction, false, "act", true);
   screen("dx-scope", "유효범위", "shield", "green", renderScope, true);
   screen("dx-history", "모델이력", "history", "purple", renderHistory, true);
 })();
