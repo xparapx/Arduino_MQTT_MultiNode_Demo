@@ -159,14 +159,9 @@ sudo systemctl enable --now multinode_sensor_demo_hub multinode_sensor_demo_dash
 
 ---
 
-## 작업 로그
+## 작업 이력
 
-- **2026-07**: 센서 구성 개편 — BME688 → **SEN55 + SCD30**(공기질 11종), 토픽 `.../env` 통합, 펌웨어·hub·dashboard 전면 교체
-- **2026-07**: 문서 이원화 — 프로젝트개요(`docs/index.html`) 신설, 구축 가이드는 `docs/manual.html`로 분리
-- **2026-06**: 멀티노드 환경 센싱 모니터 초기 공개 (UNO R4 WiFi 기본 / Nano ESP32 대안)
-- **2026-06**: 브로커 로컬(mosquitto) / 클라우드(HiveMQ TLS) 양방식 지원 — 클라이언트 격리 망 우회
-- **2026-06**: NTP 정각정렬 + 5분 평균 발행으로 노드 간 시각 정렬
-- **2026-06**: 보드 직접 붙여넣기용 영문 ASCII판(`hub/en/`) 추가 (한글 깨짐 회피)
+작업 이력·세션 인계 기록은 [docs/WORKLOG.md](docs/WORKLOG.md) 참조 (yyyy-mm 절, 최신이 위).
 
 ---
 

@@ -2,7 +2,7 @@
 
 > 대상: `hub/dashboard.py` (Streamlit, 페이지 1). 언제: 2026-08-29, Phase 1b (`v0.2-phase1b`, `v0.2.1-phase1b`).
 > 수치는 모두 보드(UNO Q) 실물 DB(readings 114,560행) 기준. 측정 도구: `hub/scripts/perf_probe.py`.
-> 관련: `docs/plan/CLAUDE_CODE_PLAN.md` §5, `docs/DRIFT.md` "Phase 1b" 절, `docs/PROGRESS.md`.
+> 관련: `docs/plan/CLAUDE_CODE_PLAN.md` §5, `docs/DRIFT.md` "Phase 1b" 절, `docs/WORKLOG.md`.
 
 ## 0. 출발점 — 왜 버벅였나
 
