@@ -62,3 +62,6 @@ hub/plug_cmd.json
 hub/plug_cmd.json.tmp
 hub/control.json
 hub/control.json.tmp
+
+# Claude Code 로컬 미리보기 설정 (머신 종속)
+.claude/launch.json
