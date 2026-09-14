@@ -6,6 +6,13 @@
 
 ## 2026-09
 
+### 플러그 8/8 완성 + 자동 제어(추론→발행) 가동 (2026-09-14)
+
+8대 프로비저닝 완료: 5대 일괄 ON/OFF 왕복(4대 정격 51 W 실측, C08은 램프 중 측정), C03·C07은 **Connection type이 No TLS로 저장된 것이 원인**(다른 설정 완벽·완전 침묵 — TLS 불일치는 인사 단계 거부라 로그도 없음) → C03은 LAN RPC로 `ssl_ca:ca.pem` 주입, C07·C05는 사용자가 UI 수정. 매뉴얼(plug_setup.html)을 원-세션 방식으로 개정(97759e8): WiFi+MQTT를 192.168.33.1에서 한 번에(WiFi 저장 후에도 AP 유지 실측), 확인은 격리망 때문에 플러그 IP가 아닌 대시보드로, No TLS 실사고 경고 명기.
+
+**자동 제어 1단계 가동**: `aq/autoctl.py`(desired_states = actuator_state 읽기 전용 + plan = 순수 reconcile 계획) + plugwatch가 auto 모드에서 60초마다 write_state 직후 reconcile — 온라인 플러그 중 판정≠실상태만 발행(`auto: CLASS_03 purifier -> ON` 저널). 수동 모드·미접속·판정 없음은 무동작. 발행 유일 경로 = plugwatch 유지. 테스트 test_autoctl 3건(가드 포함), 전체 118 passed. 첫 reconcile 예상 액션 사전 검증: C03 공청기 ON 1건뿐(물질 레짐 판정) — 판정과 실물 일치 상태에서 인수.
+남은 것: fan 플러그(매핑 fan=null — 환풍기 플러그 확보 시 config만), 비전 노드 매일 08:00 재시작 스케줄, actuator 로그의 DB 적재(전력·명령 이력 영구화)는 추후.
+
 ### 문서 구조 규칙 적용 — PROGRESS → WORKLOG (2026-09-12)
 
 전역 문서 구조 규칙 적용: `docs/PROGRESS.md` → `docs/WORKLOG.md` 개명(git mv) + yyyy-mm 절·최신이 위로 재편. README의 "작업 로그" 절을 WORKLOG(2026-06~07 절)로 이관하고 포인터만 남김. manual.html·DASHBOARD_PIPELINE.md·occ 펌웨어 주석의 PROGRESS 참조를 WORKLOG로 일괄 갱신. CLAUDE.md에 문서 구조 규칙 3줄 추가.

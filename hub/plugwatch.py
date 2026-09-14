@@ -23,6 +23,8 @@ from datetime import UTC, datetime
 
 import paho.mqtt.client as mqtt
 
+from aq import autoctl
+
 BROKER = os.environ["MQTT_BROKER"]
 PORT = int(os.environ.get("MQTT_PORT", "8883"))
 USERNAME = os.environ["MQTT_USERNAME"]
@@ -32,10 +34,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PLUGS_PATH = os.path.join(HERE, "config", "plugs.json")
 STATE_PATH = os.path.join(HERE, "plug_state.json")
 CMD_PATH = os.path.join(HERE, "plug_cmd.json")
+CTRL_PATH = os.path.join(HERE, "control.json")
+DB_PATH = os.path.join(HERE, "sensor_data.db")
+NODES_PATH = os.path.join(HERE, "nodes.json")
 TS_FMT = "%Y-%m-%d %H:%M:%S"
 SRC = "aq-plugwatch"          # RPC response topic prefix
 POLL_S = 60                   # GetStatus round for every configured plug
 WRITE_S = 15                  # state-file refresh + command-file check
+RECON_S = 60                  # auto mode: reconcile plugs to actuator_state
 OFFLINE_S = 180               # no message for this long -> online: false
 BUCKET_S = 300                # apower history: 5-min buckets ...
 HIST_N = 288                  # ... x 288 = 24 h
@@ -137,6 +143,24 @@ def run_command(client) -> bool:
     return False
 
 
+def control_mode() -> str:
+    try:
+        with open(CTRL_PATH, encoding="utf-8") as f:
+            return json.load(f).get("mode", "auto")
+    except (OSError, ValueError):
+        return "auto"
+
+
+def reconcile(client):
+    """Auto mode: bring online plugs to the state analyst judged (actuator_state).
+    Publishes only differences; matching states cost nothing. 수동 모드에선 무동작."""
+    mode = control_mode()
+    acts = autoctl.plan(autoctl.desired_states(DB_PATH, NODES_PATH), state, mode)
+    for room, dev, mac, payload in acts:
+        client.publish(f"shellyplugsg3-{mac}/command/switch:0", payload, qos=1)
+        print(f"auto: {room} {dev} -> {payload.upper()}")
+
+
 def on_connect(client, userdata, flags, reason_code, properties):
     print(f"broker connect: {reason_code}")
     client.subscribe(f"{SRC}/rpc")
@@ -188,6 +212,7 @@ print(f"plugwatch: {len(MAC2LOC)} plugs, poll {POLL_S}s, state -> {STATE_PATH}")
 # 명령 체크는 2초 주기(반응성), 상태 기록은 평시 15초 / 명령 직후 45초간 3초(SD 마모 억제)
 last_poll = 0.0
 last_write = 0.0
+last_recon = 0.0
 boost_until = 0.0
 while True:
     now = time.monotonic()
@@ -198,5 +223,8 @@ while True:
         boost_until = now + 45
     if now - last_write >= (3 if now < boost_until else WRITE_S):
         last_write = now
-        write_state()
+        write_state()                      # refreshes each device's "online" flag
+        if now - last_recon >= RECON_S:    # 자동 제어: 판정 상태로 수렴 (write 직후 = online 최신)
+            last_recon = now
+            reconcile(client)
     time.sleep(2)
