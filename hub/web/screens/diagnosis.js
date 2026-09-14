@@ -84,14 +84,19 @@
   function deviceBlock(x, dev, rules) {
     const ko = dev === "fan" ? "환풍기" : "공청기", d = (x.devices || {})[dev], c = CH.bandCfg(rules, dev), b = x.band24 || {};
     const state = d ? d.state === 1 : false, kept = state && /^(keep|min_run)/.test(d.rule || "");
-    const st = !d ? '<span class="st">—</span>' : d.rule === "hold" ? `<span class="st${state ? " on" : ""}">${state ? "ON" : "OFF"} · 미평가</span>`
+    // 플러그 실측 칩이 있으면 ON/OFF 판정 칩은 중복이라 생략(전력·회전이 실상태) —
+    // 부가 상태(유지·미평가)만 남긴다. 실측 칩이 없는 장치는 판정 칩이 유일한 상태 정보.
+    const chipP = fanChip(dev, x);
+    const st = chipP
+      ? (!d ? "" : d.rule === "hold" ? '<span class="st">미평가</span>' : kept ? '<span class="st keep">유지</span>' : "")
+      : !d ? '<span class="st">—</span>' : d.rule === "hold" ? `<span class="st${state ? " on" : ""}">${state ? "ON" : "OFF"} · 미평가</span>`
       : state ? (kept ? '<span class="st keep">ON · 유지</span>' : '<span class="st on">ON</span>') : '<span class="st">OFF</span>';
     const key = dev === "fan" ? "co2" : "voc";
     const v = x.judged ? x[key] : ((d || {}).values || {})[key] ?? null, z = CH.bandZone(c, v);   // unjudged: the value the skipped rule saw
     const val = v === null || v === undefined ? "<span>—</span>" : `<b data-tip="${esc(`${CH.ZONE_KO[z]} · 하한 ${c.off} · 상한 ${c.on}`)}">${c.var} ${num(Math.round(v))}</b>${c.unit ? `<span>${c.unit}</span>` : ""}`;
     const series = dev === "fan" ? b.co2 : b.voc;
     const body = series && series.length ? CH.bandGauge(c, v) + CH.bandStrip(c, b, dev, ko) : `<div class="empty">${b.hours || 24}h 수신 없음</div>`;
-    return `<div class="dev"><div class="lbl"><span class="nm">${ko} ${st}${fanChip(dev, x)}</span><span class="val">${val}</span></div>${body}</div>`;
+    return `<div class="dev"><div class="lbl"><span class="nm">${ko} ${st}${chipP}</span><span class="val">${val}</span></div>${body}</div>`;
   }
 
   // ---- F: 예측 · 경보 ----------------------------------------------------------------
