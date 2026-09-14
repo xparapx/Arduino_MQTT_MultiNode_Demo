@@ -370,7 +370,9 @@ class WebData:
                           "occ_max": _num(r["occ_max"])} for _, r in hist.iterrows()]}
 
     # ---- plugs (Shelly actuator roster) --------------------------------------------------
-    RUN_W = {"purifier": 30.0, "fan": 10.0}   # apower above this = device actually running
+    # apower above this = device actually running. SS-3631PW 실측: 본체 꺼짐 0~3 W ·
+    # 정음 가동 ~7 W(2026-09-14 C03) · 강풍 ~52 W — 5 W가 꺼짐/정음을 정확히 가른다
+    RUN_W = {"purifier": 5.0, "fan": 10.0}
 
     def plugs(self) -> dict:
         """Room -> {purifier, fan} plug mapping (config/plugs.json) merged with the

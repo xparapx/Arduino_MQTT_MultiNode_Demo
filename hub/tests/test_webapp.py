@@ -132,7 +132,8 @@ def test_plugs(site, tmp_path):
     c4 = next(r for r in p["rooms"] if r["room"] == "CLASS_04")["purifier"]
     assert c4["online"] and c4["output"] and c4["running"] and len(c4["hist"]) == 2
     body = get(f"{site['url']}/api/plugs")               # endpoint wired
-    assert len(body["rooms"]) == 8 and body["run_w"]["purifier"] == 30.0
+    assert len(body["rooms"]) == 8
+    assert body["run_w"]["purifier"] == webdata.WebData.RUN_W["purifier"]
     assert body["version"]                               # store gate needs a version field
 
 
