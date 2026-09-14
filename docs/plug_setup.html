@@ -79,21 +79,16 @@ WiFi 비밀번호가 틀리면 플러그가 AP 모드로 되돌아오고, MQTT �
 ② 그래도 안 되면 토글 꺼진 채로 <b>Save settings 먼저</b> 누르고 <b>F5 새로고침</b> → 토글이 풀려 있음 → 켜고 다시 Save.
 <span class="note">(실측: Save 먼저 방식으로 해결됨)</span></div>
 <ul class="chk"><li>Wi-Fi 2, Roaming(−80 / 60 s), Static IP는 <b>기본값 그대로</b> 둔다 (IP 고정은 나중에 라우터 DHCP 예약으로)</li></ul>
+<div class="box ok"><span class="lbl">✅ WiFi를 저장해도 AP 연결은 끊기지 않습니다</span>
+플러그는 학교망에 붙으면서 임시 AP도 계속 켜두므로, <b>화면 이동 없이 이 자리(192.168.33.1)에서 바로 4단계 MQTT 설정을 이어가세요.</b>
+저장 후 Settings → Wi-Fi 상단의 <b>Wi-Fi status</b>에 <code>IPv4 address</code>가 찍히면(예: 192.168.1.200) 학교망 접속 성공 — 이 IP를 매핑표에 메모.</div>
 
-<h2>4. 학교망 복귀 → 접속 확인</h2>
-<ol class="steps">
-<li>저장하면 플러그가 재부팅하며 학교망에 붙고, 폰/PC는 Shelly AP에서 자동으로 끊깁니다.</li>
-<li><b>폰/PC WiFi를 <code>wi_cne_class_S_2.4G</code>로 되돌립니다.</b></li>
-<li>브라우저에서 <code>http://shellyplugsg3-xxxxxxxxxxxx.local</code> (소문자, 1단계에서 메모한 MAC) 또는
-설정 화면에서 확인한 IP(예: <code>http://192.168.1.224</code>)로 접속되면 성공.</li>
-</ol>
-<p class="note">확인용 RPC (선택): <code>http://&lt;플러그IP&gt;/rpc/WiFi.GetStatus</code> → <code>"status":"got ip"</code>, rssi가 −70보다 크면(예: −47) 신호 양호.</p>
-
-<h2>5. MQTT 설정 (핵심)</h2>
+<h2>4. MQTT 설정 (핵심 · 같은 화면 192.168.33.1에서 계속)</h2>
 <p><b>Settings → MQTT</b>에서 아래 표대로. <b>모든 칸을 채운 뒤 Save 한 번</b>이면 됩니다.</p>
 <table>
 <tr><th>Enable</th><td>✅ 체크</td></tr>
-<tr><th>Connection type</th><td><b><code>Default TLS</code></b> — 내장 CA(<code>ca.pem</code>)로 서버 검증. <span class="note">No TLS·TLS no validation 금지, User TLS 불필요</span></td></tr>
+<tr><th>Connection type</th><td><b><code>Default TLS</code></b> — 내장 CA(<code>ca.pem</code>)로 서버 검증. <span class="note">No TLS·TLS no validation 금지, User TLS 불필요.
+<b>실사고 이력: 이 칸을 No TLS로 두면 다른 설정이 전부 맞아도 "완전 침묵"(브로커에 안 나타남) — 3반이 이 케이스였음 (2026-09-14)</b></span></td></tr>
 <tr><th>MQTT prefix</th><td>기본값 그대로 (<code>shellyplugsg3-…</code>) — 제어 토픽의 이름이 됨</td></tr>
 <tr><th>Use client certificate</th><td>⬜ 해제 그대로</td></tr>
 <tr><th>Enable 'MQTT Control'</th><td>✅ — <code>&lt;prefix&gt;/command/switch:0</code>에 <code>on</code>/<code>off</code>만 보내면 되는 제어 채널</td></tr>
@@ -105,17 +100,26 @@ WiFi 비밀번호가 틀리면 플러그가 AP 모드로 되돌아오고, MQTT �
 <tr><th>Username / Password</th><td><code>aqhub</code> / 공통값 (0장 참고, 대문자 K)</td></tr>
 </table>
 
-<h2>6. 재부팅 → MQTT 접속 확인</h2>
+<h2>5. 재부팅 → 학교망 복귀</h2>
 <div class="box warn"><span class="lbl">⚠️ MQTT 설정은 저장만으로 적용되지 않습니다 — 재부팅 필수</span>
 Save 후에도 <code>connected:false</code>인 것이 정상입니다. 재부팅해야 새 설정으로 접속합니다.</div>
 <ol class="steps">
-<li>웹 UI에서 재부팅 (Settings 하단 <b>Reboot</b>) 하거나, 콘센트에서 뽑았다 다시 꽂습니다.</li>
-<li>약 30초 후 브라우저에서 <code>http://&lt;플러그IP&gt;/rpc/MQTT.GetStatus</code> 접속 →
-<b><code>{"connected":true}</code></b>가 나오면 성공.</li>
+<li>같은 화면에서 재부팅: Settings 하단 <b>Reboot</b> (또는 콘센트에서 뽑았다 다시 꽂기).</li>
+<li>이제야 <b>폰/PC WiFi를 <code>wi_cne_class_S_2.4G</code>로 되돌립니다.</b> 설정은 끝났습니다.</li>
 </ol>
-<div class="box bad"><span class="lbl">🔧 connected:false가 계속될 때</span>
-① 비밀번호 대소문자 재확인 (첫 글자 K) ② Server 주소 끝 <code>:8883</code> 포함 여부 ③ Connection type이 Default TLS인지
-④ 다시 저장 → 재부팅. <span class="note">그래도 안 되면 관리자(Claude 세션)에게 — 허브에서 브로커 접속 로그로 원인을 좁힐 수 있음.</span></div>
+
+<h2>6. 접속 확인 — 대시보드로 (플러그 IP 접속은 쓰지 말 것)</h2>
+<div class="box warn"><span class="lbl">⚠️ 학교망에서는 플러그 IP(<code>http://192.168.1.x</code>)·mDNS 접속이 안 될 수 있습니다</span>
+클라이언트 격리 때문에 폰/PC → 플러그 직접 접근이 위치에 따라 차단됩니다(실측: 되는 자리도, 안 되는 자리도 있음).
+확인은 항상 <b>브로커를 거치는 경로</b>로 하세요.</div>
+<ol class="steps">
+<li>재부팅 약 30초 후, 대시보드 <b>에너지 화면</b>(테일넷 <code>http://aqhub:8501/#energy</code>)에서 해당 교실 칩이
+<b>미접속 → OFF/대기</b>로 바뀌면 성공 (최대 1분).</li>
+<li>대시보드를 못 보는 상황이면 관리자(Claude 세션)에게 "N반 확인" 요청 — 브로커에서 즉시 확인 가능.</li>
+</ol>
+<div class="box bad"><span class="lbl">🔧 1분 넘게 미접속일 때</span>
+① <b>Connection type이 Default TLS인지</b> (No TLS가 최다 빈발 원인) ② 비밀번호 대소문자 (첫 글자 K) ③ Server 끝 <code>:8883</code>
+④ 재부팅을 했는지 — 하나 고치면 다시 Save → Reboot. <span class="note">플러그 웹 UI에 다시 들어가려면 임시 AP(<code>ShellyPlugSG3-…</code> → 192.168.33.1)로 — AP는 설정 후에도 계속 켜져 있음.</span></div>
 
 <h2>7. 라벨 부착 + 매핑표 기입 — 건너뛰기 금지</h2>
 <ol class="steps">
