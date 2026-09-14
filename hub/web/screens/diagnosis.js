@@ -162,13 +162,17 @@
   let P = null;
   AQ.plugState = () => P;                       // monitor/energy 화면과 공유 (store가 중복 fetch 방지)
   function fanChip(dev, x) {
-    // 판정 칩 옆의 "실물" 칩: 플러그가 보고하는 물리 상태 (스핀 = 실제 가동)
+    // 판정 칩 옆의 "실물" 칩: 플러그가 보고하는 물리 상태 (스핀 = 실제 가동).
+    // 색 의미론: 빨강 = 판정과 실물 불일치일 때만. 일치하는 OFF는 무채색.
     if (!P || P.watcher_stale) return "";
     const room = x.label, d = (P.rooms.find((r) => r.room === room) || {})[dev];
     if (!d || !d.online) return "";
-    const cls = d.running ? "run" : d.output ? "" : "cut";
-    const txt = d.running ? `${num(d.apower, 1)}W` : d.output ? "대기" : "차단";
-    const tip = `플러그 실측 — ${d.output ? (d.running ? "가동중" : "통전·대기전력") : "릴레이 차단"} · ${num(d.apower, 1)} W`;
+    const judgedOn = (((x.devices || {})[dev]) || {}).state === 1;
+    const mismatch = judgedOn !== !!d.output;
+    const cls = d.running ? "run" : mismatch ? "cut" : "";
+    const txt = d.running ? `${num(d.apower, 1)}W` : d.output ? "대기" : mismatch ? "OFF ⚠" : "OFF";
+    const tip = `플러그 실측 — ${d.output ? (d.running ? "가동중" : "통전·대기전력") : "전원 차단"} · ${num(d.apower, 1)} W`
+      + (mismatch ? `\n⚠ 판정(${judgedOn ? "ON" : "OFF"})과 불일치 — 자동 모드면 1분 내 수렴, 아니면 수동 개입 상태` : "");
     return ` <span class="fanchip ${cls}" data-tip="${esc(tip)}"><svg viewBox="0 0 24 24">${AQ.icons.fan}</svg>${txt}</span>`;
   }
   async function postControl(body) {

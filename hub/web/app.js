@@ -105,7 +105,7 @@ const AQ = (() => {
     const w = `${(Math.round((d.apower || 0) * 10) / 10).toFixed(1)}W`;
     if (d.running) return `<span class="fanchip run" data-tip="가동중 · ${w}">${fan}${w}</span>`;
     if (d.output) return `<span class="fanchip" data-tip="통전 · 대기전력 ${w}">${fan}대기 ${w}</span>`;
-    return `<span class="fanchip cut" data-tip="릴레이 차단">${fan}OFF</span>`;
+    return `<span class="fanchip" data-tip="플러그 전원 차단(릴레이 열림)">${fan}OFF</span>`;
   }
   const secMeta = (meta) => `<div class="sec"><div class="meta">${meta || ""}</div></div>`;
   function sec(icon, color, title, meta) {
