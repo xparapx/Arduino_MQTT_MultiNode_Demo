@@ -111,11 +111,10 @@ def test_plugs(site, tmp_path):
     d = site["data"]
     p = d.plugs()                                       # repo config, no state file yet
     assert len(p["rooms"]) == 8 and p["watcher_stale"] and p["n_online"] == 0
-    assert p["mode"] == "auto" and p["n_plugs"] == 9    # purifiers x8 + CLASS_02 fan
+    assert p["mode"] == "auto" and p["n_plugs"] == 16   # purifiers x8 + fans x8
     assert [r["room"] for r in p["rooms"]] == [f"CLASS_0{i}" for i in range(1, 9)]
     assert all(r["purifier"] and r["purifier"]["online"] is False for r in p["rooms"])
-    assert all(r["fan"] is None for r in p["rooms"] if r["room"] != "CLASS_02")
-    assert p["rooms"][1]["fan"]["online"] is False              # CLASS_02 fan mapped
+    assert all(r["fan"] and r["fan"]["online"] is False for r in p["rooms"])
     # with a fresh state file: CLASS_04 purifier running, with a 24h history tail
     from datetime import UTC, datetime
     now_dt = datetime.now(UTC).replace(tzinfo=None)
