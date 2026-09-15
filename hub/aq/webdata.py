@@ -152,7 +152,9 @@ class WebData:
 
     # ---- node identity -----------------------------------------------------------------
     def env_nodes(self, version=None) -> list[str]:
-        """Environment nodes = nodes that ever wrote readings, in label-number order."""
+        """Environment nodes = nodes that ever wrote readings, in label-number order.
+        nodes.json is the roster of registered nodes: ids outside it (garbage-MAC
+        ghosts like node_000500 from a rebooting R4) are hidden from every screen."""
         version = version if version is not None else self.data_version()[0]
 
         def build():
@@ -162,6 +164,9 @@ class WebData:
                 if "readings" not in self._tables(con):
                     return []
                 nodes = [r[0] for r in con.execute("SELECT node FROM readings GROUP BY node")]
+            registered = self.labels()
+            if registered:
+                nodes = [n for n in nodes if n in registered]
             return sorted(nodes, key=lambda n: self._sort_key(self.label_of(n)))
         return self._memo("env_nodes", version, build)
 
@@ -237,6 +242,11 @@ class WebData:
                 if "readings" not in self._tables(con):
                     return {"version": bucket, "days": days, "box": {}, "by_node": {}}
                 dfa = pd.read_sql_query(sql, con, params=(f"-{days} days",))
+            if dfa.empty:
+                return {"version": bucket, "days": days, "box": {}, "by_node": {}}
+            registered = self.labels()                          # 미등록(유령) 노드 제외
+            if registered:
+                dfa = dfa[dfa["node"].isin(registered)].reset_index(drop=True)
             if dfa.empty:
                 return {"version": bucket, "days": days, "box": {}, "by_node": {}}
             for k, (lo_p, hi_p) in PLAUSIBLE.items():           # 물리적 불가능 값 → NaN

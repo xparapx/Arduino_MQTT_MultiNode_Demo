@@ -71,11 +71,14 @@ def load_current_model(cfg: dict, models_dir: Path):
     return model, labels, meta["version"]
 
 
-def fit_candidate(conn, cfg: dict, as_of: datetime, window_days: int):
+def fit_candidate(conn, cfg: dict, as_of: datetime, window_days: int,
+                  allowed: set | None = None):
     """Fit a GMM on the last `window_days` of QC-passed rows. Returns
     (model, labels, meta, rows_used). Raises regime.AnchorError if rejected."""
     start = as_of - timedelta(days=window_days)
     raw = db.load_readings(conn, fmt(start), fmt(as_of))
+    if allowed:
+        raw = raw[raw["node"].isin(allowed)].reset_index(drop=True)
     masked = qc.range_mask(raw, cfg)
     gate = qc.daily_gate(masked, cfg)
     clean = qc.apply_gate(masked, gate, cfg)
@@ -103,10 +106,16 @@ def get_model(conn, cfg: dict, as_of: datetime, models_dir: Path, window_days: i
 
 # ---- shared per-node preparation ------------------------------------------------------
 
-def prepare(conn, cfg: dict, start: datetime, end: datetime):
+def prepare(conn, cfg: dict, start: datetime, end: datetime,
+            allowed: set | None = None):
     """(masked readings, gate) for the window. Gate rows exist for every node
-    and every KST day in the window, so a silent node fails with 'no rows'."""
+    and every KST day in the window, so a silent node fails with 'no rows'.
+    `allowed` = registered nodes (nodes.json keys) — rows from unregistered ids
+    (e.g. the garbage-MAC ghost node_000500 a rebooting R4 emits before WiFi is
+    up) are dropped before any judgement."""
     raw = db.load_readings(conn, fmt(start), fmt(end))
+    if allowed:
+        raw = raw[raw["node"].isin(allowed)].reset_index(drop=True)
     masked = qc.range_mask(raw, cfg)
     nodes = sorted(masked["node"].unique()) if not masked.empty else []
     off = timedelta(hours=cfg["time"]["tz_offset_hours"])
@@ -131,7 +140,7 @@ def run_hourly(conn, cfg: dict, labels_map: dict, as_of: datetime, model_pack,
     model, labels, ver = model_pack
     run_at = fmt(as_of)
     start = as_of - timedelta(hours=cfg["run"]["hourly_window_hours"])
-    masked, gate = prepare(conn, cfg, start, as_of)
+    masked, gate = prepare(conn, cfg, start, as_of, set(labels_map))
     today = (as_of + timedelta(hours=cfg["time"]["tz_offset_hours"])).date()
     rows: list[dict] = []
     res = {"labels": labels_map, "regime_now": {}, "action": {}, "qc": {}, "forecast": {}}
@@ -188,7 +197,7 @@ def run_daily(conn, cfg: dict, labels_map: dict, as_of: datetime, model_pack) ->
     model, labels, ver = model_pack
     run_at = fmt(as_of)
     start = as_of - timedelta(days=cfg["run"]["daily_window_days"])
-    masked, gate = prepare(conn, cfg, start, as_of)
+    masked, gate = prepare(conn, cfg, start, as_of, set(labels_map))
     rows: list[dict] = []
     for r in gate.itertuples():
         rows.append(row("qc", qc.gate_payload(gate, r.node, r.date), f"{r.node}@{r.date}",
@@ -203,6 +212,7 @@ def run_daily(conn, cfg: dict, labels_map: dict, as_of: datetime, model_pack) ->
         rows.append(row("transition", regime.transitions(sm, g["bucket"], cfg), node, start,
                         as_of, ver, run_at))
     occ = db.load_occupancy(conn, fmt(start), fmt(as_of))
+    occ = occ[occ["node"].isin(labels_map)].reset_index(drop=True)
     rows.append(row("occ_co2", occ_co2.spearman_by_room(clean, occ, labels_map, cfg,
                                                         db.last_occupancy_bucket(conn)),
                     "all", start, as_of, None, run_at))
@@ -221,7 +231,7 @@ def boundary_in_last_week(cal: dict | None, as_of: datetime, cfg: dict) -> bool:
 
 
 def run_weekly(conn, cfg: dict, as_of: datetime, models_dir: Path, cal: dict | None,
-               dry_run: bool) -> list[dict]:
+               dry_run: bool, labels_map: dict | None = None) -> list[dict]:
     """Fit a candidate on the training window, store it as the next gmm_vN
     (never overwriting), compare with models/current on the last
     eval_window_days and promote when the plan's criteria (or a calendar
@@ -234,13 +244,14 @@ def run_weekly(conn, cfg: dict, as_of: datetime, models_dir: Path, cal: dict | N
     current = governance.load_current(models_dir, link)
     cur_ver = governance.resolve_current(models_dir, link)
     try:
-        model, labels, meta, n = fit_candidate(conn, cfg, as_of, window)
+        model, labels, meta, n = fit_candidate(conn, cfg, as_of, window,
+                                                    set(labels_map or ()))
         candidate = (model, labels, meta)
     except regime.AnchorError as e:
         candidate = None
         log(f"candidate rejected: {e}")
     eval_start = as_of - timedelta(days=cfg["governance"]["eval_window_days"])
-    masked, gate = prepare(conn, cfg, eval_start, as_of)
+    masked, gate = prepare(conn, cfg, eval_start, as_of, set(labels_map or ()))
     recent = qc.apply_gate(masked, gate, cfg)
     decision = governance.compare(current, candidate, recent, cfg,
                                   forced=boundary_in_last_week(cal, as_of, cfg))
@@ -273,7 +284,7 @@ def cmd_run(a) -> int:
     t0 = datetime.now()
     if a.mode == "weekly":
         cal = config.load_calendar(a.calendar) if Path(a.calendar).is_file() else None
-        rows = run_weekly(ro, cfg, as_of, models_dir, cal, a.dry_run)
+        rows = run_weekly(ro, cfg, as_of, models_dir, cal, a.dry_run, labels_map)
     else:
         pack = get_model(ro, cfg, as_of, models_dir, cfg["governance"]["train_window_days"])
         if a.mode == "hourly":

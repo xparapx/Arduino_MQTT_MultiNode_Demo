@@ -75,6 +75,7 @@ def test_weekly_store_promote_then_keep(fixture_copy, as_of, capsys, tmp_path):
     """Real weekly run on a copy: v1 stored + promoted; a second run keeps."""
     from aq import governance
     base = ["run", "--mode", "weekly", "--db", str(fixture_copy), "--as-of", as_of,
+            "--nodes", str(HUB / "fixtures" / "nodes.json"),
             "--models-dir", str(tmp_path)]
     assert analyst.main(base) == 0
     capsys.readouterr()
