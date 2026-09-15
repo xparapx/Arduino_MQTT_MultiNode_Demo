@@ -209,18 +209,20 @@ const CH = (() => {
   }
 
   /* 24h plug power bars: hist = [[bucket_epoch_utc, mean_W], ...] (5-min buckets,
-     gaps = no sample). Device identity colours (fan = --rg-human, purifier =
-     --rg-matter), dashed line at the running threshold. */
+     gaps = no sample). Bar colour = value on the device colormap (purifier =
+     Tealgrn, fan = Blues; floor 0.2 keeps the pale end visible on the light
+     panel), dashed line at the running threshold. */
   function powerBars(hist, dev, runW) {
-    const W = 288, H = 52, color = css(dev === "fan" ? "--rg-human" : "--rg-matter");
+    const W = 288, H = 52, map = cmap(dev);
     const now = Math.floor(Date.now() / 1000 / 300) * 300, start = now - 287 * 300;
     const slots = new Array(288).fill(null);
     for (const [b, w] of hist || []) { const i = (b - start) / 300; if (i >= 0 && i < 288) slots[i] = w; }
     const top = Math.max(60, ...slots.filter((v) => v !== null).map((v) => v * 1.1));
     const y = (v) => H * (1 - v / top);
+    const at = (v) => `rgb(${cmapAt(map, 0.2 + 0.8 * (v / top))})`;
     let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px">`;
-    s += `<line x1="0" y1="${f1(y(runW))}" x2="${W}" y2="${f1(y(runW))}" stroke="${color}" stroke-width="0.7" stroke-dasharray="3,3" opacity="0.55"/>`;
-    slots.forEach((v, i) => { if (v !== null) s += `<rect x="${i}" y="${f1(y(v))}" width="1" height="${f1(Math.max(0.8, H - y(v)))}" fill="${color}" fill-opacity="${i === 287 ? 1 : 0.75}"/>`; });
+    s += `<line x1="0" y1="${f1(y(runW))}" x2="${W}" y2="${f1(y(runW))}" stroke="${at(runW)}" stroke-width="0.7" stroke-dasharray="3,3" opacity="0.7"/>`;
+    slots.forEach((v, i) => { if (v !== null) s += `<rect x="${i}" y="${f1(y(v))}" width="1" height="${f1(Math.max(0.8, H - y(v)))}" fill="${at(v)}" fill-opacity="${i === 287 ? 1 : 0.85}"/>`; });
     s += "</svg>";
     // 축 라벨은 SVG 밖 (preserveAspectRatio=none 이 글자를 늘리므로)
     return s + `<div style="display:flex;justify-content:space-between;font-size:10px;color:${css("--dim")};font-family:'IBM Plex Mono',monospace;margin-top:2px"><span>-24h</span><span>-12h</span><span>지금</span></div>`;
@@ -394,8 +396,15 @@ const CH = (() => {
     voc: [[0, "253,237,176"], [0.091, "250,205,145"], [0.182, "246,173,119"], [0.273, "240,142,98"],
           [0.364, "231,109,84"], [0.455, "216,80,83"], [0.545, "195,56,90"], [0.636, "168,40,96"],
           [0.727, "138,29,99"], [0.818, "107,24,93"], [0.909, "76,21,80"], [1, "47,15,61"]],
+    // 장치 전력(에너지 바차트) -- 값 클수록 깊은 색: 공청기 = Tealgrn, 환풍기 = Blues (plotly)
+    purifier: [[0, "176,242,188"], [0.167, "137,232,172"], [0.333, "103,219,165"], [0.5, "76,200,163"],
+               [0.667, "56,178,163"], [0.833, "44,152,160"], [1, "37,125,152"]],
+    fan: [[0, "247,251,255"], [0.125, "222,235,247"], [0.25, "198,219,239"], [0.375, "158,202,225"],
+          [0.5, "107,174,214"], [0.625, "66,146,198"], [0.75, "33,113,181"], [0.875, "8,81,156"],
+          [1, "8,48,107"]],
   };
   const cmap = (key) => CMAPS[key] || CMAPS.co2;
+  const devColor = (dev) => `rgb(${cmapAt(cmap(dev), 0.85)})`;  // 장치 정체성 = 컬러맵 깊은 쪽
   const cvar = (key) => `rgb(${cmapAt(cmap(key), 0.5)})`;   // 단일 색이 필요한 차트용 중앙값 색
   // 변수 대표색: 핵심 = 컬러맵 중앙값, 보조 = plotly 불연속 초이스 (붉은·주황 회피)
   const PALETTE = { pm2p5: "#636EFA", pm10p0: "#AB63FA", scd_temp: "#00CC96", scd_hum: "#19D3F3" };
@@ -467,5 +476,5 @@ const CH = (() => {
     return s + "</svg>";
   }
 
-  return { radar, box, hbars, trend, pbars, dowheat, weekbars, line, occBars, powerBars, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO, cvar, varColor };
+  return { radar, box, hbars, trend, pbars, dowheat, weekbars, line, occBars, powerBars, devColor, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO, cvar, varColor };
 })();

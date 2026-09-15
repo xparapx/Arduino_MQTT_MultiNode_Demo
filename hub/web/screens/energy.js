@@ -1,13 +1,14 @@
 /* 에너지 screen -- per-room plug power: current W per device (공청기/환풍기) and a
-   24 h apower bar series (5-min buckets from plugwatch). Device identity colours
-   follow the action semantics: fan = --rg-human, purifier = --rg-matter. */
+   24 h apower bar series (5-min buckets from plugwatch). Bars are value-mapped on
+   the device colormap (purifier = Tealgrn, fan = Blues); the row dot shows the
+   colormap's deep end as the device identity colour. */
 "use strict";
 (() => {
   const { esc, css, num, secMeta, store, devChip } = AQ;
   let P = null;
 
   function devRow(dev, ko, d) {
-    const color = css(dev === "fan" ? "--rg-human" : "--rg-matter");
+    const color = CH.devColor(dev);                          // 컬러맵 깊은 쪽 = 장치 정체성
     const w = d && d.online && d.apower !== null ? `${num(d.apower, 1)} W` : "—";
     return `<div class="enrow"><span style="width:9px;height:9px;border-radius:3px;background:${color};display:inline-block"></span>`
       + `<span class="tt" style="font-weight:700">${ko}</span>${devChip(d)}<span class="w" style="color:${d && d.running ? "var(--green)" : "var(--dim)"}">${w}</span></div>`
@@ -25,7 +26,7 @@
     el.innerHTML = secMeta(meta)
       + (P.watcher_stale ? '<div class="info">plugwatch 서비스가 멈췄거나 아직 설치되지 않았습니다 — 상태·이력이 최신이 아닐 수 있습니다.</div>' : "")
       + `<div class="grid g2">${cards}</div>`
-      + `<p class="note">막대 = 5분 평균 유효전력(24h) · 점선 = 가동 판별 임계(공청기 ${num((P.run_w || {}).purifier)} W · 환풍기 ${num((P.run_w || {}).fan)} W) · 색 = 장치 정체성(공청기 물질 · 환풍기 인체, 제어 판단과 동일)</p>`;
+      + `<p class="note">막대 = 5분 평균 유효전력(24h) · 점선 = 가동 판별 임계(공청기 ${num((P.run_w || {}).purifier)} W · 환풍기 ${num((P.run_w || {}).fan)} W) · 색 = 전력 크기(공청기 Tealgrn · 환풍기 Blues, 클수록 깊은 색)</p>`;
   }
 
   AQ.router.register({
