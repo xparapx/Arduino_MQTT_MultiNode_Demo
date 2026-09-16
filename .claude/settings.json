@@ -4,7 +4,12 @@
       "Bash(uv run pytest*)",
       "Bash(ssh q git *)",
       "Bash(ssh q systemctl is-active*)",
-      "Bash(ssh q journalctl*)"
+      "Bash(ssh q journalctl*)",
+      "Bash(ssh q curl -s http://localhost*)",
+      "Bash(node --check *)",
+      "Bash(git fetch*)",
+      "mcp__Claude_Browser__read_console_messages",
+      "mcp__Claude_Browser__preview_logs"
     ],
     "deny": [
       "Bash(ssh q *sudo*)",
