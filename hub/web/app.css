@@ -229,6 +229,8 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .ctlbar .modes button.on.manual { color: var(--orange); }
 /* energy screen device panel */
 .enrow { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.enrow .tt { white-space: nowrap; }
+.enrow .w { white-space: nowrap; }
 .enrow .w { font-family: "IBM Plex Mono", monospace; font-size: 21px; font-weight: 800; margin-left: auto; }
 /* vision node ON / OFF chips -- right end of the node-select row (all vision nodes) */
 .vnodes { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
@@ -338,6 +340,11 @@ svg.chart .hb-over { animation: hb-blink 2.2s ease-in-out infinite; }
   .grid { gap: 8px; }
   .g2, .g3, .g5, .g6, .acts { grid-template-columns: 1fr; }
   .g4, .radar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }   /* 레이더 2열 × 4행 */
+  /* 에너지 2열 카드: 좁은 폭에서 칩·수치 축소, 라벨 줄바꿈 방지 */
+  .enrow { gap: 5px; }
+  .enrow .w { font-size: 15px; }
+  .enrow .fanchip { padding: 2px 7px; gap: 4px; font-size: 11px; }
+  .enrow .fanchip svg { width: 13px; height: 13px; }
   .span2, .span3 { grid-column: auto; }
   .g6 > .panel { padding: 8px; }
   .subtabs { gap: 5px; }
