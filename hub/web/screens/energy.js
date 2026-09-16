@@ -25,7 +25,7 @@
       + devRow("purifier", "공청기", r.purifier) + `<div style="height:10px"></div>` + devRow("fan", "환풍기", r.fan) + `</div>`).join("");
     el.innerHTML = secMeta(meta)
       + (P.watcher_stale ? '<div class="info">plugwatch 서비스가 멈췄거나 아직 설치되지 않았습니다 — 상태·이력이 최신이 아닐 수 있습니다.</div>' : "")
-      + `<div class="grid g2">${cards}</div>`
+      + `<div class="grid g4">${cards}</div>`
       + `<p class="note">막대 = 5분 평균 유효전력(24h) · 점선 = 가동 판별 임계(공청기 ${num((P.run_w || {}).purifier)} W · 환풍기 ${num((P.run_w || {}).fan)} W) · 색 = 전력 크기(공청기 Tealgrn · 환풍기 Blues, 클수록 깊은 색)</p>`;
   }
 
