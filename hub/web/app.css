@@ -341,10 +341,10 @@ svg.chart .hb-over { animation: hb-blink 2.2s ease-in-out infinite; }
   .g2, .g3, .g5, .g6, .acts { grid-template-columns: 1fr; }
   .g4, .radar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }   /* 레이더 2열 × 4행 */
   /* 에너지 2열 카드: 좁은 폭에서 칩·수치 축소, 라벨 줄바꿈 방지 */
-  .enrow { gap: 5px; }
-  .enrow .w { font-size: 15px; }
-  .enrow .fanchip { padding: 2px 7px; gap: 4px; font-size: 11px; }
-  .enrow .fanchip svg { width: 13px; height: 13px; }
+  .enrow { gap: 4px; }
+  .enrow .w { font-size: 13px; }
+  .enrow .fanchip { padding: 2px 5px; gap: 3px; font-size: 10px; }
+  .enrow .fanchip svg { width: 12px; height: 12px; }
   .span2, .span3 { grid-column: auto; }
   .g6 > .panel { padding: 8px; }
   .subtabs { gap: 5px; }
