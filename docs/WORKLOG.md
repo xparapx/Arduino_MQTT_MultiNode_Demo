@@ -6,6 +6,10 @@
 
 ## 2026-09
 
+### C02 환풍기 재설정 — use_client_cert 사고 유형 신규 확인 (2026-09-19)
+
+수거한 환풍기 중 C02(80b54e2b05f0) 재설정: WiFi 정상(.153, RSSI −49)인데 브로커 완전 침묵. 학교 PC→플러그 LAN HTTP가 **이 자리에서는 열려** `/rpc/MQTT.GetConfig`로 실저장 설정 확인 — UI에서 껐다고 믿은 **`use_client_cert:true`가 그대로**(저장 후 Reboot 누락 추정). 사용자가 `MQTT.SetConfig`(client cert 해제 + status_ntf 켬)+Reboot 실행 → 접속 성공, RPC·plug_state 반영 검증. 교훈: ① No TLS에 이어 **client cert 켜짐**도 "완전 침묵" 사고 유형(TLS 인사 거부) ② 격리는 자리 따라 다름 — 열리는 자리의 LAN `MQTT.GetConfig`가 "저장 안 된 설정"을 잡는 유일한 수단. plug_setup.html 트러블슈팅 ⑤ 및 고장수리 예외 명기. plugs.json C02 fan은 사용자 확정 표대로 80b54e2b05f0 원복(e70e834 — 9/15의 48f6eeb790d4 정정을 재정정).
+
 ### 환풍기 플러그 8대 설치 점검 — 1대만 편입, 7대 수거 결정 (2026-09-19)
 
 8대 설치 후 점검: **C01(48f6eeb7ac6c)만 브로커 접속** — ON→38 W 정속→OFF 실기동 검증 완료(사용자 현장 확인). C02~C08 7대는 브로커에 유언(LWT)조차 없는 완전 침묵 = MQTT 미설정 또는 No TLS 저장(9/14 사고 패턴). 진단 중 확인: **학교 공유기 클라이언트 격리로 허브→플러그 LAN HTTP 전면 차단**(접속 중인 .196도 무응답, MQTT RPC로 IP 확인) — LAN RPC 원격 주입 경로 폐쇄. 사용자 결정: 7대 수거 후 plug_setup.html 원-세션 방식으로 재설정. 재설치 시 실MAC 브로커 대조 → plugs.json 정정 예정.
