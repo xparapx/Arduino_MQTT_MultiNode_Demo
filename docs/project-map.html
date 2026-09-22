@@ -5,103 +5,247 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>multinode_aq 프로젝트 지도</title>
 <style>
-:root{
-  --ink:#33312D; --ink2:#6B6862; --paper:#FBFAF7; --surface:#fff; --line:#E4E1DA;
-  --teal:#0C6D6A; --teal-t:rgba(12,109,106,.12); --melon:#D9634B; --melon-t:rgba(217,99,75,.12);
-  --sand:#F0ECE3; --sky:#3B6EA8; --sky-t:rgba(59,110,168,.12); --gold-t:rgba(184,134,11,.12);
-  --r:18px;
+
+/* ===== project-map v3 — 파스텔 라이트 퍼스트 (soft gradient · glass card · big type) ===== */
+:root, :root[data-theme=light]{
+  --paper:#f6f4f1; --side:rgba(255,255,255,.72); --surface:#ffffff; --sand:#f3f0eb; --line:#e7e2da;
+  --ink:#1d1c2e; --ink2:#5d5a70; --foot:#7d7a8e;   /* 4.5:1 근접 — 11.5px 보조 텍스트도 읽히게 */
+  --acc:#6f66e8; --acc-t:rgba(111,102,232,.12);
+  --melon:#d94f72; --melon-t:rgba(217,79,114,.10);
+  --teal:#1e9e86; --teal-t:rgba(30,158,134,.10);
+  --sky:#3f7cd6; --sky-t:rgba(63,124,214,.10);
+  --gold:#c07f00; --gold-t:rgba(255,179,0,.14);
+  --badge-ink:#1d1c2e;
+  --l0:#ffd9a4; --l1:#c9c3f5; --l2:#a9d9f2; --l3:#f5b9d1; --l4:#bfe8cd; --l5:#f2e39e;
+  --shc:rgba(29,28,46,.05); --sh2:rgba(29,28,46,.09);
+  --glow1:rgba(201,195,245,.55); --glow2:rgba(255,217,164,.5); --glow3:rgba(169,217,242,.45);
+  --r:18px; color-scheme:light;
 }
+:root[data-theme=dark]{
+  --paper:#16151f; --side:rgba(24,23,36,.8); --surface:#201f2e; --sand:#2a2939; --line:#37354a;
+  --ink:#ecebf4; --ink2:#a9a6bc; --foot:#6f6c82;
+  --acc:#9d95f5; --acc-t:rgba(157,149,245,.16);
+  --melon:#f07898; --melon-t:rgba(240,120,152,.14);
+  --teal:#43c7ad; --teal-t:rgba(67,199,173,.13);
+  --sky:#7fabf0; --sky-t:rgba(127,171,240,.13);
+  --gold:#f0bf62; --gold-t:rgba(240,191,98,.15);
+  --badge-ink:#16151f;
+  --l0:#e8b878; --l1:#a49bec; --l2:#7db8dd; --l3:#dd8fb4; --l4:#83c9a0; --l5:#d8c46f;
+  --shc:rgba(0,0,0,.28); --sh2:rgba(0,0,0,.4);
+  --glow1:rgba(120,110,220,.16); --glow2:rgba(230,180,110,.10); --glow3:rgba(90,140,200,.12);
+  color-scheme:dark;
+}
+:root[data-theme=dark] .node.c0 rect{fill:color-mix(in srgb,var(--l0) 13%,var(--surface));stroke:color-mix(in srgb,var(--l0) 45%,var(--line))}
+:root[data-theme=dark] .node.c2 rect{fill:color-mix(in srgb,var(--l1) 13%,var(--surface));stroke:color-mix(in srgb,var(--l1) 45%,var(--line))}
+:root[data-theme=dark] .node.c3 rect{fill:color-mix(in srgb,var(--l3) 12%,var(--surface));stroke:color-mix(in srgb,var(--l3) 45%,var(--line))}
+:root[data-theme=dark] .node.c4 rect{fill:color-mix(in srgb,var(--l2) 13%,var(--surface));stroke:color-mix(in srgb,var(--l2) 45%,var(--line))}
+:root[data-theme=dark] .node.c5 rect{fill:color-mix(in srgb,var(--l4) 13%,var(--surface));stroke:color-mix(in srgb,var(--l4) 45%,var(--line))}
+:root[data-theme=dark] .node text{fill:#f4f3fa}
+:root[data-theme=dark] .node text.sub{fill:#bab7cc}
+:root[data-theme=dark] .lane,:root[data-theme=dark] .lin{background:color-mix(in srgb,var(--lc,var(--sand)) 14%,var(--surface))}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 "Noto Sans KR","Pretendard",system-ui,sans-serif}
-header{padding:28px 32px 12px}
-h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
-h1 small{font-weight:400;color:var(--ink2);font-size:14px;margin-left:10px}
-.tabs{display:flex;gap:8px;padding:0 32px 16px;flex-wrap:wrap}
-.tabs button{border:0;background:var(--sand);color:var(--ink);font:inherit;font-weight:600;padding:9px 18px;border-radius:999px;cursor:pointer}
-.tabs button[aria-selected=true]{background:var(--ink);color:#fff}
-.tabs button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+html,body{margin:0;color:var(--ink);font:16px/1.7 "Pretendard","Noto Sans KR",system-ui,sans-serif}
+body{background:
+  radial-gradient(900px 500px at 8% -4%, var(--glow1), transparent 60%),
+  radial-gradient(800px 460px at 96% 0%, var(--glow2), transparent 55%),
+  radial-gradient(700px 500px at 70% 100%, var(--glow3), transparent 60%),
+  var(--paper);
+  background-attachment:fixed}
+
+/* ---- shell: 유리질 사이드 + 메인 ---- */
+.app{display:grid;grid-template-columns:264px minmax(0,1fr);min-height:100vh}
+.sidebar{background:var(--side);backdrop-filter:blur(14px);border-right:1px solid var(--line);padding:26px 18px;position:sticky;top:0;height:100vh;overflow:auto;display:flex;flex-direction:column}
+.brand{padding:2px 10px 18px;border-bottom:1px solid var(--line)}
+.brand small{display:block;font-size:11.5px;color:var(--foot);letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+.brand b{display:block;font-size:17px;font-weight:800;line-height:1.35;margin-top:6px;letter-spacing:-.01em}
+.tabs{display:flex;flex-direction:column;gap:5px;margin-top:20px}
+.tabs button{display:flex;gap:11px;align-items:center;text-align:left;border:0;background:transparent;color:var(--ink2);font:inherit;font-size:14.5px;font-weight:600;padding:11px 12px;border-radius:12px;cursor:pointer}
+.tabs button .n{flex:0 0 24px;height:22px;border-radius:8px;display:grid;place-items:center;background:var(--sand);color:var(--ink2);font-size:11.5px;font-weight:800}
+.tabs button:hover{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px var(--shc)}
+.tabs button[aria-selected=true]{background:var(--surface);color:var(--ink);box-shadow:0 2px 6px var(--shc),0 8px 20px var(--shc)}
+.tabs button[aria-selected=true] .n{color:var(--badge-ink)}
+.tabs button[data-tab=ov][aria-selected=true] .n{background:var(--l0)}
+.tabs button[data-tab=sc][aria-selected=true] .n{background:var(--l5)}
+.tabs button[data-tab=map][aria-selected=true] .n{background:var(--l1)}
+.tabs button[data-tab=db][aria-selected=true] .n{background:var(--l2)}
+.tabs button[data-tab=ops][aria-selected=true] .n{background:var(--l4)}
+.tabs button[data-tab=gloss][aria-selected=true] .n{background:var(--l3)}
+.tabs button[data-tab^="em-"][aria-selected=true] .n{background:var(--l1)}
+.tabs button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.node:focus-visible,.tbl:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:6px}
+.embed-frame{display:block;width:100%;height:calc(100vh - 150px);min-height:540px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.embed-frame.inline{height:68vh;min-height:460px;margin-bottom:24px}
+.sidefoot{margin-top:auto;padding:16px 10px 2px;font-size:11.5px;color:var(--foot);line-height:1.6}
+#thm{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:var(--ink);border:0;color:var(--paper);font:inherit;font-size:13px;font-weight:600;padding:10px 14px;border-radius:999px;cursor:pointer;margin-bottom:12px}
+#thm:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#thm .m{display:none}
+:root[data-theme=light] #thm .s{display:none}
+:root[data-theme=light] #thm .m{display:inline}
+main{min-width:0;padding:34px 44px 80px}
+main h1{margin:0 0 6px;font-size:30px;font-weight:800;letter-spacing:-.02em;text-wrap:balance;line-height:1.25}
+main h1 small{display:block;font-weight:500;color:var(--ink2);font-size:14.5px;margin:8px 0 0;letter-spacing:0}
+main>h1{margin-bottom:26px}
 section[hidden]{display:none}
-.wrap{display:grid;grid-template-columns:1fr 320px;gap:20px;padding:0 32px 40px}
-@media(max-width:1100px){.wrap{grid-template-columns:1fr}}
-.stage{background:var(--surface);border-radius:var(--r);box-shadow:0 1px 2px rgba(51,49,45,.06),0 8px 24px rgba(51,49,45,.06);padding:16px;overflow:auto}
+
+/* ---- 지도/스키마 공용: 무대 + 우측 상세 패널 ---- */
+.wrap{display:flex;flex-direction:column;gap:20px}
+.stage{background:var(--surface);border-radius:var(--r);border:1px solid var(--line);box-shadow:0 2px 6px var(--shc),0 18px 44px var(--sh2);padding:20px;overflow:auto}
 svg{display:block;width:100%;height:auto;font-family:inherit}
-.panel{background:var(--surface);border-radius:var(--r);box-shadow:0 1px 2px rgba(51,49,45,.06),0 8px 24px rgba(51,49,45,.06);padding:20px;position:sticky;top:16px;align-self:start;min-height:200px}
-.panel h2{font-size:16px;margin:0 0 4px}
-.panel .path{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:var(--ink2);word-break:break-all}
-.panel p{margin:10px 0 0;font-size:14px}
-.panel p.desc{background:var(--sand);border-radius:10px;padding:10px 12px;margin-top:12px}
-.panel h3{font-size:13px;color:var(--ink2);margin:16px 0 4px;font-weight:600}
-.panel ul{margin:0;padding-left:18px;font-size:13.5px}
+.panel{background:var(--surface);border-radius:var(--r);border:1px solid var(--line);box-shadow:0 2px 6px var(--shc),0 18px 44px var(--sh2);padding:26px 30px;min-height:120px}
+.pgrid{display:grid;grid-template-columns:minmax(300px,1.2fr) 1fr 1fr;gap:6px 40px}
+@media(max-width:1000px){.pgrid{grid-template-columns:1fr}}
+.panel h2{font-size:17.5px;margin:0 0 4px;font-weight:800;letter-spacing:-.01em}
+.panel .path{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--ink2);word-break:break-all}
+.panel p{margin:12px 0 0;font-size:14.5px}
+.panel p.desc{background:var(--sand);border-radius:12px;padding:12px 14px;margin-top:14px}
+.panel h3{font-size:12.5px;color:var(--foot);margin:18px 0 6px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.panel ul{margin:0;padding-left:18px;font-size:14px}
+.panel li{margin:3px 0}
 .panel li b{font-weight:600}
-.chip{display:inline-block;font-size:12px;padding:2px 10px;border-radius:999px;margin:2px 4px 2px 0;background:var(--sand)}
-.chip.w{background:var(--melon-t);color:#9c3c27}.chip.r{background:var(--teal-t);color:var(--teal)}.chip.t{background:var(--gold-t);color:#7a5a07}
-.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--ink2);padding:6px 4px 0}
-.legend span::before{content:"";display:inline-block;width:22px;height:0;border-top:3px solid;margin-right:6px;vertical-align:middle}
+.chip{display:inline-block;font-size:12.5px;font-weight:600;padding:3px 11px;border-radius:999px;margin:2px 5px 2px 0;background:var(--sand)}
+.chip.w{background:var(--melon-t);color:var(--melon)}.chip.r{background:var(--teal-t);color:var(--teal)}.chip.t{background:var(--acc-t);color:var(--acc)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--ink2);padding:12px 6px 0}
+.legend span::before{content:"";display:inline-block;width:22px;height:0;border-top:3px solid;margin-right:7px;vertical-align:middle;border-radius:2px}
 .legend .call::before{border-color:var(--ink)}.legend .imp::before{border-color:var(--ink2);border-top-style:dashed}
 .legend .wr::before{border-color:var(--melon)}.legend .rd::before{border-color:var(--teal)}.legend .http::before{border-color:var(--sky)}
-/* overview */
-.ov{padding:0 32px 40px}
-.ov p{max-width:760px;margin:0 0 16px}
-.lane{display:flex;align-items:center;gap:6px;margin:0 0 10px;flex-wrap:wrap}
-.lane em{font-style:normal;font-size:12px;color:var(--ink2);width:120px;flex:none;font-weight:600}
-.lane .n{background:var(--surface);border-radius:12px;padding:8px 14px;box-shadow:0 1px 2px rgba(51,49,45,.08);min-width:120px}
-.lane .n b{display:block;font-size:13px}.lane .n span{font-size:11.5px;color:var(--ink2)}
-.lane i{font-style:normal;color:var(--ink2);font-size:14px}
-/* svg nodes */
+
+/* ---- 설계 맵: 파스텔 밴드 + 흰 카드 ---- */
+.ov p.intro{max-width:960px;margin:0 0 18px;font-size:16.5px;color:var(--ink2)}
+.ov .stats{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 24px}
+.ov .stats span{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 15px;font-size:13.5px;font-weight:650;box-shadow:0 1px 3px var(--shc);font-variant-numeric:tabular-nums}
+.ov .stats span::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--sc,var(--acc))}
+.lane{display:flex;align-items:stretch;gap:10px;margin:0 0 14px;flex-wrap:wrap;padding:16px 18px;background:color-mix(in srgb,var(--lc,var(--sand)) 26%,var(--surface));border:1px solid color-mix(in srgb,var(--lc,var(--line)) 40%,var(--line));border-radius:16px}
+.lane em{font-style:normal;font-size:13.5px;color:var(--ink);width:132px;flex:none;font-weight:800;align-self:center;line-height:1.5}
+.lane .n{background:var(--surface);border-radius:12px;padding:11px 15px;min-width:160px;flex:1 1 0;box-shadow:0 1px 3px var(--shc)}
+.lane .n b{display:block;font-size:14px;font-weight:700}.lane .n span{font-size:12.5px;color:var(--ink2)}
+.lane i{font-style:normal;color:var(--foot);font-size:16px;align-self:center}
+
+/* ---- 연결 지도 SVG ---- */
 .node{cursor:pointer}
-.node rect{fill:var(--surface);stroke:var(--line);stroke-width:1.2;rx:10}
-.node.on rect{stroke:var(--ink);stroke-width:2}
-.node.dim{opacity:.22}
-.node text{font-size:12px;fill:var(--ink)}
-.node text.sub{font-size:10px;fill:var(--ink2)}
-.node.c0 rect{fill:var(--gold-t)}.node.c1 rect{fill:var(--sand)}.node.c2 rect{fill:#fff}
-.node.c3 rect{fill:var(--melon-t)}.node.c4 rect{fill:var(--teal-t)}.node.c5 rect{fill:var(--sky-t)}.node.c6 rect{fill:#eee}
-.col-label{font-size:12px;fill:var(--ink2);font-weight:600}
-.edge{fill:none;stroke-width:1.6;opacity:.35;pointer-events:none}
+.node rect{fill:var(--surface);stroke:var(--line);stroke-width:1.2;rx:12;filter:drop-shadow(0 1px 2px var(--shc))}
+.node.on rect{stroke:var(--acc);stroke-width:2.2;filter:drop-shadow(0 3px 6px var(--sh2))}
+.node.dim{opacity:.2}
+.node text{font-size:13px;fill:var(--ink);font-weight:600}
+.node text.sub{font-size:11px;fill:var(--ink2);font-weight:400}
+.node.c0 rect{fill:color-mix(in srgb,var(--l0) 32%,var(--surface))}
+.node.c1 rect{fill:var(--surface)}
+.node.c2 rect{fill:color-mix(in srgb,var(--l1) 26%,var(--surface))}
+.node.c3 rect{fill:color-mix(in srgb,var(--l3) 26%,var(--surface))}
+.node.c4 rect{fill:color-mix(in srgb,var(--l2) 30%,var(--surface))}
+.node.c5 rect{fill:color-mix(in srgb,var(--l4) 30%,var(--surface))}
+.node.c6 rect{fill:var(--sand)}
+.col-label{font-size:13px;fill:var(--ink);font-weight:700;letter-spacing:.06em}
+.edge{fill:none;stroke-width:1.6;opacity:.3;pointer-events:none}
 .edge.call{stroke:var(--ink)}.edge.imp{stroke:var(--ink2);stroke-dasharray:4 4}
 .edge.wr{stroke:var(--melon)}.edge.rd{stroke:var(--teal)}.edge.http{stroke:var(--sky)}
 .edge.on{opacity:1;stroke-width:2.6}.edge.dim{opacity:.05}
-.edge-label{font-size:10px;fill:var(--ink2);pointer-events:none;opacity:0}
+.edge-label{font-size:10.5px;fill:var(--ink2);pointer-events:none;opacity:0}
 .edge-label.on{opacity:1}
-/* db view */
-.db .side{fill:#d6d2c8}.db .top{fill:#efece4}.db .face{fill:#fff;stroke:var(--line)}
-.db .title{font-size:13px;font-weight:700}
+
+/* ---- DB 스키마 ---- */
+#dbsvg{margin:0 auto}
+.db .face{fill:var(--surface);stroke:color-mix(in srgb,var(--dbc,var(--line)) 45%,var(--line));stroke-width:1.2;filter:drop-shadow(0 2px 5px var(--shc))}
+.db .dot{fill:var(--dbc,var(--acc))}
+.db .title{font-size:15px;font-weight:800;fill:var(--ink)}
 .tbl{cursor:pointer}
-.tbl rect{fill:var(--sand);stroke:none;rx:6}
-.tbl.on rect{fill:var(--teal)}.tbl.on text{fill:#fff}
-.tbl text{font-size:11.5px;fill:var(--ink)}
-.rel{fill:none;stroke:var(--teal);stroke-width:1.6;stroke-dasharray:5 4;opacity:0;pointer-events:none}
+.tbl rect{fill:color-mix(in srgb,var(--dbc,var(--sand)) 14%,var(--sand));stroke:none;rx:9}
+.tbl.on rect{fill:var(--acc)}.tbl.on text{fill:#fff}
+.tbl text{font-size:12px;fill:var(--ink)}
+.rel{fill:none;stroke:var(--acc);stroke-width:1.7;stroke-dasharray:5 4;opacity:0;pointer-events:none}
 .rel.on{opacity:1}
-.writer{font-size:11px;fill:#9c3c27;font-weight:600}
-.reader{font-size:11px;fill:var(--teal);font-weight:600}
-table.cols{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
-table.cols td{padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+.writer{font-size:11px;fill:var(--melon);font-weight:700}
+.reader{font-size:11.5px;fill:var(--teal);font-weight:700}
+.db text{fill:var(--ink2)}
+table.cols{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:8px;font-variant-numeric:tabular-nums}
+table.cols td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 table.cols td:first-child{font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all;max-width:180px}
-/* glossary */
-.gloss{padding:0 32px 48px;max-width:860px}
-.gloss h2{font-size:18px;margin:8px 0 6px}
-.gloss .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:14px 0}
-.gloss .flow div{background:var(--surface);border-radius:12px;padding:10px 12px;font-size:13px;box-shadow:0 1px 2px rgba(51,49,45,.06);position:relative}
-.gloss .flow div b{display:block;font-size:12px;color:var(--ink2);font-weight:600;margin-bottom:2px}
-.gloss .flow div.hl{outline:2px solid var(--teal)}
-.gloss .flow div+div::before{content:"→";position:absolute;left:-13px;top:14px;color:var(--ink2)}
-.gloss p{margin:8px 0}
-.gloss code,.panel code{background:var(--sand);padding:1px 6px;border-radius:6px;font-size:13px}
-.note{background:var(--melon-t);border-radius:12px;padding:12px 16px;margin-top:14px;font-size:14px}
+.gloss table.cols{font-size:15px;margin-top:12px}
+.gloss table.cols td{padding:11px 12px;line-height:1.65}
+.gloss table.cols td:first-child{max-width:260px;min-width:170px;font-size:14px}
+
+/* ---- 시나리오 (시간 축) ---- */
+.sc p.intro{max-width:900px;margin:0 0 20px;color:var(--ink2);font-size:16.5px}
+.scsel{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 24px}
+.scsel button{border:1px solid var(--line);background:var(--surface);color:var(--ink2);font:inherit;font-size:14px;font-weight:600;padding:9px 18px;border-radius:999px;cursor:pointer;box-shadow:0 1px 3px var(--shc)}
+.scsel button:hover{color:var(--ink)}
+.scsel button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.scsel button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.tl{position:relative;margin:0;padding:0 0 0 38px;list-style:none;max-width:920px}
+.tl::before{content:"";position:absolute;left:12px;top:10px;bottom:10px;width:2px;background:var(--line)}
+.tl li{position:relative;margin:0 0 16px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:15px 20px;box-shadow:0 2px 6px var(--shc)}
+.tl li::before{content:"";position:absolute;left:-31px;top:20px;width:11px;height:11px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 3px var(--paper)}
+.tl .t{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--acc);font-weight:700;margin-right:10px}
+.tl .txt{font-size:15.5px}
+.tl .nd{display:inline-block;border:1px solid var(--line);background:var(--sand);color:var(--ink);font:inherit;font-size:13px;font-weight:600;padding:4px 13px;border-radius:999px;cursor:pointer;margin:8px 7px 0 0}
+.tl .nd:hover{border-color:var(--acc);color:var(--acc);background:var(--acc-t)}
+.tl .nd:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.tl .nd::after{content:" ↗";font-size:11.5px;color:var(--foot)}
+
+/* ---- 데이터 여정 (lineage) ---- */
+.linwrap{margin:0 0 26px}
+.linwrap h2{font-size:19px;margin:0 0 12px;font-weight:800;letter-spacing:-.01em}
+.lin{display:flex;align-items:stretch;gap:10px;margin:0 0 12px;flex-wrap:wrap;padding:13px 16px;background:color-mix(in srgb,var(--lc,var(--sand)) 24%,var(--surface));border:1px solid color-mix(in srgb,var(--lc,var(--line)) 40%,var(--line));border-radius:16px}
+.lin em{font-style:normal;font-size:13.5px;color:var(--ink);width:164px;flex:none;font-weight:800;align-self:center;line-height:1.45}
+.lin .n{background:var(--surface);border-radius:12px;padding:9px 14px;min-width:130px;flex:1 1 0;box-shadow:0 1px 3px var(--shc)}
+.lin .n b{display:block;font-size:13.5px;font-weight:700}.lin .n span{font-size:12px;color:var(--ink2)}
+.lin i{font-style:normal;color:var(--foot);align-self:center}
+
+/* ---- 운영 · 배포 ---- */
+#opsbody p.intro{max-width:1000px;margin:0 0 24px;color:var(--ink2);font-size:16.5px}
+.opsgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px}
+.dev{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:24px 26px;box-shadow:0 2px 6px var(--shc),0 18px 44px var(--sh2)}
+.dev h2{font-size:18px;margin:0;font-weight:800;letter-spacing:-.01em}
+.dev .host{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
+table.svc{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:14px}
+table.svc td{padding:9px 9px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.6}
+table.svc td:first-child{font-family:ui-monospace,Menlo,Consolas,monospace;white-space:nowrap;font-weight:600}
+table.svc .meta{color:var(--ink2);font-size:13px;margin-top:2px}
+.dev ul{margin:14px 0 0;padding-left:18px;font-size:14.5px;color:var(--ink2);line-height:1.7}
+.dev ul li{margin:6px 0}
+
+/* ---- 핵심 기술 · 용어 ---- */
+.gloss{font-size:16px}
+.gloss h2{font-size:21px;margin:30px 0 12px;font-weight:800;letter-spacing:-.01em}
+.gloss h2:first-child{margin-top:0}
+.gloss .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:28px;margin:18px 0}
+.gloss .flow div{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px;font-size:14.5px;line-height:1.55;box-shadow:0 2px 6px var(--shc);position:relative}
+.gloss .flow div b{display:block;font-size:15px;font-weight:800;margin-bottom:6px}
+.gloss .flow div small{display:block;font-size:13px;color:var(--ink2);line-height:1.55;margin-top:6px}
+.gloss .flow div.hl{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc-t),0 2px 6px var(--shc)}
+.gloss .flow div+div::before{content:"→";position:absolute;left:-23px;top:50%;transform:translateY(-50%);color:var(--foot);font-size:15px}
+.gloss p{margin:10px 0}
+.gloss code,.panel code{background:var(--sand);padding:1px 7px;border-radius:7px;font-size:.92em}
+.note{border-left:3px solid var(--melon);background:var(--melon-t);border-radius:0 14px 14px 0;padding:16px 20px;margin-top:24px;font-size:15px;line-height:1.7}
 @media(max-width:700px){.gloss .flow{grid-template-columns:1fr 1fr}.gloss .flow div+div::before{display:none}}
+@media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{position:static;height:auto}.tabs{flex-direction:row;flex-wrap:wrap}main{padding:20px 18px 60px}}
 @media(prefers-reduced-motion:no-preference){.edge,.node,.tbl rect,.rel{transition:opacity .18s,stroke-width .18s,fill .18s}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('pm-theme')||'light')}catch(e){document.documentElement.setAttribute('data-theme','light')}</script>
 </head>
 <body>
-<header><h1 id="title"></h1></header>
-<div class="tabs" role="tablist">
-  <button role="tab" aria-selected="true" data-tab="ov">설계 맵 (큰 그림)</button>
-  <button role="tab" aria-selected="false" data-tab="map">스크립트 연결 지도</button>
-  <button role="tab" aria-selected="false" data-tab="db">DB 스키마</button>
-  <button role="tab" aria-selected="false" data-tab="gloss" id="glossbtn">API · 엔드포인트란</button>
-</div>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand"><small>project-map</small><b id="brand"></b></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="ov"><span class="n">1</span>한눈에 보기 (큰 그림)</button>
+    <button role="tab" aria-selected="false" data-tab="sc" id="scbtn" hidden><span class="n">·</span>하루의 흐름 (시나리오)</button>
+    <button role="tab" aria-selected="false" data-tab="map"><span class="n">2</span>코드 연결 지도</button>
+    <button role="tab" aria-selected="false" data-tab="db"><span class="n">3</span><span id="dblabel">DB 스키마</span></button>
+    <button role="tab" aria-selected="false" data-tab="ops" id="opsbtn" hidden><span class="n">·</span>운영 · 배포</button>
+    <button role="tab" aria-selected="false" data-tab="gloss" id="glossbtn"><span class="n">4</span><span id="glosslabel">핵심 기술 · 용어</span></button>
+  </nav>
+  <div class="sidefoot">
+    <button id="thm" type="button" aria-label="테마 전환"><span class="s">☀</span><span class="m">🌙</span><span>테마 전환</span></button>
+    <span id="foot"></span>
+  </div>
+</aside>
+<main>
+<h1 id="title"></h1>
 
-<section id="ov"><div class="ov" id="ovbody"></div></section>
+<section id="ov"><div class="ov" id="ovhead"></div><div data-embed-slot></div><div class="ov" id="ovlanes"></div></section>
+
+<section id="sc" hidden><div class="sc" id="scbody"></div></section>
 
 <section id="map" hidden>
   <div class="wrap">
@@ -112,11 +256,11 @@ table.cols td:first-child{font-family:ui-monospace,Menlo,Consolas,monospace;word
         <span class="wr">파일 쓰기 (파일당 쓰기 주체 하나)</span><span class="rd">파일 읽기</span><span class="http">HTTP / 소켓</span>
       </div>
     </div>
-    <aside class="panel" id="mappanel">
-      <h2>노드를 선택하세요</h2>
-      <p>세로 열은 "누가 시작시키는가"에서 "누가 최종 소비하는가"까지의 순서입니다. 노드를 클릭하면 그 파일의 역할 요약과, 무엇을 부르고 누가 부르는지가 나옵니다.</p>
-      <p>공용 모듈 열은 스스로 실행되는 일이 없습니다 — 다른 스크립트가 <code>import</code> 해서 함수만 빌려 씁니다.</p>
-    </aside>
+    <aside class="panel" id="mappanel"><div class="pgrid">
+      <div><h2>노드를 선택하세요</h2></div>
+      <p style="margin:0">세로 열은 "누가 시작시키는가"에서 "누가 최종 소비하는가"까지의 순서입니다. 노드를 클릭하면 그 파일의 역할 요약과, 무엇을 부르고 누가 부르는지가 여기 나옵니다.</p>
+      <p style="margin:0">공용 모듈 열은 스스로 실행되는 일이 없습니다 — 다른 스크립트가 <code>import</code> 해서 함수만 빌려 씁니다.</p>
+    </div></aside>
   </div>
 </section>
 
@@ -124,19 +268,21 @@ table.cols td:first-child{font-family:ui-monospace,Menlo,Consolas,monospace;word
   <div class="wrap">
     <div class="stage">
       <svg id="dbsvg" role="img" aria-label="DB 스키마"></svg>
-      <div class="legend"><span class="wr">유일한 쓰기 주체 (writer)</span><span class="rd">읽기만 (reader)</span><span class="imp">테이블 클릭 → 컬럼 + 같은 키로 이어지는 테이블</span></div>
+      <div class="legend"><span class="wr">카드의 붉은 글자 = 쓰기 주체 (writer)</span><span class="rd">회색 목록 = 읽기 전용 (readers)</span><span class="imp">점선 = 같은 키로 조인 · 테이블 클릭 → 컬럼</span></div>
     </div>
-    <aside class="panel" id="dbpanel">
-      <h2>테이블을 선택하세요</h2>
-      <p>DB 파일마다 쓰기 주체(writer)를 하나로 두면 잠금 경합이 없고, 파일이 잘못됐을 때 의심할 프로그램이 하나로 좁혀집니다.</p>
-      <p>파일 사이 점선은 외래키가 아니라 같은 값(보통 날짜·시각 문자열)으로 코드에서 조인하는 관계입니다.</p>
-    </aside>
+    <aside class="panel" id="dbpanel"><div class="pgrid">
+      <div><h2>테이블을 선택하세요</h2></div>
+      <p style="margin:0">DB 파일마다 쓰기 주체(writer)를 하나로 두면 잠금 경합이 없고, 파일이 잘못됐을 때 의심할 프로그램이 하나로 좁혀집니다.</p>
+      <p style="margin:0">파일 사이 점선은 외래키가 아니라 같은 값(보통 날짜·시각 문자열)으로 코드에서 조인하는 관계입니다.</p>
+    </div></aside>
   </div>
 </section>
 
+<section id="ops" hidden><div id="opsbody"></div></section>
+
 <section id="gloss" hidden><div class="gloss" id="glossbody">
     <h2>"API" 는 스크립트도, DB 호출도 아닙니다</h2>
-    <p>API 는 "서버가 클라이언트에게 약속한 <b>주소와 응답 모양</b>" 입니다. 어떤 스크립트가 만들었는지, 뒤에서 DB 를 읽는지 JSON 파일을 읽는지는 약속에 들어가지 않습니다. 그래서 문서 제목이 "API <b>계약</b>" 입니다.</p>
+    <p>API 는 "서버가 클라이언트에게 약속한 <b>주소와 응답 모양</b>" 입니다. 어떤 스크립트가 만들었는지, 뒤에서 DB 를 읽는지 JSON 파일을 읽는지는 약속에 들어가지 않습니다.</p>
     <div class="flow">
       <div><b>실행 주체</b>타이머 / 서비스</div>
       <div><b>스크립트</b>계산해서 저장</div>
@@ -144,52 +290,107 @@ table.cols td:first-child{font-family:ui-monospace,Menlo,Consolas,monospace;word
       <div class="hl"><b>엔드포인트</b>서버가 여는 문<br><code>GET /api/…</code></div>
       <div><b>소비자</b>브라우저가 fetch</div>
     </div>
-    <h2>엔드포인트 = 파이프라인의 끝이 아니라 서버 쪽 "문"</h2>
-    <p>엔드포인트는 HTTP 요청이 도착하는 주소 하나(<code>메서드 + 경로</code>)입니다. 배치 파이프라인(타이머→스크립트→파일)의 출력이 아니라, 그와 별개의 요청–응답 축에서 서버가 열어 둔 입구입니다. 라우터 파일 안의 <code>@router.get("/api/…")</code> 함수 하나가 엔드포인트 하나이고, 요청이 올 때마다 실행되어 그때 파일이나 DB 를 읽습니다.</p>
     <table class="cols">
       <tr><td>API</td><td>추상적 약속. "이 주소에 이런 JSON 이 온다"</td></tr>
       <tr><td>엔드포인트</td><td>그 약속의 한 줄. 메서드+경로 하나 = 라우터 함수 하나</td></tr>
-      <tr><td>라우터</td><td>엔드포인트를 묶은 파일</td></tr>
       <tr><td>스크립트 / 잡</td><td>타이머가 돌리는 독립 프로세스. HTTP 와 무관, 파일을 남기고 종료</td></tr>
     </table>
-    <div class="note"><b>혼동이 생기는 이유</b> — 스크립트가 남의 API(NEIS, Guardian…)를 호출할 때 우리 스크립트는 <b>클라이언트</b>입니다. API 계약에서는 방향이 반대로 우리 서버가 내주는 쪽입니다. "스크립트 = 클라이언트 쪽, 엔드포인트 = 서버 쪽"으로 자리를 나누면 헷갈리지 않습니다.</div>
+    <div class="note"><b>안내</b> — 이 프로젝트의 맞춤 용어 데이터를 불러오지 못해 일반 해설이 표시되고 있습니다.</div>
 </div></section>
+</main>
+</div>
 
 <script>
-const DATA = {"title": "multinode_aq 프로젝트 지도", "subtitle": "교실 공기질 IoT·엣지 AI — 수집·분석·표시·자동 제어 (2026-09-22 기준)", "overview": {"intro": "8개 교실의 센서 노드와 5개 교실의 비전 노드가 MQTT(HiveMQ Cloud, TLS)로 측정값을 올리고, 보드(UNO Q)의 네 프로세스가 이를 수집·분석·표시·집행한다. 설계 불변식: sensor_data.db의 readings·occupancy는 hub.py만, analysis·actuator_state는 analyst.py만 쓴다. 스마트플러그 제어 명령은 plugwatch.py 한 곳에서만 발행된다.", "lanes": [{"label": "① 실시간 수집", "items": ["센서·비전 노드|5분 평균(공기질)·재실 인원수를 MQTT publish", "MQTT 브로커|HiveMQ Cloud 8883 TLS — 모든 메시지의 단일 통로", "hub.py|구독 → readings·occupancy 테이블에 저장 (이 두 테이블의 유일한 writer)"]}, {"label": "② 주기 분석·판정", "items": ["systemd 타이머|hourly(레짐·규칙·예측) · daily(QC·밴드) · weekly(모델 재학습·거버넌스)", "analyst.py|aq 모듈 파이프라인 실행 → analysis·actuator_state에 기록 (유일한 writer)", "QC 게이트|CO₂ 유효율<95%인 노드/날은 통째로 '판정 보류'"]}, {"label": "③ 플러그 관측·집행", "items": ["plugwatch.py|Shelly 플러그 16대 MQTT 관측(전력 실측) + plug_state.json 기록", "reconcile|auto 모드: actuator_state(판정)와 실물이 다를 때만 스위치 명령 발행", "plug_cmd.json|manual 모드: webapp이 큐잉 → plugwatch가 집행 후 삭제"]}, {"label": "④ 웹 표시", "items": ["webapp.py|JSON API + 정적 SPA 서빙 (web·web_public 두 유닛)", "webdata.py|DB·상태 파일을 읽어 화면별 payload 조립 (읽기 전용)", "SPA|홈·모니터·에너지·진단(A–I)·관리 화면, /api/* 폴링"]}, {"label": "⑤ 정본 설정 (git 배포)", "items": ["nodes.json|노드→교실 정본 로스터 — 유령 노드 차단의 기준", "plugs.json|교실→플러그 MAC 매핑 (공청기 8·환풍기 8)", "analyst.toml·calendar.json|임계값·QC 기준·학사 일정 — 보드에는 git pull로만 반영"]}]}, "columns": [{"id": "timer", "label": "실행 주체"}, {"id": "job", "label": "프로세스"}, {"id": "lib", "label": "공용 모듈 (aq/)"}, {"id": "data", "label": "데이터 파일"}, {"id": "api", "label": "API · MQTT"}, {"id": "web", "label": "브라우저"}], "nodes": {"dev.sensor": {"c": "timer", "n": "센서·비전 노드 ×13", "s": "UNO R4 WiFi ×8 · Nicla Vision ×5", "d": "교실의 공기질(5분 평균)과 재실 인원수(엣지 AI, 영상 비전송)를 MQTT로 publish하는 외부 장치. 펌웨어는 manual.html에 내장.", "row": 0}, "dev.plug": {"c": "timer", "n": "Shelly 플러그 ×16", "s": "PlugS Gen3 · 공청기 8 + 환풍기 8", "d": "브로커에 상태·전력을 publish하고 RPC-over-MQTT로 스위치 명령을 받는다. 설정은 AP 모드 원-세션 방식(plug_setup.html).", "row": 1}, "unit.hub": {"c": "timer", "n": "multinode_aq_hub.service", "s": "상시 · Restart=always", "d": "hub.py를 상주시키는 systemd 유닛. sudo 없이 pkill만으로 재기동된다.", "row": 2}, "unit.plugwatch": {"c": "timer", "n": "multinode_aq_plugwatch.service", "s": "상시", "d": "plugwatch.py 상주 유닛.", "row": 3}, "unit.analyst": {"c": "timer", "n": "analyst 타이머 ×3", "s": "hourly · daily · weekly", "d": "OnCalendar 타이머 3개가 analyst.py를 각각 --hourly/--daily/--weekly 인자로 기동한다.", "row": 4}, "unit.web": {"c": "timer", "n": "web · web_public.service", "s": "8501 · 8502", "d": "webapp.py를 두 포트로 띄운다 — 내부용(관리 포함)과 공개용(읽기 전용).", "row": 5}, "job.hub": {"c": "job", "n": "hub/hub.py", "s": "MQTT 구독 → SQLite 저장", "d": "노드 토픽을 구독해 readings·occupancy에 저장한다. 이 두 테이블의 유일한 writer라는 것이 프로젝트 최상위 불변식(CI 가드 존재).", "row": 2}, "job.plugwatch": {"c": "job", "n": "hub/plugwatch.py", "s": "플러그 관측 + 명령 집행", "d": "플러그 상태를 폴링·구독해 plug_state.json을 쓰고, auto 모드에선 autoctl의 reconcile 계획을, manual 모드에선 plug_cmd.json을 집행한다. 스위치 명령을 발행하는 유일한 경로.", "row": 3}, "job.analyst": {"c": "job", "n": "hub/analyst.py", "s": "주기 분석 러너", "d": "aq 모듈들을 순서대로 실행하는 오케스트레이터. 결과는 전부 analysis 테이블 payload(JSON)로, 제어 목표는 actuator_state로 기록한다.", "row": 4}, "lib.config": {"c": "lib", "n": "aq/config.py", "s": "analyst.toml 로더·검증", "d": "임계값·QC 기준·모델 파라미터를 config/analyst.toml에서 읽고 스키마 검증한다. 학사 일정(calendar.json)도 여기서 로드.", "row": 0}, "lib.db": {"c": "lib", "n": "aq/db.py", "s": "SQLite 접근 계층", "d": "sensor_data.db 읽기와 analysis·actuator_state 쓰기를 담당. 쓰기 함수는 analyst 경로에서만 호출된다.", "row": 1}, "lib.qc": {"c": "lib", "n": "aq/qc.py", "s": "품질 게이트", "d": "물리 범위 밖 값을 NaN 처리(range_mask)하고, 노드×일 CO₂ 유효율<95%면 그날치를 분석에서 제외(daily_gate). 행 삭제는 없다.", "row": 2}, "lib.regime": {"c": "lib", "n": "aq/regime.py", "s": "GMM 오염 레짐 판정", "d": "정규화 CO₂–VOC 평면에서 청정/인체/물질/복합 레짐을 분류. QC 제외 노드는 hold.", "row": 3}, "lib.governance": {"c": "lib", "n": "aq/governance.py", "s": "모델 거버넌스", "d": "주간 재학습된 후보 GMM을 현행 모델과 비교해 승격/기각을 자동 결정한다(중심 이동·로그우도 기준). 사분면 겹침 후보는 기각.", "row": 4}, "lib.rules": {"c": "lib", "n": "aq/rules.py", "s": "히스테리시스 규칙", "d": "환풍기: 인체/복합 & CO₂>1000 ON, <700 OFF. 공청기: 물질/복합 & VOC>200 ON, <120 OFF. 최소 가동 10분. QC 제외면 판정 보류(이전 상태 유지).", "row": 5}, "lib.autoctl": {"c": "lib", "n": "aq/autoctl.py", "s": "제어 계획(reconcile)", "d": "actuator_state(판정 목표, 읽기 전용)와 플러그 실물 상태를 비교해 달라진 것만 스위치 계획으로 산출. plugwatch가 import해 집행한다.", "row": 6}, "lib.forecast": {"c": "lib", "n": "aq/forecast.py", "s": "단기 예측", "d": "CO₂/VOC 단기 추세 예측 — 진단 화면과 행동 권고의 근거.", "row": 7}, "lib.occ_co2": {"c": "lib", "n": "aq/occ_co2.py", "s": "재실×CO₂ 상관·회귀", "d": "재실 인원과 CO₂의 Spearman 상관·1인당 상승 기여를 상시 산출한다.", "row": 8}, "lib.explore": {"c": "lib", "n": "aq/explore.py", "s": "탐색 집계", "d": "변수 상관행렬·2D 히스토그램 등 진단 H 섹션용 집계.", "row": 9}, "lib.summary": {"c": "lib", "n": "aq/summary.py", "s": "실행 요약문", "d": "한 번의 analyst 실행 결과를 사람이 읽는 한 문단으로 요약(QC 제외 목록 포함).", "row": 10}, "lib.derive": {"c": "lib", "n": "aq/derive.py", "s": "순수 파생 함수", "d": "판정→표시 문구(조치 없음/판정 보류 등) 등 DB 없이 테스트되는 순수 함수 모음.", "row": 11}, "lib.webdata": {"c": "lib", "n": "aq/webdata.py", "s": "화면 payload 조립 (읽기 전용)", "d": "DB·상태 파일을 읽어 /api/* 응답을 만든다. 정본 nodes.json 허용목록으로 유령 노드를 화면에서 차단.", "row": 12}, "lib.schemas": {"c": "lib", "n": "aq/schemas.py", "s": "payload 타입 정의", "d": "analysis payload들의 TypedDict 스키마 — 모듈 간 계약 문서 역할.", "row": 13}, "lib.legacy": {"c": "lib", "n": "legacy/ (보관)", "s": "Streamlit 대시보드 등 구버전", "d": "Phase 5 이전의 Streamlit 대시보드·구 허브 사본. 실행되지 않으며 참고용으로만 보관.", "row": 14}, "file.db": {"c": "data", "n": "sensor_data.db", "s": "SQLite · 4 테이블", "d": "측정 원본(readings·occupancy)과 분석 산출(analysis·actuator_state). 테이블별 writer 분리가 핵심 불변식.", "row": 2}, "file.plugstate": {"c": "data", "n": "plug_state.json", "s": "plugwatch → 대시보드", "d": "플러그 실측 스냅샷(online·전력·24h 이력). 원자적 교체(tmp+replace)로 갱신.", "row": 3}, "file.plugcmd": {"c": "data", "n": "plug_cmd.json", "s": "manual 명령 큐", "d": "webapp이 쓰고 plugwatch가 집행 후 삭제하는 1회성 명령 파일.", "row": 4}, "file.control": {"c": "data", "n": "control.json", "s": "auto/manual 모드", "d": "전역 제어 모드. webapp이 쓰고 plugwatch·webdata가 읽는다.", "row": 5}, "file.nodes": {"c": "data", "n": "nodes.json", "s": "노드→교실 정본 로스터", "d": "판정·표시의 허용목록. 리포지토리에서 git으로 관리되는 정본 설정.", "row": 6}, "file.plugs": {"c": "data", "n": "config/plugs.json", "s": "교실→플러그 MAC 매핑", "d": "공청기·환풍기 16장치의 MAC 정본. plugwatch 기동 시 로드.", "row": 7}, "file.toml": {"c": "data", "n": "config/analyst.toml", "s": "분석·제어 파라미터", "d": "임계값(ON/OFF·QC 95%·최소가동 10분)과 모델 설정의 단일 출처.", "row": 8}, "file.calendar": {"c": "data", "n": "config/calendar.json", "s": "학사 일정", "d": "수업일/방학 구분 — 분석 창과 리포트 라벨에 사용.", "row": 9}, "api.broker": {"c": "api", "n": "MQTT 브로커", "s": "HiveMQ Cloud · 8883 TLS", "d": "노드·플러그·보드 프로세스가 모두 접속하는 단일 메시지 버스. 클라이언트 인증서 옵션이 켜져 있으면 접속이 침묵 거부된다(실사고 2건).", "row": 0}, "api.webapp": {"c": "api", "n": "hub/webapp.py", "s": "JSON API + 정적 서빙", "d": "webdata payload를 /api/*로 내고 SPA를 서빙. 제어 POST는 control.json·plug_cmd.json 기록까지만(집행은 plugwatch). 관리용 reset은 readings를 CSV 백업 후 비운다 — DB에 손대는 유일한 예외 경로.", "row": 5}, "web.index": {"c": "web", "n": "web/index.html", "s": "SPA 셸", "d": "단일 페이지 진입점. 해시 라우팅으로 화면 전환.", "row": 0}, "web.app": {"c": "web", "n": "web/app.js", "s": "부트스트랩·공통 상태", "d": "/api/* 폴링, 공통 포맷터, 화면 등록. REGIME 한글 라벨 등 표시 사전 보유.", "row": 1}, "web.router": {"c": "web", "n": "web/router.js", "s": "해시 라우터", "d": "#home/#monitor/#energy/#diagnosis/#admin 전환.", "row": 2}, "web.charts": {"c": "web", "n": "web/charts.js", "s": "Plotly 차트 헬퍼", "d": "시계열·히트맵·연속 컬러맵 바차트 등 공용 차트 생성기.", "row": 3}, "web.home": {"c": "web", "n": "screens/home.js", "s": "홈 — 교실 카드", "d": "교실별 현재값·레짐·플러그 실측 칩 요약.", "row": 4}, "web.monitor": {"c": "web", "n": "screens/monitor.js", "s": "모니터 — 시계열", "d": "변수별 시계열·비전 크로스헤어·기록.", "row": 5}, "web.energy": {"c": "web", "n": "screens/energy.js", "s": "에너지 — 플러그", "d": "플러그 전력 실측·가동 판별(≥5W)·제어 카드.", "row": 6}, "web.diagnosis": {"c": "web", "n": "screens/diagnosis.js", "s": "진단 A–I", "d": "QC·레짐 지도·예측·재실 상관 등 분석 근거 화면.", "row": 7}, "web.admin": {"c": "web", "n": "screens/admin.js", "s": "관리", "d": "CSV 내보내기·reset 등 내부 포트 전용 기능.", "row": 8}}, "edges": [["dev.sensor", "api.broker", "http", "publish 5분"], ["dev.plug", "api.broker", "http", "상태·전력"], ["api.broker", "job.hub", "http", "subscribe"], ["api.broker", "job.plugwatch", "http", "상태 수신"], ["job.plugwatch", "api.broker", "http", "스위치 RPC"], ["unit.hub", "job.hub", "call", ""], ["unit.plugwatch", "job.plugwatch", "call", ""], ["unit.analyst", "job.analyst", "call", "h·d·w"], ["unit.web", "api.webapp", "call", "8501·8502"], ["job.hub", "file.db", "wr", "readings·occupancy"], ["job.analyst", "lib.config", "imp", ""], ["job.analyst", "lib.qc", "imp", ""], ["job.analyst", "lib.regime", "imp", ""], ["job.analyst", "lib.governance", "imp", ""], ["job.analyst", "lib.rules", "imp", ""], ["job.analyst", "lib.forecast", "imp", ""], ["job.analyst", "lib.occ_co2", "imp", ""], ["job.analyst", "lib.explore", "imp", ""], ["job.analyst", "lib.summary", "imp", ""], ["job.analyst", "lib.db", "imp", ""], ["lib.db", "file.db", "wr", "analysis·actuator_state"], ["lib.config", "file.toml", "rd", ""], ["lib.config", "file.calendar", "rd", ""], ["job.plugwatch", "lib.autoctl", "imp", "auto 모드"], ["lib.autoctl", "file.db", "rd", "actuator_state"], ["job.plugwatch", "file.plugs", "rd", ""], ["job.plugwatch", "file.nodes", "rd", ""], ["job.plugwatch", "file.control", "rd", "모드 확인"], ["job.plugwatch", "file.plugcmd", "rd", "집행 후 삭제"], ["job.plugwatch", "file.plugstate", "wr", "15초"], ["api.webapp", "lib.webdata", "imp", ""], ["lib.webdata", "file.db", "rd", ""], ["lib.webdata", "file.nodes", "rd", "허용목록"], ["lib.webdata", "file.control", "rd", ""], ["lib.webdata", "file.plugs", "rd", ""], ["lib.webdata", "file.plugstate", "rd", ""], ["lib.webdata", "lib.derive", "imp", ""], ["lib.webdata", "lib.config", "imp", ""], ["api.webapp", "file.control", "wr", "모드 전환"], ["api.webapp", "file.plugcmd", "wr", "manual 명령"], ["api.webapp", "file.db", "wr", "reset(예외)"], ["api.webapp", "web.index", "http", "정적 서빙"], ["web.app", "api.webapp", "http", "/api/* 폴링"], ["web.index", "web.app", "imp", ""], ["web.app", "web.router", "imp", ""], ["web.app", "web.charts", "imp", ""], ["web.app", "web.home", "imp", ""], ["web.app", "web.monitor", "imp", ""], ["web.app", "web.energy", "imp", ""], ["web.app", "web.diagnosis", "imp", ""], ["web.app", "web.admin", "imp", ""]], "dbs": [{"id": "db", "name": "sensor_data.db", "writer": "hub.py (readings·occupancy) · analyst.py (analysis·actuator_state) — 예외: webapp reset이 readings를 비움", "readers": ["webdata.py (모든 화면)", "autoctl.py (actuator_state)", "analyst.py (readings·occupancy)"], "tables": [{"n": "readings", "pk": "id", "d": "공기질 원본 — 5분 버킷, 15.7만+ 행", "cols": [["id", "INTEGER PK AUTOINCREMENT"], ["ts", "TEXT · UTC 버킷 (5분)"], ["node", "TEXT · node_XXXXXX"], ["co2 / voc / nox", "REAL · SCD30 CO₂, SEN55 지수"], ["pm1p0 / pm2p5 / pm4p0 / pm10p0", "REAL · 미세먼지"], ["sen_temp / sen_hum / scd_temp / scd_hum", "REAL · 온습도 2계통"], ["n", "INTEGER · 버킷 내 표본 수"]]}, {"n": "occupancy", "pk": "id", "d": "비전 노드 재실 — 버킷 통계", "cols": [["id", "INTEGER PK AUTOINCREMENT"], ["ts", "TEXT · UTC 버킷"], ["node", "TEXT · 비전 노드 id"], ["occ / occ_med / occ_max / occ_last", "REAL·INT · 버킷 평균/중앙/최대/마지막"], ["cents", "TEXT · 탐지 중심좌표(조준 보정용)"], ["w / n", "INT · 가중치·표본 수"]]}, {"n": "analysis", "pk": "id", "d": "분석 산출 — kind별 JSON payload (regime_now·action·forecast·qc·band·occ_co2·model_event…)", "cols": [["id", "INTEGER PK"], ["run_at", "TEXT · 실행 시각(UTC)"], ["kind", "TEXT · payload 종류"], ["scope", "TEXT · node_id 또는 all"], ["win_start / win_end", "TEXT · 분석 창"], ["model_ver", "TEXT · 예: gmm_v1"], ["payload", "TEXT · JSON"]]}, {"n": "actuator_state", "pk": "node+device", "d": "장치별 제어 목표 상태 — autoctl reconcile의 기준", "cols": [["node", "TEXT · 환경노드 id"], ["device", "TEXT · fan | purifier"], ["state", "INTEGER · 0/1"], ["since", "TEXT · 상태 시작(UTC) — min_run 10분 판정에 사용"]]}]}], "rels": [["db.readings", "db.occupancy", "node(교실 매핑)·ts 5분 버킷"], ["db.readings", "db.analysis", "node = scope · ts ∈ [win_start, win_end]"], ["db.analysis", "db.actuator_state", "scope = node · action payload → state"]], "glossary": true};
-document.getElementById('title').innerHTML=(DATA.title||'프로젝트 지도')+(DATA.subtitle?`<small>${DATA.subtitle}</small>`:'');
+const DATA = {"title": "multinode_aq 프로젝트 지도", "subtitle": "교실 공기질 IoT·엣지 AI — 수집·분석·표시·자동 제어 (기준 코드: 2026-09-22 · 715f860)", "overview": {"intro": "8개 교실의 센서 노드와 5개 교실의 비전 노드가 MQTT(HiveMQ Cloud, TLS)로 측정값을 올리고, 보드(UNO Q)의 네 프로세스가 이를 수집·분석·표시·집행한다. 설계 불변식: sensor_data.db의 readings·occupancy는 hub.py만, analysis·actuator_state는 analyst.py만 쓴다. 스마트플러그 제어 명령은 plugwatch.py 한 곳에서만 발행된다.", "lanes": [{"label": "① 실시간 수집", "items": ["센서·비전 노드|5분 평균(공기질)·재실 인원수를 MQTT publish", "MQTT 브로커|HiveMQ Cloud 8883 TLS — 모든 메시지의 단일 통로", "hub.py|구독 → readings·occupancy 테이블에 저장 (이 두 테이블의 유일한 writer)"]}, {"label": "② 주기 분석·판정", "items": ["systemd 타이머|hourly(레짐·규칙·예측) · daily(QC·밴드) · weekly(모델 재학습·거버넌스)", "analyst.py|aq 모듈 파이프라인 실행 → analysis·actuator_state에 기록 (유일한 writer)", "QC 게이트|CO₂ 유효율<95%인 노드/날은 통째로 '판정 보류'"]}, {"label": "③ 플러그 관측·집행", "items": ["plugwatch.py|Shelly 플러그 16대 MQTT 관측(전력 실측) + plug_state.json 기록", "reconcile|auto 모드: actuator_state(판정)와 실물이 다를 때만 스위치 명령 발행", "plug_cmd.json|manual 모드: webapp이 큐잉 → plugwatch가 집행 후 삭제"]}, {"label": "④ 웹 표시", "items": ["webapp.py|JSON API + 정적 SPA 서빙 (web·web_public 두 유닛)", "webdata.py|DB·상태 파일을 읽어 화면별 payload 조립 (읽기 전용)", "SPA|홈·모니터·에너지·진단(A–I)·관리 화면, /api/* 폴링"]}, {"label": "⑤ 정본 설정 (git 배포)", "items": ["nodes.json|노드→교실 정본 로스터 — 유령 노드 차단의 기준", "plugs.json|교실→플러그 MAC 매핑 (공청기 8·환풍기 8)", "analyst.toml·calendar.json|임계값·QC 기준·학사 일정 — 보드에는 git pull로만 반영"]}]}, "columns": [{"id": "timer", "label": "실행 주체"}, {"id": "job", "label": "프로세스"}, {"id": "lib", "label": "공용 모듈 (aq/)"}, {"id": "data", "label": "데이터 파일"}, {"id": "api", "label": "API · MQTT"}, {"id": "web", "label": "브라우저"}], "nodes": {"dev.sensor": {"c": "timer", "n": "센서·비전 노드 ×13", "s": "UNO R4 WiFi ×8 · Nicla Vision ×5", "d": "교실의 공기질(5분 평균)과 재실 인원수(엣지 AI, 영상 비전송)를 MQTT로 publish하는 외부 장치. 펌웨어는 manual.html에 내장.", "row": 0}, "dev.plug": {"c": "timer", "n": "Shelly 플러그 ×16", "s": "PlugS Gen3 · 공청기 8 + 환풍기 8", "d": "브로커에 상태·전력을 publish하고 RPC-over-MQTT로 스위치 명령을 받는다. 설정은 AP 모드 원-세션 방식(plug_setup.html).", "row": 1}, "unit.hub": {"c": "timer", "n": "multinode_aq_hub.service", "s": "상시 · Restart=always", "d": "hub.py를 상주시키는 systemd 유닛. sudo 없이 pkill만으로 재기동된다.", "row": 2}, "unit.plugwatch": {"c": "timer", "n": "multinode_aq_plugwatch.service", "s": "상시", "d": "plugwatch.py 상주 유닛.", "row": 3}, "unit.analyst": {"c": "timer", "n": "analyst 타이머 ×3", "s": "hourly · daily · weekly", "d": "OnCalendar 타이머 3개가 analyst.py를 각각 --hourly/--daily/--weekly 인자로 기동한다.", "row": 4}, "unit.web": {"c": "timer", "n": "web · web_public.service", "s": "8501 · 8502", "d": "webapp.py를 두 포트로 띄운다 — 내부용(관리 포함)과 공개용(읽기 전용).", "row": 5}, "job.hub": {"c": "job", "n": "hub/hub.py", "s": "MQTT 구독 → SQLite 저장", "d": "노드 토픽을 구독해 readings·occupancy에 저장한다. 이 두 테이블의 유일한 writer라는 것이 프로젝트 최상위 불변식(CI 가드 존재).", "row": 2}, "job.plugwatch": {"c": "job", "n": "hub/plugwatch.py", "s": "플러그 관측 + 명령 집행", "d": "플러그 상태를 폴링·구독해 plug_state.json을 쓰고, auto 모드에선 autoctl의 reconcile 계획을, manual 모드에선 plug_cmd.json을 집행한다. 스위치 명령을 발행하는 유일한 경로.", "row": 3}, "job.analyst": {"c": "job", "n": "hub/analyst.py", "s": "주기 분석 러너", "d": "aq 모듈들을 순서대로 실행하는 오케스트레이터. 결과는 전부 analysis 테이블 payload(JSON)로, 제어 목표는 actuator_state로 기록한다.", "row": 4}, "lib.config": {"c": "lib", "n": "aq/config.py", "s": "analyst.toml 로더·검증", "d": "임계값·QC 기준·모델 파라미터를 config/analyst.toml에서 읽고 스키마 검증한다. 학사 일정(calendar.json)도 여기서 로드.", "row": 0}, "lib.db": {"c": "lib", "n": "aq/db.py", "s": "SQLite 접근 계층", "d": "sensor_data.db 읽기와 analysis·actuator_state 쓰기를 담당. 쓰기 함수는 analyst 경로에서만 호출된다.", "row": 1}, "lib.qc": {"c": "lib", "n": "aq/qc.py", "s": "품질 게이트", "d": "물리 범위 밖 값을 NaN 처리(range_mask)하고, 노드×일 CO₂ 유효율<95%면 그날치를 분석에서 제외(daily_gate). 행 삭제는 없다.", "row": 2}, "lib.regime": {"c": "lib", "n": "aq/regime.py", "s": "GMM 오염 레짐 판정", "d": "정규화 CO₂–VOC 평면에서 청정/인체/물질/복합 레짐을 분류. QC 제외 노드는 hold.", "row": 3}, "lib.governance": {"c": "lib", "n": "aq/governance.py", "s": "모델 거버넌스", "d": "주간 재학습된 후보 GMM을 현행 모델과 비교해 승격/기각을 자동 결정한다(중심 이동·로그우도 기준). 사분면 겹침 후보는 기각.", "row": 4}, "lib.rules": {"c": "lib", "n": "aq/rules.py", "s": "히스테리시스 규칙", "d": "환풍기: 인체/복합 & CO₂>1000 ON, <700 OFF. 공청기: 물질/복합 & VOC>200 ON, <120 OFF. 최소 가동 10분. QC 제외면 판정 보류(이전 상태 유지).", "row": 5}, "lib.autoctl": {"c": "lib", "n": "aq/autoctl.py", "s": "제어 계획(reconcile)", "d": "actuator_state(판정 목표, 읽기 전용)와 플러그 실물 상태를 비교해 달라진 것만 스위치 계획으로 산출. plugwatch가 import해 집행한다.", "row": 6}, "lib.forecast": {"c": "lib", "n": "aq/forecast.py", "s": "단기 예측", "d": "CO₂/VOC 단기 추세 예측 — 진단 화면과 행동 권고의 근거.", "row": 7}, "lib.occ_co2": {"c": "lib", "n": "aq/occ_co2.py", "s": "재실×CO₂ 상관·회귀", "d": "재실 인원과 CO₂의 Spearman 상관·1인당 상승 기여를 상시 산출한다.", "row": 8}, "lib.explore": {"c": "lib", "n": "aq/explore.py", "s": "탐색 집계", "d": "변수 상관행렬·2D 히스토그램 등 진단 H 섹션용 집계.", "row": 9}, "lib.summary": {"c": "lib", "n": "aq/summary.py", "s": "실행 요약문", "d": "한 번의 analyst 실행 결과를 사람이 읽는 한 문단으로 요약(QC 제외 목록 포함).", "row": 10}, "lib.derive": {"c": "lib", "n": "aq/derive.py", "s": "순수 파생 함수", "d": "판정→표시 문구(조치 없음/판정 보류 등) 등 DB 없이 테스트되는 순수 함수 모음.", "row": 11}, "lib.webdata": {"c": "lib", "n": "aq/webdata.py", "s": "화면 payload 조립 (읽기 전용)", "d": "DB·상태 파일을 읽어 /api/* 응답을 만든다. 정본 nodes.json 허용목록으로 유령 노드를 화면에서 차단.", "row": 12}, "lib.schemas": {"c": "lib", "n": "aq/schemas.py", "s": "payload 타입 정의", "d": "analysis payload들의 TypedDict 스키마 — 모듈 간 계약 문서 역할.", "row": 13}, "lib.legacy": {"c": "lib", "n": "legacy/ (보관)", "s": "Streamlit 대시보드 등 구버전", "d": "Phase 5 이전의 Streamlit 대시보드·구 허브 사본. 실행되지 않으며 참고용으로만 보관.", "row": 14}, "file.db": {"c": "data", "n": "sensor_data.db", "s": "SQLite · 4 테이블", "d": "측정 원본(readings·occupancy)과 분석 산출(analysis·actuator_state). 테이블별 writer 분리가 핵심 불변식.", "row": 2}, "file.plugstate": {"c": "data", "n": "plug_state.json", "s": "plugwatch → 대시보드", "d": "플러그 실측 스냅샷(online·전력·24h 이력). 원자적 교체(tmp+replace)로 갱신.", "row": 3}, "file.plugcmd": {"c": "data", "n": "plug_cmd.json", "s": "manual 명령 큐", "d": "webapp이 쓰고 plugwatch가 집행 후 삭제하는 1회성 명령 파일.", "row": 4}, "file.control": {"c": "data", "n": "control.json", "s": "auto/manual 모드", "d": "전역 제어 모드. webapp이 쓰고 plugwatch·webdata가 읽는다.", "row": 5}, "file.nodes": {"c": "data", "n": "nodes.json", "s": "노드→교실 정본 로스터", "d": "판정·표시의 허용목록. 리포지토리에서 git으로 관리되는 정본 설정.", "row": 6}, "file.plugs": {"c": "data", "n": "config/plugs.json", "s": "교실→플러그 MAC 매핑", "d": "공청기·환풍기 16장치의 MAC 정본. plugwatch 기동 시 로드.", "row": 7}, "file.toml": {"c": "data", "n": "config/analyst.toml", "s": "분석·제어 파라미터", "d": "임계값(ON/OFF·QC 95%·최소가동 10분)과 모델 설정의 단일 출처.", "row": 8}, "file.calendar": {"c": "data", "n": "config/calendar.json", "s": "학사 일정", "d": "수업일/방학 구분 — 분석 창과 리포트 라벨에 사용.", "row": 9}, "api.broker": {"c": "api", "n": "MQTT 브로커", "s": "HiveMQ Cloud · 8883 TLS", "d": "노드·플러그·보드 프로세스가 모두 접속하는 단일 메시지 버스. 클라이언트 인증서 옵션이 켜져 있으면 접속이 침묵 거부된다(실사고 2건).", "row": 0}, "api.webapp": {"c": "api", "n": "hub/webapp.py", "s": "JSON API + 정적 서빙", "d": "webdata payload를 /api/*로 내고 SPA를 서빙. 제어 POST는 control.json·plug_cmd.json 기록까지만(집행은 plugwatch). 관리용 reset은 readings를 CSV 백업 후 비운다 — DB에 손대는 유일한 예외 경로.", "row": 5}, "web.index": {"c": "web", "n": "web/index.html", "s": "SPA 셸", "d": "단일 페이지 진입점. 해시 라우팅으로 화면 전환.", "row": 0}, "web.app": {"c": "web", "n": "web/app.js", "s": "부트스트랩·공통 상태", "d": "/api/* 폴링, 공통 포맷터, 화면 등록. REGIME 한글 라벨 등 표시 사전 보유.", "row": 1}, "web.router": {"c": "web", "n": "web/router.js", "s": "해시 라우터", "d": "#home/#monitor/#energy/#diagnosis/#admin 전환.", "row": 2}, "web.charts": {"c": "web", "n": "web/charts.js", "s": "Plotly 차트 헬퍼", "d": "시계열·히트맵·연속 컬러맵 바차트 등 공용 차트 생성기.", "row": 3}, "web.home": {"c": "web", "n": "screens/home.js", "s": "홈 — 교실 카드", "d": "교실별 현재값·레짐·플러그 실측 칩 요약.", "row": 4}, "web.monitor": {"c": "web", "n": "screens/monitor.js", "s": "모니터 — 시계열", "d": "변수별 시계열·비전 크로스헤어·기록.", "row": 5}, "web.energy": {"c": "web", "n": "screens/energy.js", "s": "에너지 — 플러그", "d": "플러그 전력 실측·가동 판별(≥5W)·제어 카드.", "row": 6}, "web.diagnosis": {"c": "web", "n": "screens/diagnosis.js", "s": "진단 A–I", "d": "QC·레짐 지도·예측·재실 상관 등 분석 근거 화면.", "row": 7}, "web.admin": {"c": "web", "n": "screens/admin.js", "s": "관리", "d": "CSV 내보내기·reset 등 내부 포트 전용 기능.", "row": 8}}, "edges": [["dev.sensor", "api.broker", "http", "publish 5분"], ["dev.plug", "api.broker", "http", "상태·전력"], ["api.broker", "job.hub", "http", "subscribe"], ["api.broker", "job.plugwatch", "http", "상태 수신"], ["job.plugwatch", "api.broker", "http", "스위치 RPC"], ["unit.hub", "job.hub", "call", ""], ["unit.plugwatch", "job.plugwatch", "call", ""], ["unit.analyst", "job.analyst", "call", "h·d·w"], ["unit.web", "api.webapp", "call", "8501·8502"], ["job.hub", "file.db", "wr", "readings·occupancy"], ["job.analyst", "lib.config", "imp", ""], ["job.analyst", "lib.qc", "imp", ""], ["job.analyst", "lib.regime", "imp", ""], ["job.analyst", "lib.governance", "imp", ""], ["job.analyst", "lib.rules", "imp", ""], ["job.analyst", "lib.forecast", "imp", ""], ["job.analyst", "lib.occ_co2", "imp", ""], ["job.analyst", "lib.explore", "imp", ""], ["job.analyst", "lib.summary", "imp", ""], ["job.analyst", "lib.db", "imp", ""], ["lib.db", "file.db", "wr", "analysis·actuator_state"], ["lib.config", "file.toml", "rd", ""], ["lib.config", "file.calendar", "rd", ""], ["job.plugwatch", "lib.autoctl", "imp", "auto 모드"], ["lib.autoctl", "file.db", "rd", "actuator_state"], ["job.plugwatch", "file.plugs", "rd", ""], ["job.plugwatch", "file.nodes", "rd", ""], ["job.plugwatch", "file.control", "rd", "모드 확인"], ["job.plugwatch", "file.plugcmd", "rd", "집행 후 삭제"], ["job.plugwatch", "file.plugstate", "wr", "15초"], ["api.webapp", "lib.webdata", "imp", ""], ["lib.webdata", "file.db", "rd", ""], ["lib.webdata", "file.nodes", "rd", "허용목록"], ["lib.webdata", "file.control", "rd", ""], ["lib.webdata", "file.plugs", "rd", ""], ["lib.webdata", "file.plugstate", "rd", ""], ["lib.webdata", "lib.derive", "imp", ""], ["lib.webdata", "lib.config", "imp", ""], ["api.webapp", "file.control", "wr", "모드 전환"], ["api.webapp", "file.plugcmd", "wr", "manual 명령"], ["api.webapp", "file.db", "wr", "reset(예외)"], ["api.webapp", "web.index", "http", "정적 서빙"], ["web.app", "api.webapp", "http", "/api/* 폴링"], ["web.index", "web.app", "imp", ""], ["web.app", "web.router", "imp", ""], ["web.app", "web.charts", "imp", ""], ["web.app", "web.home", "imp", ""], ["web.app", "web.monitor", "imp", ""], ["web.app", "web.energy", "imp", ""], ["web.app", "web.diagnosis", "imp", ""], ["web.app", "web.admin", "imp", ""]], "dbs": [{"id": "db", "name": "sensor_data.db", "writer": "hub.py (readings·occupancy) · analyst.py (analysis·actuator_state) — 예외: webapp reset이 readings를 비움", "readers": ["webdata.py (모든 화면)", "autoctl.py (actuator_state)", "analyst.py (readings·occupancy)"], "tables": [{"n": "readings", "pk": "id", "d": "공기질 원본 — 5분 버킷, 15.7만+ 행", "cols": [["id", "INTEGER PK AUTOINCREMENT"], ["ts", "TEXT · UTC 버킷 (5분)"], ["node", "TEXT · node_XXXXXX"], ["co2 / voc / nox", "REAL · SCD30 CO₂, SEN55 지수"], ["pm1p0 / pm2p5 / pm4p0 / pm10p0", "REAL · 미세먼지"], ["sen_temp / sen_hum / scd_temp / scd_hum", "REAL · 온습도 2계통"], ["n", "INTEGER · 버킷 내 표본 수"]]}, {"n": "occupancy", "pk": "id", "d": "비전 노드 재실 — 버킷 통계", "cols": [["id", "INTEGER PK AUTOINCREMENT"], ["ts", "TEXT · UTC 버킷"], ["node", "TEXT · 비전 노드 id"], ["occ / occ_med / occ_max / occ_last", "REAL·INT · 버킷 평균/중앙/최대/마지막"], ["cents", "TEXT · 탐지 중심좌표(조준 보정용)"], ["w / n", "INT · 가중치·표본 수"]]}, {"n": "analysis", "pk": "id", "d": "분석 산출 — kind별 JSON payload (regime_now·action·forecast·qc·band·occ_co2·model_event…)", "cols": [["id", "INTEGER PK"], ["run_at", "TEXT · 실행 시각(UTC)"], ["kind", "TEXT · payload 종류"], ["scope", "TEXT · node_id 또는 all"], ["win_start / win_end", "TEXT · 분석 창"], ["model_ver", "TEXT · 예: gmm_v1"], ["payload", "TEXT · JSON"]]}, {"n": "actuator_state", "pk": "node+device", "d": "장치별 제어 목표 상태 — autoctl reconcile의 기준", "cols": [["node", "TEXT · 환경노드 id"], ["device", "TEXT · fan | purifier"], ["state", "INTEGER · 0/1"], ["since", "TEXT · 상태 시작(UTC) — min_run 10분 판정에 사용"]]}]}], "rels": [["db.readings", "db.occupancy", "node(교실 매핑)·ts 5분 버킷"], ["db.readings", "db.analysis", "node = scope · ts ∈ [win_start, win_end]"], ["db.analysis", "db.actuator_state", "scope = node · action payload → state"]], "glossary": true, "scenarios": [{"id": "morning", "label": "수업일 아침 — 측정에서 화면까지", "intro": "아무도 손대지 않아도 매일 반복되는 기본 사이클. 측정값 하나가 화면의 숫자가 되기까지 다섯 단계를 거친다.", "steps": [{"t": "08:30", "node": "dev.sensor", "text": "1반 센서 노드가 5분 평균(CO₂ 812 ppm·VOC 96 …)을 계산해 MQTT로 publish. 비전 노드는 같은 시각 재실 3명을 발행 — 영상은 기기 안에서 즉시 폐기."}, {"t": "08:30", "node": "job.hub", "also": ["api.broker", "file.db"], "text": "hub.py가 구독 중이던 메시지를 받아 readings·occupancy에 저장. DB에 측정 원본을 쓰는 프로그램은 이것 하나뿐이다."}, {"t": "09:05", "node": "job.analyst", "also": ["unit.analyst", "lib.qc", "lib.regime", "lib.rules"], "text": "hourly 타이머가 analyst.py를 깨운다. QC 게이트 통과분만으로 레짐 판정(GMM) → 히스테리시스 규칙 평가 → 결과를 analysis·actuator_state에 기록."}, {"t": "09:06", "node": "job.plugwatch", "also": ["lib.autoctl"], "text": "plugwatch의 60초 reconcile이 판정(actuator_state)과 플러그 실물을 비교 — 다른 게 없으면 아무것도 발행하지 않는다."}, {"t": "09:10", "node": "web.home", "also": ["web.app", "api.webapp", "lib.webdata"], "text": "교무실 브라우저가 /api/data를 폴링 — webdata가 DB·상태 파일을 조립해 내려주고, 홈 카드에 레짐 칩과 현재값이 뜬다."}]}, {"id": "auto_on", "label": "CO₂ 초과 → 환풍기 자동 ON → 회복", "intro": "이 시스템의 존재 이유인 제어 사이클. 판정하는 곳(analyst)과 스위치를 누르는 곳(plugwatch)이 분리되어 있다는 점이 핵심이다.", "steps": [{"t": "11:00", "node": "dev.sensor", "text": "3교시 연속 수업 — 창문이 닫힌 채 CO₂가 1,180 ppm까지 상승(재실 기여 실측 2.6~6.8 ppm/분·인)."}, {"t": "11:05", "node": "lib.rules", "also": ["job.analyst", "lib.regime"], "text": "hourly 판정: 레짐=인체 & CO₂>1,000 → 환풍기 ON. actuator_state.fan=1 기록 (since=지금, 최소가동 10분 예약)."}, {"t": "11:06", "node": "job.plugwatch", "also": ["lib.autoctl", "api.broker", "dev.plug"], "text": "reconcile: 목표 ON ≠ 실물 OFF → 그 플러그에만 스위치 RPC 발행. 릴레이가 붙고 환풍기 기동(~38 W 실측)."}, {"t": "11:07", "node": "web.energy", "also": ["file.plugstate"], "text": "plug_state.json에 전력이 실리고, 에너지 화면의 팬 칩이 회전 — 판정이 아니라 실측으로 가동을 표시한다(가동 판별 ≥5 W)."}, {"t": "11:40", "node": "lib.rules", "text": "환기로 CO₂<700 → OFF 판정. 10분 최소가동이 이미 지났으므로 즉시 반영 — 700~1,000 사이에서는 히스테리시스로 상태를 유지해 껐다켰다(채터링)를 막는다."}]}, {"id": "qc_hold", "label": "센서가 이상하다 — QC가 하루를 접는 날", "intro": "고장난 데이터로 제어하는 것보다 하루를 버리는 것이 낫다는 방어 설계. 2026-09-21 1반에서 실제로 일어난 일이다.", "steps": [{"t": "새벽", "node": "dev.sensor", "text": "1반 SCD30이 간헐적으로 물리 범위 밖 CO₂ 값을 섞어 보낸다. 행은 그대로 저장된다 — 원본은 지우지 않는다."}, {"t": "정시마다", "node": "lib.qc", "also": ["job.analyst"], "text": "range_mask가 범위 밖 값을 무효(NaN) 처리 → 그날 CO₂ 유효율 84.7% < 95% → daily_gate가 그 노드/날 전체를 분석에서 제외."}, {"t": "직후", "node": "lib.rules", "text": "레짐=hold → 규칙 계층은 판정하지 않고 이전 상태 유지 = 화면의 판정 보류. 오염된 근거로는 스위치를 만지지 않는다."}, {"t": "화면", "node": "web.home", "also": ["web.diagnosis"], "text": "레짐 칩이 제외로 바뀌고 진단 A 섹션에 사유(co2 valid 84.7% < 95%)가 노출 — 관리자는 센서 재장착/교체를 판단한다."}, {"t": "이튿날", "node": "lib.qc", "text": "유효율이 95%를 회복하면 별도 조작 없이 판정·제어가 자동 재개된다."}]}], "lineage": [{"label": "공기질 측정값 (co2·voc·pm)", "steps": ["센서 노드 5분 평균|탄생", "MQTT 8883 TLS|이동", "readings|저장", "QC→레짐→예측|가공", "홈·모니터·진단|소비"]}, {"label": "재실 인원수 (occ)", "steps": ["FOMO 온디바이스 추론|탄생 · 영상 즉시 폐기", "MQTT|이동", "occupancy|저장", "재실×CO₂ 상관|가공", "진단 G 섹션|소비"]}, {"label": "제어 판정 (fan·purifier)", "steps": ["GMM 레짐+규칙|탄생", "actuator_state|저장", "autoctl reconcile|가공", "플러그 릴레이|소비(집행)"]}, {"label": "플러그 전력 실측 (apower)", "steps": ["Shelly 계측|탄생", "MQTT status|이동", "plug_state.json|저장", "가동 판별 ≥5W|가공", "에너지 화면 칩|소비"]}, {"label": "정본 설정 (roster·매핑·임계값)", "steps": ["사람이 git 커밋|탄생", "보드 git pull|이동", "nodes·plugs·toml|저장", "기동 시 로드|소비 — 보드 직접 수정 금지"]}], "ops": {"intro": "보드 1대(UNO Q, Tailscale aqhub)가 서비스 6종을 무인 운영하고, 교실에는 외부 장치 29대(센서 8·비전 5·플러그 16)가 흩어져 있다. 원칙: 보드 파일은 절대 직접 수정하지 않고 git pull로만 배포하며, sudo가 필요한 조작은 사람 몫이다.", "devices": [{"label": "허브 보드 (Arduino UNO Q)", "host": "ssh aq · /home/arduino/multinode_aq (Tailscale: aqhub)", "services": [{"name": "multinode_aq_hub.service", "port": "—", "restart": "always", "health": "journalctl -u … | grep saved", "d": "MQTT 수집 → SQLite. 죽으면 측정이 유실되므로 최우선 감시 대상."}, {"name": "multinode_aq_plugwatch.service", "port": "—", "restart": "always", "health": "plug_state.json updated 최신성", "d": "플러그 관측·명령 집행. sudo 없이 pkill 브래킷 패턴으로 재기동."}, {"name": "multinode_aq_web.service", "port": "8501 (테일넷 내부)", "restart": "always", "health": "GET /api/plugs", "d": "관리 포함 전체 기능. Funnel에 태우지 말 것."}, {"name": "multinode_aq_web_public.service", "port": "8502 (Funnel 공개)", "restart": "always", "health": "GET /api/plugs", "d": "조회 전용 — 제어 POST는 403."}, {"name": "analyst hourly·daily·weekly.timer", "port": "—", "restart": "OnCalendar", "health": "analysis.run_at 최신성 (진단 A)", "d": "판정·QC·모델 재학습. 실패해도 다음 정시에 재시도."}], "notes": ["배포 = git pull --ff-only (보드 파일 직접 수정 금지)", "sudo·systemctl restart는 사람 몫 — 명령을 출력해 전달", "pkill -f 패턴은 브래킷 형태 plugwatch[.]py (ssh 원격 명령줄 자기 매치 방지)"]}, {"label": "교실 장치 함대 (×29)", "host": "학교 WiFi wi_cne_class_S_2.4G → HiveMQ Cloud 8883", "services": [{"name": "환경 센서 노드 ×8", "port": "MQTT pub", "restart": "상시 전원", "health": "홈 화면 노드 칩", "d": "UNO R4 WiFi. 재부팅 순간 유령 MAC 이력 → nodes.json 허용목록으로 방어."}, {"name": "비전 노드 ×5", "port": "MQTT pub", "restart": "매일 08:00 플러그 재시작", "health": "occupancy 최신 행", "d": "WDT 웜리셋 후 카메라 초기화 무한루프 이력 → 일일 재시작으로 안정화."}, {"name": "Shelly 플러그 ×16", "port": "MQTT 8883 TLS", "restart": "—", "health": "에너지 화면 미접속 칩", "d": "완전 침묵의 2대 사고 유형: No TLS 저장 · use_client_cert 켜짐. 설정은 AP 원-세션(plug_setup.html)."}], "notes": ["학교망은 클라이언트 격리 — 플러그 IP 접속은 자리 따라 다름, 확인은 항상 브로커 경유(대시보드)"]}], "checks": ["curl http://aqhub:8501/api/plugs — 웹·plugwatch 생존 한 방 확인", "ssh aq systemctl is-active multinode_aq_hub multinode_aq_plugwatch multinode_aq_web", "진단 화면 A — hourly 마지막 실행 시각·QC 제외 목록", "ssh aq journalctl -u multinode_aq_plugwatch -n 20 — auto: … ON/OFF 발행 로그"]}, "diff_ignore": ["legacy/*", ".claude/*", "hub/tests/*", "hub/data/*", "docs/*", "hub/deploy.sh", "hub/aq/__init__.py"], "glossary_label": "핵심 기술 · 용어", "glossary_html": "<h2>이 프로젝트를 관통하는 설계 문법<\/h2><div class=\"flow\"><div class=\"card hl\"><b>단일 writer 불변식<\/b><span>readings·occupancy는 hub.py만, analysis·actuator_state는 analyst.py만 쓴다. \"누가 이 값을 망가뜨렸나\"라는 질문이 성립하지 않게 만드는 규칙 — CI 가드가 지킨다.<\/span><\/div><div class=\"card\"><b>브로커 단일 통로<\/b><span>노드·플러그·보드가 전부 MQTT 하나로 만난다. 장치가 늘어도 연결 방식은 하나뿐이라 8실 확장에 코드 변경이 없었다.<\/span><\/div><div class=\"card\"><b>판정 ↔ 집행 분리<\/b><span>analyst는 목표 상태를 기록만 하고, plugwatch는 실물과 다를 때만 스위치를 만진다(reconcile). 어느 한쪽이 죽어도 다른 쪽이 오동작하지 않는다.<\/span><\/div><div class=\"card\"><b>정본은 git<\/b><span>로스터·매핑·임계값은 저장소가 정본이고 보드에는 git pull로만 간다. \"보드에서 몰래 고친 설정\"이라는 사고 유형을 원천 차단.<\/span><\/div><div class=\"card\"><b>의심되면 멈춘다<\/b><span>QC 미달이면 그날을 통째로 접고(판정 보류) 이전 상태를 유지한다. 나쁜 데이터로 제어하는 것보다 하루를 버리는 쪽을 택했다.<\/span><\/div><\/div><h2>채택 기술 — 무엇을, 왜 이 선택인지<\/h2><table class=\"cols\"><tr><td>MQTT + HiveMQ Cloud (8883 TLS)<\/td><td>29대 장치의 다대일 통신을 pub/sub 하나로. 클라우드 브로커라 학교망 클라이언트 격리(장치 간 직접 통신 차단)와 무관하게 모두가 만날 수 있다 — 격리망에서 직결 방식은 애초에 불가능했다.<\/td><\/tr><tr><td>SQLite 단일 파일<\/td><td>보드 한 대·writer 분리 구조에서는 서버형 DB가 과잉. 파일 하나라 백업(CSV 내보내기)과 분석 반출(scp)이 한 명령이다.<\/td><\/tr><tr><td>GMM 오염 레짐 모델<\/td><td>고정 임계값 대신 정규화 CO₂–VOC 평면의 분포로 상태를 분류 — 인체 기원이냐 물질 기원이냐를 구분해야 환기/공기청정을 다르게 걸 수 있다. 후보 모델 자동 학습·기각(거버넌스)까지 포함.<\/td><\/tr><tr><td>히스테리시스 + 최소가동 10분<\/td><td>ON 임계(1,000)와 OFF 임계(700)를 벌려 경계값 근처의 껐다켰다(채터링)를 차단. 릴레이·모터 수명 보호가 목적이다.<\/td><\/tr><tr><td>FOMO 엣지 AI (Nicla Vision)<\/td><td>재실 인원은 CO₂ 해석의 필수 변수지만 교실 영상 저장은 초상권 침해 — 추론을 기기 안에서 끝내고 숫자만 내보내는 것으로 해결. 프라이버시가 기능 요구사항이었다.<\/td><\/tr><tr><td>systemd 서비스·타이머<\/td><td>Restart=always로 무인 자가 복구, OnCalendar로 주기 분석. sudo 없이도 pkill만으로 재기동되도록 유닛을 설계해 원격 운영이 가능하다.<\/td><\/tr><tr><td>바닐라 JS SPA + Plotly<\/td><td>보드에 node·빌드 도구가 없어도 정적 파일 서빙만으로 동작. 화면별 모듈(screens/*)을 app.js가 조립하는 최소 구조.<\/td><\/tr><\/table><h2>화면에서 마주치는 용어<\/h2><table class=\"cols\"><tr><td>레짐 (청정·인체·물질·복합)<\/td><td>지금 공기 상태의 종류. 인체=CO₂ 우세(→환기), 물질=VOC 우세(→공기청정), 복합=둘 다. 값이 아니라 분포 위치로 판정한다.<\/td><\/tr><tr><td>판정 보류<\/td><td>레짐이 없거나(수신 없음) QC 제외이거나 값이 없어 규칙을 평가하지 않은 상태. 장치는 이전 상태 그대로 둔다 — 고장 표시가 아니라 안전 정지다.<\/td><\/tr><tr><td>유효율 / QC 게이트<\/td><td>그날 측정 중 물리 범위(CO₂ 350~5,000 등) 안에 든 비율. CO₂ 유효율<95%면 그 노드의 그날 전체를 분석에서 제외한다.<\/td><\/tr><tr><td>reconcile (조정)<\/td><td>판정 목표와 플러그 실물 상태를 비교해 다를 때만 명령을 보내는 방식. 같으면 아무 일도 안 한다.<\/td><\/tr><tr><td>가동 판별 ≥5 W<\/td><td>릴레이 ON이 아니라 실제 전력으로 돌고 있음을 판정. 환풍기 정음 운전(~7 W)까지 가동으로 인정하도록 실측 보정된 값.<\/td><\/tr><tr><td>미접속 / 유령 노드<\/td><td>미접속=플러그가 브로커에 없음(전원·설정 문제). 유령 노드=재부팅 순간 깨진 MAC으로 저장된 행 — 정본 로스터에 없으면 화면·판정에서 차단.<\/td><\/tr><tr><td>탐지 인원<\/td><td>비전 노드가 화각 안에서 센 사람 수. 가림·화각 때문에 실제보다 적게 잡히므로, 상관 분석의 계수는 탐지 인원당 값이다.<\/td><\/tr><\/table><p class=\"note\">가장 흔한 오해: <b>\"판정 보류 = 시스템 고장\"이 아니다.<\/b> 보류는 \"오늘 이 센서의 데이터는 제어 근거로 쓰기에 부족하다\"는 능동적 판단이며, 데이터가 회복되면 사람 손 없이 자동으로 풀린다. 반대로 <b>\"미접속\"은 실물 쪽 문제<\/b>(전원·WiFi·플러그 설정)라 사람이 가야 한다.<\/p>"};
+// h1 에는 커밋 해시 같은 "(기준 …)" 꼬리를 빼고, 전체는 사이드바 푸터에만 남긴다
+const _sub=DATA.subtitle||'', _subMain=_sub.replace(/\s*\(기준[^)]*\)\s*$/,'');
+document.getElementById('title').innerHTML=(DATA.title||'프로젝트 지도')+(_subMain?`<small>${_subMain}</small>`:'');
+document.getElementById('brand').textContent=DATA.title||'프로젝트 지도';
+document.getElementById('foot').textContent=_sub;
 document.title=DATA.title||'프로젝트 지도';
 if(DATA.glossary_html)document.getElementById('glossbody').innerHTML=DATA.glossary_html;
+if(DATA.glossary_label)document.getElementById('glosslabel').textContent=DATA.glossary_label;
 if(DATA.glossary===false)document.getElementById('glossbtn').hidden=true;
+if((DATA.scenarios||[]).length)document.getElementById('scbtn').hidden=false;
+if(DATA.ops)document.getElementById('opsbtn').hidden=false;
+if((DATA.lineage||[]).length)document.getElementById('dblabel').textContent='데이터 (여정 · 스키마)';
+const curTheme=()=>document.documentElement.getAttribute('data-theme')||'light';
+function applyEmbedTheme(f){try{f.contentDocument&&f.contentDocument.documentElement.setAttribute('data-theme',curTheme())}catch(err){}}
+function syncEmbedThemes(){document.querySelectorAll('.embed-frame').forEach(applyEmbedTheme)}
+(DATA.embeds||[]).forEach(e=>{
+  const f=document.createElement('iframe');f.className='embed-frame';f.title=e.label;
+  f.addEventListener('load',()=>applyEmbedTheme(f));  // archify 등 내장 문서 테마를 부모와 동기화
+  let loaded=false;  // 무거운 내장 문서는 첫 방문 때만 파싱
+  const load=()=>{if(!loaded){f.srcdoc=e.html;loaded=true}};
+  if(e.into){  // 기존 탭(section id)에 삽입 — [data-embed-slot] 이 있으면 그 자리(소개문 아래), 없으면 맨 위
+    const s=document.getElementById(e.into); if(!s) return;
+    f.classList.add('inline');
+    const slot=s.querySelector('[data-embed-slot]');
+    if(slot) slot.appendChild(f); else s.prepend(f);
+    if(!s.hidden) load();
+    else{const b=document.querySelector('.tabs button[data-tab='+e.into+']'); b&&b.addEventListener('click',load);}
+    return;
+  }
+  const nav=document.querySelector('.tabs');
+  const b=document.createElement('button');
+  b.setAttribute('role','tab');b.setAttribute('aria-selected','false');b.dataset.tab='em-'+e.id;
+  const n=document.createElement('span');n.className='n';n.textContent=nav.children.length+1;
+  b.append(n,e.label);nav.append(b);
+  const s=document.createElement('section');s.id='em-'+e.id;s.hidden=true;
+  s.append(f);document.querySelector('main').append(s);
+  b.addEventListener('click',load);
+});
+(function(){let i=1;document.querySelectorAll('.tabs button').forEach(b=>{if(!b.hidden)b.querySelector('.n').textContent=i++})})();
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
-  document.querySelectorAll('section').forEach(s=>s.hidden = s.id!==b.dataset.tab);
+  document.querySelectorAll('main>section').forEach(s=>s.hidden = s.id!==b.dataset.tab);
 }));
+document.getElementById('thm').addEventListener('click',()=>{
+  const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',t);
+  try{localStorage.setItem('pm-theme',t)}catch(e){}
+  syncEmbedThemes();
+});
 const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+let selectNode=null;
+function gotoNode(id){
+  const b=document.querySelector('.tabs button[data-tab=map]'); if(!b) return;
+  b.click(); if(selectNode) selectNode(id);
+  const g=document.querySelector('#mapsvg .node[data-id="'+id+'"]');
+  if(g&&g.scrollIntoView) g.scrollIntoView({block:'center',inline:'nearest'});
+}
 
-/* ---------- 설계 맵 ---------- */
+/* ---------- 설계 맵: 레인별 색상 ---------- */
 (function(){
-  const ov=DATA.overview||{};const el=document.getElementById('ovbody');
-  let h=ov.intro?`<p>${esc(ov.intro)}</p>`:'';
-  (ov.lanes||[]).forEach(l=>{
-    h+=`<div class="lane"><em>${esc(l.label)}</em>`+l.items.map((it,i)=>{const [b,s]=String(it).split('|');return (i?'<i>→</i>':'')+`<div class="n"><b>${esc(b)}</b><span>${esc(s||'')}</span></div>`}).join('')+'</div>';
+  const ov=DATA.overview||{};
+  // 머리(소개문+스탯 칩)는 archify 내장 위, 레인 상세는 그 아래 — 처음 보는 사람은 글부터 읽는다
+  let head=ov.intro?`<p class="intro">${esc(ov.intro)}</p>`:'';
+  if((ov.stats||[]).length)
+    head+='<div class="stats" role="list">'+ov.stats.map((s,i)=>`<span role="listitem" style="--sc:var(--l${i%6})">${esc(s)}</span>`).join('')+'</div>';
+  document.getElementById('ovhead').innerHTML=head;
+  let h='';
+  (ov.lanes||[]).forEach((l,li)=>{
+    h+=`<div class="lane" style="--lc:var(--l${li%6})"><em>${esc(l.label)}</em>`
+      +l.items.map((it,i)=>{const [b,s]=String(it).split('|');return (i?'<i aria-hidden="true">→</i>':'')+`<div class="n"><b>${esc(b)}</b><span>${esc(s||'')}</span></div>`}).join('')+'</div>';
   });
-  el.innerHTML=h||'<p>overview.lanes 가 비어 있습니다.</p>';
+  document.getElementById('ovlanes').innerHTML=h||'<p>overview.lanes 가 비어 있습니다.</p>';
 })();
 
 /* ---------- 스크립트 연결 지도 ---------- */
 (function(){
   const NODES=DATA.nodes||{},EDGES=DATA.edges||[],COLS=DATA.columns||[];
-  const NW=200,NH=44,ROW=70,CW=230;
+  const NW=212,NH=52,ROW=82,CW=246;
   const svg=document.getElementById('mapsvg'),NS='http://www.w3.org/2000/svg';
   const el=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e};
   const colIdx=Object.fromEntries(COLS.map((c,i)=>[c.id,i]));
-  // row 배정: 명시된 row 우선, 없으면 열 안에서 다음 빈 줄
   const used={};let maxRow=0;
   Object.values(NODES).forEach(n=>{if(n.row!=null){(used[n.c]??=new Set()).add(n.row);maxRow=Math.max(maxRow,n.row)}});
   Object.values(NODES).forEach(n=>{if(n.row==null){let r=0;const u=(used[n.c]??=new Set());while(u.has(r))r++;u.add(r);n.row=r;maxRow=Math.max(maxRow,r)}});
   const W=20+COLS.length*CW,H=60+(maxRow+1)*ROW;
   svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  // 화살표 머리 — 간선 방향(왼쪽 열 → 오른쪽 열)이 그림만으로 읽히게. context-stroke 로 간선 색을 따른다
+  const defs=el('defs',{}),mk=el('marker',{id:'pm-arrow',viewBox:'0 0 10 10',refX:'8.5',refY:'5',markerWidth:'6.5',markerHeight:'6.5',orient:'auto-start-reverse'});
+  const mp=el('path',{d:'M0,1 L9,5 L0,9 z',fill:'context-stroke'});mk.appendChild(mp);defs.appendChild(mk);svg.appendChild(defs);
   COLS.forEach((c,i)=>{const t=el('text',{x:20+i*CW,y:22,class:'col-label'});t.textContent=c.label;svg.appendChild(t)});
   const pos=id=>{const n=NODES[id];return {x:20+colIdx[n.c]*CW,y:40+n.row*ROW}};
   const gE=el('g',{}),gL=el('g',{}),gN=el('g',{});svg.append(gE,gL,gN);
@@ -199,7 +400,7 @@ const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
     const a=pos(f),b=pos(t),fw=b.x>=a.x;
     const x1=fw?a.x+NW:a.x,x2=fw?b.x:b.x+NW,y1=a.y+NH/2,y2=b.y+NH/2,dx=Math.max(40,Math.abs(x2-x1)/2);
     const d=`M${x1},${y1} C${x1+(fw?dx:-dx)},${y1} ${x2-(fw?dx:-dx)},${y2} ${x2},${y2}`;
-    const p=el('path',{d,class:'edge '+ty});gE.appendChild(p);
+    const p=el('path',{d,class:'edge '+ty,'marker-end':'url(#pm-arrow)'});gE.appendChild(p);
     const lb=el('text',{x:(x1+x2)/2,y:(y1+y2)/2-4,class:'edge-label','text-anchor':'middle'});lb.textContent=lab||'';gL.appendChild(lb);
     edgeEls.push({p,lb,f,t,ty,lab});
   });
@@ -207,23 +408,25 @@ const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
     const {x,y}=pos(id);
     const g=el('g',{class:'node c'+colIdx[n.c],'data-id':id,tabindex:0,role:'button'});
     g.appendChild(el('rect',{x,y,width:NW,height:NH}));
-    const t1=el('text',{x:x+10,y:y+18,'font-weight':600});t1.textContent=n.n;
-    const t2=el('text',{x:x+10,y:y+34,class:'sub'});t2.textContent=n.s||'';
+    const t1=el('text',{x:x+12,y:y+21,'font-weight':600});t1.textContent=n.n;
+    const t2=el('text',{x:x+12,y:y+38,class:'sub'});t2.textContent=n.s||'';
     g.append(t1,t2);gN.appendChild(g);
-    const sel=()=>select(id);
+    // 클릭한 상세가 화면 밖(다이어그램 아래 패널)에 있으므로 사용자가 고른 때만 살짝 데려간다
+    const sel=()=>{select(id);document.getElementById('mappanel').scrollIntoView({block:'nearest',behavior:'smooth'})};
     g.addEventListener('click',sel);g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sel()}});
   });
   const TY={call:'실행',imp:'import',wr:'쓰기',rd:'읽기',http:'HTTP/소켓'};
+  selectNode=id=>NODES[id]&&select(id);
   function select(id){
     const linked=new Set([id]);
     edgeEls.forEach(e=>{const on=e.f===id||e.t===id;e.p.classList.toggle('on',on);e.p.classList.toggle('dim',!on);e.lb.classList.toggle('on',on);if(on){linked.add(e.f);linked.add(e.t)}});
     gN.querySelectorAll('.node').forEach(g=>{const k=g.dataset.id;g.classList.toggle('on',k===id);g.classList.toggle('dim',!linked.has(k))});
     const n=NODES[id],out=edgeEls.filter(e=>e.f===id),inn=edgeEls.filter(e=>e.t===id);
     const li=e=>{const o=e.f===id?e.t:e.f;return `<li><span class="chip ${e.ty==='wr'?'w':e.ty==='rd'?'r':e.ty==='call'?'t':''}">${TY[e.ty]||e.ty}</span><b>${esc(NODES[o].n)}</b>${e.lab?' — '+esc(e.lab):''}</li>`};
-    document.getElementById('mappanel').innerHTML=`<h2>${esc(n.n)}</h2><div class="path">${esc(n.s||'')}</div>
-      ${n.d?`<p class="desc">${esc(n.d)}</p>`:''}
-      <h3>이 노드가 하는 것 (→)</h3><ul>${out.map(li).join('')||'<li>없음</li>'}</ul>
-      <h3>이 노드를 부르는/읽는 것 (←)</h3><ul>${inn.map(li).join('')||'<li>없음 — 진입점</li>'}</ul>`;
+    document.getElementById('mappanel').innerHTML=`<div class="pgrid">
+      <div><h2>${esc(n.n)}</h2><div class="path">${esc(n.s||'')}</div>${n.d?`<p class="desc">${esc(n.d)}</p>`:''}</div>
+      <div><h3>이 노드가 하는 것 (→)</h3><ul>${out.map(li).join('')||'<li>없음</li>'}</ul></div>
+      <div><h3>이 노드를 부르는/읽는 것 (←)</h3><ul>${inn.map(li).join('')||'<li>없음 — 진입점</li>'}</ul></div></div>`;
   }
 })();
 
@@ -232,30 +435,36 @@ const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
   const DBS=DATA.dbs||[],RELS=DATA.rels||[];
   const svg=document.getElementById('dbsvg'),NS='http://www.w3.org/2000/svg';
   const el=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e};
-  const W=280,TH=26,GAP=8,OFF=14,COLW=340,PER=3;
-  // 자동 배치: 3열, 열마다 y 누적
+  const W=340,TH=26,GAP=8,OFF=14,COLW=400,PER=3;
+  // writer 문자열 줄바꿈 (실린더 폭 안에서)
+  const wrap=(s,n)=>{const out=[];let cur='';String(s).split(/\s+/).forEach(w=>{if((cur+' '+w).trim().length>n){if(cur)out.push(cur);cur=w}else cur=(cur+' '+w).trim()});if(cur)out.push(cur);return out};
   const colY=[60,60,60];let maxY=0;
-  DBS.forEach((d,i)=>{const H=64+d.tables.length*(TH+GAP)+8+(d.readers.length+1)*16;const c=i%PER;d._x=d.x??(30+c*COLW);d._y=d.y??colY[c];d._h=H;colY[c]=d._y+H+OFF+40;maxY=Math.max(maxY,d._y+H+OFF+20)});
-  svg.setAttribute('viewBox',`0 0 ${Math.max(1,Math.min(DBS.length,PER))*COLW+60} ${maxY+20}`);
+  DBS.forEach((d,i)=>{d._wl=wrap('writer · '+d.writer,52);
+    const H=48+d._wl.length*15+8+d.tables.length*(TH+GAP)+12+(d.readers.length+1)*16;
+    const c=i%PER;d._x=d.x??(30+c*COLW);d._y=d.y??colY[c];d._h=H;colY[c]=d._y+H+OFF+40;maxY=Math.max(maxY,d._y+H+OFF+20)});
+  const VW=Math.max(1,Math.min(DBS.length,PER))*COLW+60;
+  svg.setAttribute('viewBox',`0 0 ${VW} ${maxY+20}`);
+  svg.style.maxWidth=Math.min(VW*1.2,1500)+'px';           // 1-DB 소형 지도가 전폭으로 확대되는 것 방지
   const tpos={};const gDb=el('g',{}),gRel=el('g',{});svg.append(gDb,gRel);
   DBS.forEach(d=>{
-    const H=d._h,x=d._x,y=d._y,g=el('g',{class:'db'});
-    g.appendChild(el('path',{class:'side',d:`M${x+W},${y+OFF} l${OFF},-${OFF} v${H} l-${OFF},${OFF} z`}));
-    g.appendChild(el('path',{class:'top',d:`M${x},${y+OFF} l${OFF},-${OFF} h${W} l-${OFF},${OFF} z`}));
-    g.appendChild(el('rect',{class:'face',x,y:y+OFF,width:W,height:H,rx:6}));
-    const tt=el('text',{x:x+14,y:y+OFF+24,class:'title'});tt.textContent='🗄 '+d.name;g.appendChild(tt);
-    const w=el('text',{x:x+14,y:y+OFF+44,class:'writer'});w.textContent='writer · '+d.writer;g.appendChild(w);
+    const H=d._h,x=d._x,y=d._y,i=DBS.indexOf(d),g=el('g',{class:'db',style:'--dbc:var(--l'+(i%6)+')'});
+    g.appendChild(el('rect',{class:'face',x,y:y+OFF,width:W,height:H,rx:16}));
+    g.appendChild(el('circle',{class:'dot',cx:x+22,cy:y+OFF+19,r:5.5}));
+    const tt=el('text',{x:x+36,y:y+OFF+24,class:'title'});tt.textContent=d.name;g.appendChild(tt);
+    d._wl.forEach((ln,i)=>{const w=el('text',{x:x+14,y:y+OFF+42+i*15,class:'writer'});w.textContent=ln;g.appendChild(w)});
+    const tbase=y+OFF+48+d._wl.length*15+4;
     d.tables.forEach((t,i)=>{
-      const ty=y+OFF+56+i*(TH+GAP),id=d.id+'.'+t.n;
+      const ty=tbase+i*(TH+GAP),id=d.id+'.'+t.n;
       const tg=el('g',{class:'tbl','data-id':id,tabindex:0,role:'button'});
       tg.appendChild(el('rect',{x:x+14,y:ty,width:W-28,height:TH}));
       const tx=el('text',{x:x+24,y:ty+17});tx.textContent=t.n;tg.appendChild(tx);
       const pk=el('text',{x:x+W-24,y:ty+17,'text-anchor':'end','font-size':10});pk.textContent=t.pk?'PK '+t.pk:'';tg.appendChild(pk);
       tpos[id]={x:x+14,y:ty,w:W-28,h:TH,db:d,t};
-      const sel=()=>select(id);tg.addEventListener('click',sel);tg.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sel()}});
+      const sel=()=>{select(id);document.getElementById('dbpanel').scrollIntoView({block:'nearest',behavior:'smooth'})};
+      tg.addEventListener('click',sel);tg.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sel()}});
       g.appendChild(tg);
     });
-    let ry=y+OFF+56+d.tables.length*(TH+GAP)+12;
+    let ry=tbase+d.tables.length*(TH+GAP)+12;
     const rl=el('text',{x:x+14,y:ry,class:'reader'});rl.textContent='readers';g.appendChild(rl);
     d.readers.forEach(r=>{ry+=16;const t=el('text',{x:x+26,y:ry,'font-size':11});t.textContent='· '+r;g.appendChild(t)});
     gDb.appendChild(g);
@@ -274,11 +483,62 @@ const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
     const linked=new Set([id,...rel.flatMap(r=>[r.a,r.b])]);
     svg.querySelectorAll('.tbl').forEach(g=>g.classList.toggle('on',linked.has(g.dataset.id)));
     const {db,t}=tpos[id];
-    document.getElementById('dbpanel').innerHTML=`<h2>${esc(t.n)}</h2><div class="path">${esc(db.name)}${t.pk?' · PK '+esc(t.pk):''}</div>
-      <span class="chip w">writer ${esc(db.writer)}</span>${t.d?`<p class="desc">${esc(t.d)}</p>`:''}
-      <table class="cols">${(t.cols||[]).map(([c,d])=>`<tr><td>${esc(c)}</td><td>${esc(d)}</td></tr>`).join('')}</table>
-      <h3>이어지는 테이블</h3><ul>${rel.map(r=>`<li><b>${esc((r.a===id?r.b:r.a).split('.').slice(1).join('.'))}</b> — ${esc(r.k)}</li>`).join('')||'<li>없음</li>'}</ul>`;
+    document.getElementById('dbpanel').innerHTML=`<div class="pgrid" style="grid-template-columns:minmax(280px,1fr) minmax(340px,1.5fr) minmax(200px,.8fr)">
+      <div><h2>${esc(t.n)}</h2><div class="path">${esc(db.name)}${t.pk?' · PK '+esc(t.pk):''}</div>
+        <p style="margin-top:10px"><span class="chip w">writer ${esc(db.writer)}</span></p>${t.d?`<p class="desc">${esc(t.d)}</p>`:''}</div>
+      <div><h3>컬럼</h3><table class="cols">${(t.cols||[]).map(([c,d])=>`<tr><td>${esc(c)}</td><td>${esc(d)}</td></tr>`).join('')}</table></div>
+      <div><h3>이어지는 테이블</h3><ul>${rel.map(r=>`<li><b>${esc((r.a===id?r.b:r.a).split('.').slice(1).join('.'))}</b> — ${esc(r.k)}</li>`).join('')||'<li>없음</li>'}</ul></div></div>`;
   }
+})();
+
+/* ---------- 시나리오 (시간 축) ---------- */
+(function(){
+  const SCS=DATA.scenarios||[]; if(!SCS.length) return;
+  const NODES=DATA.nodes||{}; const el=document.getElementById('scbody');
+  let cur=0;
+  function draw(){
+    const s=SCS[cur];
+    let h=SCS.length>1?'<div class="scsel" role="group" aria-label="시나리오 선택">'
+      +SCS.map((x,i)=>`<button type="button" aria-pressed="${i===cur}" data-i="${i}">${esc(x.label)}</button>`).join('')+'</div>':'';
+    if(s.intro) h+=`<p class="intro">${esc(s.intro)}</p>`;
+    h+='<ol class="tl">'+ (s.steps||[]).map(st=>{
+      const nodes=[st.node,...(st.also||[])].filter(id=>id&&NODES[id]);
+      return `<li>${st.t?`<span class="t">${esc(st.t)}</span>`:''}<span class="txt">${esc(st.text||'')}</span>`
+        +(nodes.length?'<div>'+nodes.map(id=>`<button type="button" class="nd" data-node="${esc(id)}">${esc(NODES[id].n)}</button>`).join('')+'</div>':'')
+        +'</li>';
+    }).join('')+'</ol>';
+    el.innerHTML=h;
+    el.querySelectorAll('.scsel button').forEach(b=>b.addEventListener('click',()=>{cur=+b.dataset.i;draw()}));
+    el.querySelectorAll('.nd').forEach(b=>b.addEventListener('click',()=>gotoNode(b.dataset.node)));
+  }
+  draw();
+})();
+
+/* ---------- 데이터 여정 (lineage) — 데이터 탭 상단 ---------- */
+(function(){
+  const LIN=DATA.lineage||[]; if(!LIN.length) return;
+  const w=document.createElement('div'); w.className='linwrap';
+  w.innerHTML='<h2>데이터 여정 — 탄생 → 이동 → 저장 → 가공 → 소비</h2>'
+    +LIN.map((l,li)=>`<div class="lin" style="--lc:var(--l${li%6})"><em>${esc(l.label)}</em>`
+      +(l.steps||[]).map((it,i)=>{const [b,s]=String(it).split('|');return (i?'<i>→</i>':'')+`<div class="n"><b>${esc(b)}</b><span>${esc(s||'')}</span></div>`}).join('')+'</div>').join('');
+  document.getElementById('db').prepend(w);
+})();
+
+/* ---------- 운영 · 배포 ---------- */
+(function(){
+  const O=DATA.ops; if(!O) return;
+  const el=document.getElementById('opsbody');
+  let h=O.intro?`<p class="intro">${esc(O.intro)}</p>`:'';
+  h+='<div class="opsgrid">'+(O.devices||[]).map(d=>{
+    let c=`<div class="dev"><h2>${esc(d.label)}</h2>${d.host?`<div class="host">${esc(d.host)}</div>`:''}`;
+    if((d.services||[]).length) c+='<table class="svc">'+d.services.map(s=>
+      `<tr><td>${esc(s.name)}</td><td>${esc(s.d||'')}<div class="meta">${[s.port?'port '+s.port:'',s.restart?'restart: '+s.restart:'',s.health?'health: '+s.health:''].filter(Boolean).map(esc).join(' · ')}</div></td></tr>`).join('')+'</table>';
+    if((d.notes||[]).length) c+='<ul>'+d.notes.map(n=>`<li>${esc(n)}</li>`).join('')+'</ul>';
+    return c+'</div>';
+  }).join('');
+  if((O.checks||[]).length) h+=`<div class="dev"><h2>헬스체크 · 점검 절차</h2><ul>${O.checks.map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`;
+  h+='</div>';
+  el.innerHTML=h;
 })();
 </script>
 </body>

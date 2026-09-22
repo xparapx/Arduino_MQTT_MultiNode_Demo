@@ -1,188 +1,1124 @@
 {
-  "title": "multinode_aq 프로젝트 지도",
-  "subtitle": "교실 공기질 IoT·엣지 AI — 수집·분석·표시·자동 제어 (2026-09-22 기준)",
-  "overview": {
-    "intro": "8개 교실의 센서 노드와 5개 교실의 비전 노드가 MQTT(HiveMQ Cloud, TLS)로 측정값을 올리고, 보드(UNO Q)의 네 프로세스가 이를 수집·분석·표시·집행한다. 설계 불변식: sensor_data.db의 readings·occupancy는 hub.py만, analysis·actuator_state는 analyst.py만 쓴다. 스마트플러그 제어 명령은 plugwatch.py 한 곳에서만 발행된다.",
-    "lanes": [
-      {"label": "① 실시간 수집", "items": [
-        "센서·비전 노드|5분 평균(공기질)·재실 인원수를 MQTT publish",
-        "MQTT 브로커|HiveMQ Cloud 8883 TLS — 모든 메시지의 단일 통로",
-        "hub.py|구독 → readings·occupancy 테이블에 저장 (이 두 테이블의 유일한 writer)"
-      ]},
-      {"label": "② 주기 분석·판정", "items": [
-        "systemd 타이머|hourly(레짐·규칙·예측) · daily(QC·밴드) · weekly(모델 재학습·거버넌스)",
-        "analyst.py|aq 모듈 파이프라인 실행 → analysis·actuator_state에 기록 (유일한 writer)",
-        "QC 게이트|CO₂ 유효율<95%인 노드/날은 통째로 '판정 보류'"
-      ]},
-      {"label": "③ 플러그 관측·집행", "items": [
-        "plugwatch.py|Shelly 플러그 16대 MQTT 관측(전력 실측) + plug_state.json 기록",
-        "reconcile|auto 모드: actuator_state(판정)와 실물이 다를 때만 스위치 명령 발행",
-        "plug_cmd.json|manual 모드: webapp이 큐잉 → plugwatch가 집행 후 삭제"
-      ]},
-      {"label": "④ 웹 표시", "items": [
-        "webapp.py|JSON API + 정적 SPA 서빙 (web·web_public 두 유닛)",
-        "webdata.py|DB·상태 파일을 읽어 화면별 payload 조립 (읽기 전용)",
-        "SPA|홈·모니터·에너지·진단(A–I)·관리 화면, /api/* 폴링"
-      ]},
-      {"label": "⑤ 정본 설정 (git 배포)", "items": [
-        "nodes.json|노드→교실 정본 로스터 — 유령 노드 차단의 기준",
-        "plugs.json|교실→플러그 MAC 매핑 (공청기 8·환풍기 8)",
-        "analyst.toml·calendar.json|임계값·QC 기준·학사 일정 — 보드에는 git pull로만 반영"
-      ]}
+ "title": "multinode_aq 프로젝트 지도",
+ "subtitle": "교실 공기질 IoT·엣지 AI — 수집·분석·표시·자동 제어 (기준 코드: 2026-09-22 · 715f860)",
+ "overview": {
+  "intro": "8개 교실의 센서 노드와 5개 교실의 비전 노드가 MQTT(HiveMQ Cloud, TLS)로 측정값을 올리고, 보드(UNO Q)의 네 프로세스가 이를 수집·분석·표시·집행한다. 설계 불변식: sensor_data.db의 readings·occupancy는 hub.py만, analysis·actuator_state는 analyst.py만 쓴다. 스마트플러그 제어 명령은 plugwatch.py 한 곳에서만 발행된다.",
+  "lanes": [
+   {
+    "label": "① 실시간 수집",
+    "items": [
+     "센서·비전 노드|5분 평균(공기질)·재실 인원수를 MQTT publish",
+     "MQTT 브로커|HiveMQ Cloud 8883 TLS — 모든 메시지의 단일 통로",
+     "hub.py|구독 → readings·occupancy 테이블에 저장 (이 두 테이블의 유일한 writer)"
     ]
+   },
+   {
+    "label": "② 주기 분석·판정",
+    "items": [
+     "systemd 타이머|hourly(레짐·규칙·예측) · daily(QC·밴드) · weekly(모델 재학습·거버넌스)",
+     "analyst.py|aq 모듈 파이프라인 실행 → analysis·actuator_state에 기록 (유일한 writer)",
+     "QC 게이트|CO₂ 유효율<95%인 노드/날은 통째로 '판정 보류'"
+    ]
+   },
+   {
+    "label": "③ 플러그 관측·집행",
+    "items": [
+     "plugwatch.py|Shelly 플러그 16대 MQTT 관측(전력 실측) + plug_state.json 기록",
+     "reconcile|auto 모드: actuator_state(판정)와 실물이 다를 때만 스위치 명령 발행",
+     "plug_cmd.json|manual 모드: webapp이 큐잉 → plugwatch가 집행 후 삭제"
+    ]
+   },
+   {
+    "label": "④ 웹 표시",
+    "items": [
+     "webapp.py|JSON API + 정적 SPA 서빙 (web·web_public 두 유닛)",
+     "webdata.py|DB·상태 파일을 읽어 화면별 payload 조립 (읽기 전용)",
+     "SPA|홈·모니터·에너지·진단(A–I)·관리 화면, /api/* 폴링"
+    ]
+   },
+   {
+    "label": "⑤ 정본 설정 (git 배포)",
+    "items": [
+     "nodes.json|노드→교실 정본 로스터 — 유령 노드 차단의 기준",
+     "plugs.json|교실→플러그 MAC 매핑 (공청기 8·환풍기 8)",
+     "analyst.toml·calendar.json|임계값·QC 기준·학사 일정 — 보드에는 git pull로만 반영"
+    ]
+   }
+  ]
+ },
+ "columns": [
+  {
+   "id": "timer",
+   "label": "실행 주체"
   },
-  "columns": [
-    {"id": "timer", "label": "실행 주체"},
-    {"id": "job", "label": "프로세스"},
-    {"id": "lib", "label": "공용 모듈 (aq/)"},
-    {"id": "data", "label": "데이터 파일"},
-    {"id": "api", "label": "API · MQTT"},
-    {"id": "web", "label": "브라우저"}
-  ],
-  "nodes": {
-    "dev.sensor": {"c": "timer", "n": "센서·비전 노드 ×13", "s": "UNO R4 WiFi ×8 · Nicla Vision ×5", "d": "교실의 공기질(5분 평균)과 재실 인원수(엣지 AI, 영상 비전송)를 MQTT로 publish하는 외부 장치. 펌웨어는 manual.html에 내장.", "row": 0},
-    "dev.plug": {"c": "timer", "n": "Shelly 플러그 ×16", "s": "PlugS Gen3 · 공청기 8 + 환풍기 8", "d": "브로커에 상태·전력을 publish하고 RPC-over-MQTT로 스위치 명령을 받는다. 설정은 AP 모드 원-세션 방식(plug_setup.html).", "row": 1},
-    "unit.hub": {"c": "timer", "n": "multinode_aq_hub.service", "s": "상시 · Restart=always", "d": "hub.py를 상주시키는 systemd 유닛. sudo 없이 pkill만으로 재기동된다.", "row": 2},
-    "unit.plugwatch": {"c": "timer", "n": "multinode_aq_plugwatch.service", "s": "상시", "d": "plugwatch.py 상주 유닛.", "row": 3},
-    "unit.analyst": {"c": "timer", "n": "analyst 타이머 ×3", "s": "hourly · daily · weekly", "d": "OnCalendar 타이머 3개가 analyst.py를 각각 --hourly/--daily/--weekly 인자로 기동한다.", "row": 4},
-    "unit.web": {"c": "timer", "n": "web · web_public.service", "s": "8501 · 8502", "d": "webapp.py를 두 포트로 띄운다 — 내부용(관리 포함)과 공개용(읽기 전용).", "row": 5},
-    "job.hub": {"c": "job", "n": "hub/hub.py", "s": "MQTT 구독 → SQLite 저장", "d": "노드 토픽을 구독해 readings·occupancy에 저장한다. 이 두 테이블의 유일한 writer라는 것이 프로젝트 최상위 불변식(CI 가드 존재).", "row": 2},
-    "job.plugwatch": {"c": "job", "n": "hub/plugwatch.py", "s": "플러그 관측 + 명령 집행", "d": "플러그 상태를 폴링·구독해 plug_state.json을 쓰고, auto 모드에선 autoctl의 reconcile 계획을, manual 모드에선 plug_cmd.json을 집행한다. 스위치 명령을 발행하는 유일한 경로.", "row": 3},
-    "job.analyst": {"c": "job", "n": "hub/analyst.py", "s": "주기 분석 러너", "d": "aq 모듈들을 순서대로 실행하는 오케스트레이터. 결과는 전부 analysis 테이블 payload(JSON)로, 제어 목표는 actuator_state로 기록한다.", "row": 4},
-    "lib.config": {"c": "lib", "n": "aq/config.py", "s": "analyst.toml 로더·검증", "d": "임계값·QC 기준·모델 파라미터를 config/analyst.toml에서 읽고 스키마 검증한다. 학사 일정(calendar.json)도 여기서 로드.", "row": 0},
-    "lib.db": {"c": "lib", "n": "aq/db.py", "s": "SQLite 접근 계층", "d": "sensor_data.db 읽기와 analysis·actuator_state 쓰기를 담당. 쓰기 함수는 analyst 경로에서만 호출된다.", "row": 1},
-    "lib.qc": {"c": "lib", "n": "aq/qc.py", "s": "품질 게이트", "d": "물리 범위 밖 값을 NaN 처리(range_mask)하고, 노드×일 CO₂ 유효율<95%면 그날치를 분석에서 제외(daily_gate). 행 삭제는 없다.", "row": 2},
-    "lib.regime": {"c": "lib", "n": "aq/regime.py", "s": "GMM 오염 레짐 판정", "d": "정규화 CO₂–VOC 평면에서 청정/인체/물질/복합 레짐을 분류. QC 제외 노드는 hold.", "row": 3},
-    "lib.governance": {"c": "lib", "n": "aq/governance.py", "s": "모델 거버넌스", "d": "주간 재학습된 후보 GMM을 현행 모델과 비교해 승격/기각을 자동 결정한다(중심 이동·로그우도 기준). 사분면 겹침 후보는 기각.", "row": 4},
-    "lib.rules": {"c": "lib", "n": "aq/rules.py", "s": "히스테리시스 규칙", "d": "환풍기: 인체/복합 & CO₂>1000 ON, <700 OFF. 공청기: 물질/복합 & VOC>200 ON, <120 OFF. 최소 가동 10분. QC 제외면 판정 보류(이전 상태 유지).", "row": 5},
-    "lib.autoctl": {"c": "lib", "n": "aq/autoctl.py", "s": "제어 계획(reconcile)", "d": "actuator_state(판정 목표, 읽기 전용)와 플러그 실물 상태를 비교해 달라진 것만 스위치 계획으로 산출. plugwatch가 import해 집행한다.", "row": 6},
-    "lib.forecast": {"c": "lib", "n": "aq/forecast.py", "s": "단기 예측", "d": "CO₂/VOC 단기 추세 예측 — 진단 화면과 행동 권고의 근거.", "row": 7},
-    "lib.occ_co2": {"c": "lib", "n": "aq/occ_co2.py", "s": "재실×CO₂ 상관·회귀", "d": "재실 인원과 CO₂의 Spearman 상관·1인당 상승 기여를 상시 산출한다.", "row": 8},
-    "lib.explore": {"c": "lib", "n": "aq/explore.py", "s": "탐색 집계", "d": "변수 상관행렬·2D 히스토그램 등 진단 H 섹션용 집계.", "row": 9},
-    "lib.summary": {"c": "lib", "n": "aq/summary.py", "s": "실행 요약문", "d": "한 번의 analyst 실행 결과를 사람이 읽는 한 문단으로 요약(QC 제외 목록 포함).", "row": 10},
-    "lib.derive": {"c": "lib", "n": "aq/derive.py", "s": "순수 파생 함수", "d": "판정→표시 문구(조치 없음/판정 보류 등) 등 DB 없이 테스트되는 순수 함수 모음.", "row": 11},
-    "lib.webdata": {"c": "lib", "n": "aq/webdata.py", "s": "화면 payload 조립 (읽기 전용)", "d": "DB·상태 파일을 읽어 /api/* 응답을 만든다. 정본 nodes.json 허용목록으로 유령 노드를 화면에서 차단.", "row": 12},
-    "lib.schemas": {"c": "lib", "n": "aq/schemas.py", "s": "payload 타입 정의", "d": "analysis payload들의 TypedDict 스키마 — 모듈 간 계약 문서 역할.", "row": 13},
-    "lib.legacy": {"c": "lib", "n": "legacy/ (보관)", "s": "Streamlit 대시보드 등 구버전", "d": "Phase 5 이전의 Streamlit 대시보드·구 허브 사본. 실행되지 않으며 참고용으로만 보관.", "row": 14},
-    "file.db": {"c": "data", "n": "sensor_data.db", "s": "SQLite · 4 테이블", "d": "측정 원본(readings·occupancy)과 분석 산출(analysis·actuator_state). 테이블별 writer 분리가 핵심 불변식.", "row": 2},
-    "file.plugstate": {"c": "data", "n": "plug_state.json", "s": "plugwatch → 대시보드", "d": "플러그 실측 스냅샷(online·전력·24h 이력). 원자적 교체(tmp+replace)로 갱신.", "row": 3},
-    "file.plugcmd": {"c": "data", "n": "plug_cmd.json", "s": "manual 명령 큐", "d": "webapp이 쓰고 plugwatch가 집행 후 삭제하는 1회성 명령 파일.", "row": 4},
-    "file.control": {"c": "data", "n": "control.json", "s": "auto/manual 모드", "d": "전역 제어 모드. webapp이 쓰고 plugwatch·webdata가 읽는다.", "row": 5},
-    "file.nodes": {"c": "data", "n": "nodes.json", "s": "노드→교실 정본 로스터", "d": "판정·표시의 허용목록. 리포지토리에서 git으로 관리되는 정본 설정.", "row": 6},
-    "file.plugs": {"c": "data", "n": "config/plugs.json", "s": "교실→플러그 MAC 매핑", "d": "공청기·환풍기 16장치의 MAC 정본. plugwatch 기동 시 로드.", "row": 7},
-    "file.toml": {"c": "data", "n": "config/analyst.toml", "s": "분석·제어 파라미터", "d": "임계값(ON/OFF·QC 95%·최소가동 10분)과 모델 설정의 단일 출처.", "row": 8},
-    "file.calendar": {"c": "data", "n": "config/calendar.json", "s": "학사 일정", "d": "수업일/방학 구분 — 분석 창과 리포트 라벨에 사용.", "row": 9},
-    "api.broker": {"c": "api", "n": "MQTT 브로커", "s": "HiveMQ Cloud · 8883 TLS", "d": "노드·플러그·보드 프로세스가 모두 접속하는 단일 메시지 버스. 클라이언트 인증서 옵션이 켜져 있으면 접속이 침묵 거부된다(실사고 2건).", "row": 0},
-    "api.webapp": {"c": "api", "n": "hub/webapp.py", "s": "JSON API + 정적 서빙", "d": "webdata payload를 /api/*로 내고 SPA를 서빙. 제어 POST는 control.json·plug_cmd.json 기록까지만(집행은 plugwatch). 관리용 reset은 readings를 CSV 백업 후 비운다 — DB에 손대는 유일한 예외 경로.", "row": 5},
-    "web.index": {"c": "web", "n": "web/index.html", "s": "SPA 셸", "d": "단일 페이지 진입점. 해시 라우팅으로 화면 전환.", "row": 0},
-    "web.app": {"c": "web", "n": "web/app.js", "s": "부트스트랩·공통 상태", "d": "/api/* 폴링, 공통 포맷터, 화면 등록. REGIME 한글 라벨 등 표시 사전 보유.", "row": 1},
-    "web.router": {"c": "web", "n": "web/router.js", "s": "해시 라우터", "d": "#home/#monitor/#energy/#diagnosis/#admin 전환.", "row": 2},
-    "web.charts": {"c": "web", "n": "web/charts.js", "s": "Plotly 차트 헬퍼", "d": "시계열·히트맵·연속 컬러맵 바차트 등 공용 차트 생성기.", "row": 3},
-    "web.home": {"c": "web", "n": "screens/home.js", "s": "홈 — 교실 카드", "d": "교실별 현재값·레짐·플러그 실측 칩 요약.", "row": 4},
-    "web.monitor": {"c": "web", "n": "screens/monitor.js", "s": "모니터 — 시계열", "d": "변수별 시계열·비전 크로스헤어·기록.", "row": 5},
-    "web.energy": {"c": "web", "n": "screens/energy.js", "s": "에너지 — 플러그", "d": "플러그 전력 실측·가동 판별(≥5W)·제어 카드.", "row": 6},
-    "web.diagnosis": {"c": "web", "n": "screens/diagnosis.js", "s": "진단 A–I", "d": "QC·레짐 지도·예측·재실 상관 등 분석 근거 화면.", "row": 7},
-    "web.admin": {"c": "web", "n": "screens/admin.js", "s": "관리", "d": "CSV 내보내기·reset 등 내부 포트 전용 기능.", "row": 8}
+  {
+   "id": "job",
+   "label": "프로세스"
   },
-  "edges": [
-    ["dev.sensor", "api.broker", "http", "publish 5분"],
-    ["dev.plug", "api.broker", "http", "상태·전력"],
-    ["api.broker", "job.hub", "http", "subscribe"],
-    ["api.broker", "job.plugwatch", "http", "상태 수신"],
-    ["job.plugwatch", "api.broker", "http", "스위치 RPC"],
-    ["unit.hub", "job.hub", "call", ""],
-    ["unit.plugwatch", "job.plugwatch", "call", ""],
-    ["unit.analyst", "job.analyst", "call", "h·d·w"],
-    ["unit.web", "api.webapp", "call", "8501·8502"],
-    ["job.hub", "file.db", "wr", "readings·occupancy"],
-    ["job.analyst", "lib.config", "imp", ""],
-    ["job.analyst", "lib.qc", "imp", ""],
-    ["job.analyst", "lib.regime", "imp", ""],
-    ["job.analyst", "lib.governance", "imp", ""],
-    ["job.analyst", "lib.rules", "imp", ""],
-    ["job.analyst", "lib.forecast", "imp", ""],
-    ["job.analyst", "lib.occ_co2", "imp", ""],
-    ["job.analyst", "lib.explore", "imp", ""],
-    ["job.analyst", "lib.summary", "imp", ""],
-    ["job.analyst", "lib.db", "imp", ""],
-    ["lib.db", "file.db", "wr", "analysis·actuator_state"],
-    ["lib.config", "file.toml", "rd", ""],
-    ["lib.config", "file.calendar", "rd", ""],
-    ["job.plugwatch", "lib.autoctl", "imp", "auto 모드"],
-    ["lib.autoctl", "file.db", "rd", "actuator_state"],
-    ["job.plugwatch", "file.plugs", "rd", ""],
-    ["job.plugwatch", "file.nodes", "rd", ""],
-    ["job.plugwatch", "file.control", "rd", "모드 확인"],
-    ["job.plugwatch", "file.plugcmd", "rd", "집행 후 삭제"],
-    ["job.plugwatch", "file.plugstate", "wr", "15초"],
-    ["api.webapp", "lib.webdata", "imp", ""],
-    ["lib.webdata", "file.db", "rd", ""],
-    ["lib.webdata", "file.nodes", "rd", "허용목록"],
-    ["lib.webdata", "file.control", "rd", ""],
-    ["lib.webdata", "file.plugs", "rd", ""],
-    ["lib.webdata", "file.plugstate", "rd", ""],
-    ["lib.webdata", "lib.derive", "imp", ""],
-    ["lib.webdata", "lib.config", "imp", ""],
-    ["api.webapp", "file.control", "wr", "모드 전환"],
-    ["api.webapp", "file.plugcmd", "wr", "manual 명령"],
-    ["api.webapp", "file.db", "wr", "reset(예외)"],
-    ["api.webapp", "web.index", "http", "정적 서빙"],
-    ["web.app", "api.webapp", "http", "/api/* 폴링"],
-    ["web.index", "web.app", "imp", ""],
-    ["web.app", "web.router", "imp", ""],
-    ["web.app", "web.charts", "imp", ""],
-    ["web.app", "web.home", "imp", ""],
-    ["web.app", "web.monitor", "imp", ""],
-    ["web.app", "web.energy", "imp", ""],
-    ["web.app", "web.diagnosis", "imp", ""],
-    ["web.app", "web.admin", "imp", ""]
+  {
+   "id": "lib",
+   "label": "공용 모듈 (aq/)"
+  },
+  {
+   "id": "data",
+   "label": "데이터 파일"
+  },
+  {
+   "id": "api",
+   "label": "API · MQTT"
+  },
+  {
+   "id": "web",
+   "label": "브라우저"
+  }
+ ],
+ "nodes": {
+  "dev.sensor": {
+   "c": "timer",
+   "n": "센서·비전 노드 ×13",
+   "s": "UNO R4 WiFi ×8 · Nicla Vision ×5",
+   "d": "교실의 공기질(5분 평균)과 재실 인원수(엣지 AI, 영상 비전송)를 MQTT로 publish하는 외부 장치. 펌웨어는 manual.html에 내장.",
+   "row": 0
+  },
+  "dev.plug": {
+   "c": "timer",
+   "n": "Shelly 플러그 ×16",
+   "s": "PlugS Gen3 · 공청기 8 + 환풍기 8",
+   "d": "브로커에 상태·전력을 publish하고 RPC-over-MQTT로 스위치 명령을 받는다. 설정은 AP 모드 원-세션 방식(plug_setup.html).",
+   "row": 1
+  },
+  "unit.hub": {
+   "c": "timer",
+   "n": "multinode_aq_hub.service",
+   "s": "상시 · Restart=always",
+   "d": "hub.py를 상주시키는 systemd 유닛. sudo 없이 pkill만으로 재기동된다.",
+   "row": 2
+  },
+  "unit.plugwatch": {
+   "c": "timer",
+   "n": "multinode_aq_plugwatch.service",
+   "s": "상시",
+   "d": "plugwatch.py 상주 유닛.",
+   "row": 3
+  },
+  "unit.analyst": {
+   "c": "timer",
+   "n": "analyst 타이머 ×3",
+   "s": "hourly · daily · weekly",
+   "d": "OnCalendar 타이머 3개가 analyst.py를 각각 --hourly/--daily/--weekly 인자로 기동한다.",
+   "row": 4
+  },
+  "unit.web": {
+   "c": "timer",
+   "n": "web · web_public.service",
+   "s": "8501 · 8502",
+   "d": "webapp.py를 두 포트로 띄운다 — 내부용(관리 포함)과 공개용(읽기 전용).",
+   "row": 5
+  },
+  "job.hub": {
+   "c": "job",
+   "n": "hub/hub.py",
+   "s": "MQTT 구독 → SQLite 저장",
+   "d": "노드 토픽을 구독해 readings·occupancy에 저장한다. 이 두 테이블의 유일한 writer라는 것이 프로젝트 최상위 불변식(CI 가드 존재).",
+   "row": 2
+  },
+  "job.plugwatch": {
+   "c": "job",
+   "n": "hub/plugwatch.py",
+   "s": "플러그 관측 + 명령 집행",
+   "d": "플러그 상태를 폴링·구독해 plug_state.json을 쓰고, auto 모드에선 autoctl의 reconcile 계획을, manual 모드에선 plug_cmd.json을 집행한다. 스위치 명령을 발행하는 유일한 경로.",
+   "row": 3
+  },
+  "job.analyst": {
+   "c": "job",
+   "n": "hub/analyst.py",
+   "s": "주기 분석 러너",
+   "d": "aq 모듈들을 순서대로 실행하는 오케스트레이터. 결과는 전부 analysis 테이블 payload(JSON)로, 제어 목표는 actuator_state로 기록한다.",
+   "row": 4
+  },
+  "lib.config": {
+   "c": "lib",
+   "n": "aq/config.py",
+   "s": "analyst.toml 로더·검증",
+   "d": "임계값·QC 기준·모델 파라미터를 config/analyst.toml에서 읽고 스키마 검증한다. 학사 일정(calendar.json)도 여기서 로드.",
+   "row": 0
+  },
+  "lib.db": {
+   "c": "lib",
+   "n": "aq/db.py",
+   "s": "SQLite 접근 계층",
+   "d": "sensor_data.db 읽기와 analysis·actuator_state 쓰기를 담당. 쓰기 함수는 analyst 경로에서만 호출된다.",
+   "row": 1
+  },
+  "lib.qc": {
+   "c": "lib",
+   "n": "aq/qc.py",
+   "s": "품질 게이트",
+   "d": "물리 범위 밖 값을 NaN 처리(range_mask)하고, 노드×일 CO₂ 유효율<95%면 그날치를 분석에서 제외(daily_gate). 행 삭제는 없다.",
+   "row": 2
+  },
+  "lib.regime": {
+   "c": "lib",
+   "n": "aq/regime.py",
+   "s": "GMM 오염 레짐 판정",
+   "d": "정규화 CO₂–VOC 평면에서 청정/인체/물질/복합 레짐을 분류. QC 제외 노드는 hold.",
+   "row": 3
+  },
+  "lib.governance": {
+   "c": "lib",
+   "n": "aq/governance.py",
+   "s": "모델 거버넌스",
+   "d": "주간 재학습된 후보 GMM을 현행 모델과 비교해 승격/기각을 자동 결정한다(중심 이동·로그우도 기준). 사분면 겹침 후보는 기각.",
+   "row": 4
+  },
+  "lib.rules": {
+   "c": "lib",
+   "n": "aq/rules.py",
+   "s": "히스테리시스 규칙",
+   "d": "환풍기: 인체/복합 & CO₂>1000 ON, <700 OFF. 공청기: 물질/복합 & VOC>200 ON, <120 OFF. 최소 가동 10분. QC 제외면 판정 보류(이전 상태 유지).",
+   "row": 5
+  },
+  "lib.autoctl": {
+   "c": "lib",
+   "n": "aq/autoctl.py",
+   "s": "제어 계획(reconcile)",
+   "d": "actuator_state(판정 목표, 읽기 전용)와 플러그 실물 상태를 비교해 달라진 것만 스위치 계획으로 산출. plugwatch가 import해 집행한다.",
+   "row": 6
+  },
+  "lib.forecast": {
+   "c": "lib",
+   "n": "aq/forecast.py",
+   "s": "단기 예측",
+   "d": "CO₂/VOC 단기 추세 예측 — 진단 화면과 행동 권고의 근거.",
+   "row": 7
+  },
+  "lib.occ_co2": {
+   "c": "lib",
+   "n": "aq/occ_co2.py",
+   "s": "재실×CO₂ 상관·회귀",
+   "d": "재실 인원과 CO₂의 Spearman 상관·1인당 상승 기여를 상시 산출한다.",
+   "row": 8
+  },
+  "lib.explore": {
+   "c": "lib",
+   "n": "aq/explore.py",
+   "s": "탐색 집계",
+   "d": "변수 상관행렬·2D 히스토그램 등 진단 H 섹션용 집계.",
+   "row": 9
+  },
+  "lib.summary": {
+   "c": "lib",
+   "n": "aq/summary.py",
+   "s": "실행 요약문",
+   "d": "한 번의 analyst 실행 결과를 사람이 읽는 한 문단으로 요약(QC 제외 목록 포함).",
+   "row": 10
+  },
+  "lib.derive": {
+   "c": "lib",
+   "n": "aq/derive.py",
+   "s": "순수 파생 함수",
+   "d": "판정→표시 문구(조치 없음/판정 보류 등) 등 DB 없이 테스트되는 순수 함수 모음.",
+   "row": 11
+  },
+  "lib.webdata": {
+   "c": "lib",
+   "n": "aq/webdata.py",
+   "s": "화면 payload 조립 (읽기 전용)",
+   "d": "DB·상태 파일을 읽어 /api/* 응답을 만든다. 정본 nodes.json 허용목록으로 유령 노드를 화면에서 차단.",
+   "row": 12
+  },
+  "lib.schemas": {
+   "c": "lib",
+   "n": "aq/schemas.py",
+   "s": "payload 타입 정의",
+   "d": "analysis payload들의 TypedDict 스키마 — 모듈 간 계약 문서 역할.",
+   "row": 13
+  },
+  "lib.legacy": {
+   "c": "lib",
+   "n": "legacy/ (보관)",
+   "s": "Streamlit 대시보드 등 구버전",
+   "d": "Phase 5 이전의 Streamlit 대시보드·구 허브 사본. 실행되지 않으며 참고용으로만 보관.",
+   "row": 14
+  },
+  "file.db": {
+   "c": "data",
+   "n": "sensor_data.db",
+   "s": "SQLite · 4 테이블",
+   "d": "측정 원본(readings·occupancy)과 분석 산출(analysis·actuator_state). 테이블별 writer 분리가 핵심 불변식.",
+   "row": 2
+  },
+  "file.plugstate": {
+   "c": "data",
+   "n": "plug_state.json",
+   "s": "plugwatch → 대시보드",
+   "d": "플러그 실측 스냅샷(online·전력·24h 이력). 원자적 교체(tmp+replace)로 갱신.",
+   "row": 3
+  },
+  "file.plugcmd": {
+   "c": "data",
+   "n": "plug_cmd.json",
+   "s": "manual 명령 큐",
+   "d": "webapp이 쓰고 plugwatch가 집행 후 삭제하는 1회성 명령 파일.",
+   "row": 4
+  },
+  "file.control": {
+   "c": "data",
+   "n": "control.json",
+   "s": "auto/manual 모드",
+   "d": "전역 제어 모드. webapp이 쓰고 plugwatch·webdata가 읽는다.",
+   "row": 5
+  },
+  "file.nodes": {
+   "c": "data",
+   "n": "nodes.json",
+   "s": "노드→교실 정본 로스터",
+   "d": "판정·표시의 허용목록. 리포지토리에서 git으로 관리되는 정본 설정.",
+   "row": 6
+  },
+  "file.plugs": {
+   "c": "data",
+   "n": "config/plugs.json",
+   "s": "교실→플러그 MAC 매핑",
+   "d": "공청기·환풍기 16장치의 MAC 정본. plugwatch 기동 시 로드.",
+   "row": 7
+  },
+  "file.toml": {
+   "c": "data",
+   "n": "config/analyst.toml",
+   "s": "분석·제어 파라미터",
+   "d": "임계값(ON/OFF·QC 95%·최소가동 10분)과 모델 설정의 단일 출처.",
+   "row": 8
+  },
+  "file.calendar": {
+   "c": "data",
+   "n": "config/calendar.json",
+   "s": "학사 일정",
+   "d": "수업일/방학 구분 — 분석 창과 리포트 라벨에 사용.",
+   "row": 9
+  },
+  "api.broker": {
+   "c": "api",
+   "n": "MQTT 브로커",
+   "s": "HiveMQ Cloud · 8883 TLS",
+   "d": "노드·플러그·보드 프로세스가 모두 접속하는 단일 메시지 버스. 클라이언트 인증서 옵션이 켜져 있으면 접속이 침묵 거부된다(실사고 2건).",
+   "row": 0
+  },
+  "api.webapp": {
+   "c": "api",
+   "n": "hub/webapp.py",
+   "s": "JSON API + 정적 서빙",
+   "d": "webdata payload를 /api/*로 내고 SPA를 서빙. 제어 POST는 control.json·plug_cmd.json 기록까지만(집행은 plugwatch). 관리용 reset은 readings를 CSV 백업 후 비운다 — DB에 손대는 유일한 예외 경로.",
+   "row": 5
+  },
+  "web.index": {
+   "c": "web",
+   "n": "web/index.html",
+   "s": "SPA 셸",
+   "d": "단일 페이지 진입점. 해시 라우팅으로 화면 전환.",
+   "row": 0
+  },
+  "web.app": {
+   "c": "web",
+   "n": "web/app.js",
+   "s": "부트스트랩·공통 상태",
+   "d": "/api/* 폴링, 공통 포맷터, 화면 등록. REGIME 한글 라벨 등 표시 사전 보유.",
+   "row": 1
+  },
+  "web.router": {
+   "c": "web",
+   "n": "web/router.js",
+   "s": "해시 라우터",
+   "d": "#home/#monitor/#energy/#diagnosis/#admin 전환.",
+   "row": 2
+  },
+  "web.charts": {
+   "c": "web",
+   "n": "web/charts.js",
+   "s": "Plotly 차트 헬퍼",
+   "d": "시계열·히트맵·연속 컬러맵 바차트 등 공용 차트 생성기.",
+   "row": 3
+  },
+  "web.home": {
+   "c": "web",
+   "n": "screens/home.js",
+   "s": "홈 — 교실 카드",
+   "d": "교실별 현재값·레짐·플러그 실측 칩 요약.",
+   "row": 4
+  },
+  "web.monitor": {
+   "c": "web",
+   "n": "screens/monitor.js",
+   "s": "모니터 — 시계열",
+   "d": "변수별 시계열·비전 크로스헤어·기록.",
+   "row": 5
+  },
+  "web.energy": {
+   "c": "web",
+   "n": "screens/energy.js",
+   "s": "에너지 — 플러그",
+   "d": "플러그 전력 실측·가동 판별(≥5W)·제어 카드.",
+   "row": 6
+  },
+  "web.diagnosis": {
+   "c": "web",
+   "n": "screens/diagnosis.js",
+   "s": "진단 A–I",
+   "d": "QC·레짐 지도·예측·재실 상관 등 분석 근거 화면.",
+   "row": 7
+  },
+  "web.admin": {
+   "c": "web",
+   "n": "screens/admin.js",
+   "s": "관리",
+   "d": "CSV 내보내기·reset 등 내부 포트 전용 기능.",
+   "row": 8
+  }
+ },
+ "edges": [
+  [
+   "dev.sensor",
+   "api.broker",
+   "http",
+   "publish 5분"
   ],
-  "dbs": [
+  [
+   "dev.plug",
+   "api.broker",
+   "http",
+   "상태·전력"
+  ],
+  [
+   "api.broker",
+   "job.hub",
+   "http",
+   "subscribe"
+  ],
+  [
+   "api.broker",
+   "job.plugwatch",
+   "http",
+   "상태 수신"
+  ],
+  [
+   "job.plugwatch",
+   "api.broker",
+   "http",
+   "스위치 RPC"
+  ],
+  [
+   "unit.hub",
+   "job.hub",
+   "call",
+   ""
+  ],
+  [
+   "unit.plugwatch",
+   "job.plugwatch",
+   "call",
+   ""
+  ],
+  [
+   "unit.analyst",
+   "job.analyst",
+   "call",
+   "h·d·w"
+  ],
+  [
+   "unit.web",
+   "api.webapp",
+   "call",
+   "8501·8502"
+  ],
+  [
+   "job.hub",
+   "file.db",
+   "wr",
+   "readings·occupancy"
+  ],
+  [
+   "job.analyst",
+   "lib.config",
+   "imp",
+   ""
+  ],
+  [
+   "job.analyst",
+   "lib.qc",
+   "imp",
+   ""
+  ],
+  [
+   "job.analyst",
+   "lib.regime",
+   "imp",
+   ""
+  ],
+  [
+   "job.analyst",
+   "lib.governance",
+   "imp",
+   ""
+  ],
+  [
+   "job.analyst",
+   "lib.rules",
+   "imp",
+   ""
+  ],
+  [
+   "job.analyst",
+   "lib.forecast",
+   "imp",
+   ""
+  ],
+  [
+   "job.analyst",
+   "lib.occ_co2",
+   "imp",
+   ""
+  ],
+  [
+   "job.analyst",
+   "lib.explore",
+   "imp",
+   ""
+  ],
+  [
+   "job.analyst",
+   "lib.summary",
+   "imp",
+   ""
+  ],
+  [
+   "job.analyst",
+   "lib.db",
+   "imp",
+   ""
+  ],
+  [
+   "lib.db",
+   "file.db",
+   "wr",
+   "analysis·actuator_state"
+  ],
+  [
+   "lib.config",
+   "file.toml",
+   "rd",
+   ""
+  ],
+  [
+   "lib.config",
+   "file.calendar",
+   "rd",
+   ""
+  ],
+  [
+   "job.plugwatch",
+   "lib.autoctl",
+   "imp",
+   "auto 모드"
+  ],
+  [
+   "lib.autoctl",
+   "file.db",
+   "rd",
+   "actuator_state"
+  ],
+  [
+   "job.plugwatch",
+   "file.plugs",
+   "rd",
+   ""
+  ],
+  [
+   "job.plugwatch",
+   "file.nodes",
+   "rd",
+   ""
+  ],
+  [
+   "job.plugwatch",
+   "file.control",
+   "rd",
+   "모드 확인"
+  ],
+  [
+   "job.plugwatch",
+   "file.plugcmd",
+   "rd",
+   "집행 후 삭제"
+  ],
+  [
+   "job.plugwatch",
+   "file.plugstate",
+   "wr",
+   "15초"
+  ],
+  [
+   "api.webapp",
+   "lib.webdata",
+   "imp",
+   ""
+  ],
+  [
+   "lib.webdata",
+   "file.db",
+   "rd",
+   ""
+  ],
+  [
+   "lib.webdata",
+   "file.nodes",
+   "rd",
+   "허용목록"
+  ],
+  [
+   "lib.webdata",
+   "file.control",
+   "rd",
+   ""
+  ],
+  [
+   "lib.webdata",
+   "file.plugs",
+   "rd",
+   ""
+  ],
+  [
+   "lib.webdata",
+   "file.plugstate",
+   "rd",
+   ""
+  ],
+  [
+   "lib.webdata",
+   "lib.derive",
+   "imp",
+   ""
+  ],
+  [
+   "lib.webdata",
+   "lib.config",
+   "imp",
+   ""
+  ],
+  [
+   "api.webapp",
+   "file.control",
+   "wr",
+   "모드 전환"
+  ],
+  [
+   "api.webapp",
+   "file.plugcmd",
+   "wr",
+   "manual 명령"
+  ],
+  [
+   "api.webapp",
+   "file.db",
+   "wr",
+   "reset(예외)"
+  ],
+  [
+   "api.webapp",
+   "web.index",
+   "http",
+   "정적 서빙"
+  ],
+  [
+   "web.app",
+   "api.webapp",
+   "http",
+   "/api/* 폴링"
+  ],
+  [
+   "web.index",
+   "web.app",
+   "imp",
+   ""
+  ],
+  [
+   "web.app",
+   "web.router",
+   "imp",
+   ""
+  ],
+  [
+   "web.app",
+   "web.charts",
+   "imp",
+   ""
+  ],
+  [
+   "web.app",
+   "web.home",
+   "imp",
+   ""
+  ],
+  [
+   "web.app",
+   "web.monitor",
+   "imp",
+   ""
+  ],
+  [
+   "web.app",
+   "web.energy",
+   "imp",
+   ""
+  ],
+  [
+   "web.app",
+   "web.diagnosis",
+   "imp",
+   ""
+  ],
+  [
+   "web.app",
+   "web.admin",
+   "imp",
+   ""
+  ]
+ ],
+ "dbs": [
+  {
+   "id": "db",
+   "name": "sensor_data.db",
+   "writer": "hub.py (readings·occupancy) · analyst.py (analysis·actuator_state) — 예외: webapp reset이 readings를 비움",
+   "readers": [
+    "webdata.py (모든 화면)",
+    "autoctl.py (actuator_state)",
+    "analyst.py (readings·occupancy)"
+   ],
+   "tables": [
     {
-      "id": "db",
-      "name": "sensor_data.db",
-      "writer": "hub.py (readings·occupancy) · analyst.py (analysis·actuator_state) — 예외: webapp reset이 readings를 비움",
-      "readers": ["webdata.py (모든 화면)", "autoctl.py (actuator_state)", "analyst.py (readings·occupancy)"],
-      "tables": [
-        {"n": "readings", "pk": "id", "d": "공기질 원본 — 5분 버킷, 15.7만+ 행", "cols": [
-          ["id", "INTEGER PK AUTOINCREMENT"],
-          ["ts", "TEXT · UTC 버킷 (5분)"],
-          ["node", "TEXT · node_XXXXXX"],
-          ["co2 / voc / nox", "REAL · SCD30 CO₂, SEN55 지수"],
-          ["pm1p0 / pm2p5 / pm4p0 / pm10p0", "REAL · 미세먼지"],
-          ["sen_temp / sen_hum / scd_temp / scd_hum", "REAL · 온습도 2계통"],
-          ["n", "INTEGER · 버킷 내 표본 수"]
-        ]},
-        {"n": "occupancy", "pk": "id", "d": "비전 노드 재실 — 버킷 통계", "cols": [
-          ["id", "INTEGER PK AUTOINCREMENT"],
-          ["ts", "TEXT · UTC 버킷"],
-          ["node", "TEXT · 비전 노드 id"],
-          ["occ / occ_med / occ_max / occ_last", "REAL·INT · 버킷 평균/중앙/최대/마지막"],
-          ["cents", "TEXT · 탐지 중심좌표(조준 보정용)"],
-          ["w / n", "INT · 가중치·표본 수"]
-        ]},
-        {"n": "analysis", "pk": "id", "d": "분석 산출 — kind별 JSON payload (regime_now·action·forecast·qc·band·occ_co2·model_event…)", "cols": [
-          ["id", "INTEGER PK"],
-          ["run_at", "TEXT · 실행 시각(UTC)"],
-          ["kind", "TEXT · payload 종류"],
-          ["scope", "TEXT · node_id 또는 all"],
-          ["win_start / win_end", "TEXT · 분석 창"],
-          ["model_ver", "TEXT · 예: gmm_v1"],
-          ["payload", "TEXT · JSON"]
-        ]},
-        {"n": "actuator_state", "pk": "node+device", "d": "장치별 제어 목표 상태 — autoctl reconcile의 기준", "cols": [
-          ["node", "TEXT · 환경노드 id"],
-          ["device", "TEXT · fan | purifier"],
-          ["state", "INTEGER · 0/1"],
-          ["since", "TEXT · 상태 시작(UTC) — min_run 10분 판정에 사용"]
-        ]}
+     "n": "readings",
+     "pk": "id",
+     "d": "공기질 원본 — 5분 버킷, 15.7만+ 행",
+     "cols": [
+      [
+       "id",
+       "INTEGER PK AUTOINCREMENT"
+      ],
+      [
+       "ts",
+       "TEXT · UTC 버킷 (5분)"
+      ],
+      [
+       "node",
+       "TEXT · node_XXXXXX"
+      ],
+      [
+       "co2 / voc / nox",
+       "REAL · SCD30 CO₂, SEN55 지수"
+      ],
+      [
+       "pm1p0 / pm2p5 / pm4p0 / pm10p0",
+       "REAL · 미세먼지"
+      ],
+      [
+       "sen_temp / sen_hum / scd_temp / scd_hum",
+       "REAL · 온습도 2계통"
+      ],
+      [
+       "n",
+       "INTEGER · 버킷 내 표본 수"
       ]
+     ]
+    },
+    {
+     "n": "occupancy",
+     "pk": "id",
+     "d": "비전 노드 재실 — 버킷 통계",
+     "cols": [
+      [
+       "id",
+       "INTEGER PK AUTOINCREMENT"
+      ],
+      [
+       "ts",
+       "TEXT · UTC 버킷"
+      ],
+      [
+       "node",
+       "TEXT · 비전 노드 id"
+      ],
+      [
+       "occ / occ_med / occ_max / occ_last",
+       "REAL·INT · 버킷 평균/중앙/최대/마지막"
+      ],
+      [
+       "cents",
+       "TEXT · 탐지 중심좌표(조준 보정용)"
+      ],
+      [
+       "w / n",
+       "INT · 가중치·표본 수"
+      ]
+     ]
+    },
+    {
+     "n": "analysis",
+     "pk": "id",
+     "d": "분석 산출 — kind별 JSON payload (regime_now·action·forecast·qc·band·occ_co2·model_event…)",
+     "cols": [
+      [
+       "id",
+       "INTEGER PK"
+      ],
+      [
+       "run_at",
+       "TEXT · 실행 시각(UTC)"
+      ],
+      [
+       "kind",
+       "TEXT · payload 종류"
+      ],
+      [
+       "scope",
+       "TEXT · node_id 또는 all"
+      ],
+      [
+       "win_start / win_end",
+       "TEXT · 분석 창"
+      ],
+      [
+       "model_ver",
+       "TEXT · 예: gmm_v1"
+      ],
+      [
+       "payload",
+       "TEXT · JSON"
+      ]
+     ]
+    },
+    {
+     "n": "actuator_state",
+     "pk": "node+device",
+     "d": "장치별 제어 목표 상태 — autoctl reconcile의 기준",
+     "cols": [
+      [
+       "node",
+       "TEXT · 환경노드 id"
+      ],
+      [
+       "device",
+       "TEXT · fan | purifier"
+      ],
+      [
+       "state",
+       "INTEGER · 0/1"
+      ],
+      [
+       "since",
+       "TEXT · 상태 시작(UTC) — min_run 10분 판정에 사용"
+      ]
+     ]
     }
+   ]
+  }
+ ],
+ "rels": [
+  [
+   "db.readings",
+   "db.occupancy",
+   "node(교실 매핑)·ts 5분 버킷"
   ],
-  "rels": [
-    ["db.readings", "db.occupancy", "node(교실 매핑)·ts 5분 버킷"],
-    ["db.readings", "db.analysis", "node = scope · ts ∈ [win_start, win_end]"],
-    ["db.analysis", "db.actuator_state", "scope = node · action payload → state"]
+  [
+   "db.readings",
+   "db.analysis",
+   "node = scope · ts ∈ [win_start, win_end]"
   ],
-  "glossary": true
+  [
+   "db.analysis",
+   "db.actuator_state",
+   "scope = node · action payload → state"
+  ]
+ ],
+ "glossary": true,
+ "scenarios": [
+  {
+   "id": "morning",
+   "label": "수업일 아침 — 측정에서 화면까지",
+   "intro": "아무도 손대지 않아도 매일 반복되는 기본 사이클. 측정값 하나가 화면의 숫자가 되기까지 다섯 단계를 거친다.",
+   "steps": [
+    {
+     "t": "08:30",
+     "node": "dev.sensor",
+     "text": "1반 센서 노드가 5분 평균(CO₂ 812 ppm·VOC 96 …)을 계산해 MQTT로 publish. 비전 노드는 같은 시각 재실 3명을 발행 — 영상은 기기 안에서 즉시 폐기."
+    },
+    {
+     "t": "08:30",
+     "node": "job.hub",
+     "also": [
+      "api.broker",
+      "file.db"
+     ],
+     "text": "hub.py가 구독 중이던 메시지를 받아 readings·occupancy에 저장. DB에 측정 원본을 쓰는 프로그램은 이것 하나뿐이다."
+    },
+    {
+     "t": "09:05",
+     "node": "job.analyst",
+     "also": [
+      "unit.analyst",
+      "lib.qc",
+      "lib.regime",
+      "lib.rules"
+     ],
+     "text": "hourly 타이머가 analyst.py를 깨운다. QC 게이트 통과분만으로 레짐 판정(GMM) → 히스테리시스 규칙 평가 → 결과를 analysis·actuator_state에 기록."
+    },
+    {
+     "t": "09:06",
+     "node": "job.plugwatch",
+     "also": [
+      "lib.autoctl"
+     ],
+     "text": "plugwatch의 60초 reconcile이 판정(actuator_state)과 플러그 실물을 비교 — 다른 게 없으면 아무것도 발행하지 않는다."
+    },
+    {
+     "t": "09:10",
+     "node": "web.home",
+     "also": [
+      "web.app",
+      "api.webapp",
+      "lib.webdata"
+     ],
+     "text": "교무실 브라우저가 /api/data를 폴링 — webdata가 DB·상태 파일을 조립해 내려주고, 홈 카드에 레짐 칩과 현재값이 뜬다."
+    }
+   ]
+  },
+  {
+   "id": "auto_on",
+   "label": "CO₂ 초과 → 환풍기 자동 ON → 회복",
+   "intro": "이 시스템의 존재 이유인 제어 사이클. 판정하는 곳(analyst)과 스위치를 누르는 곳(plugwatch)이 분리되어 있다는 점이 핵심이다.",
+   "steps": [
+    {
+     "t": "11:00",
+     "node": "dev.sensor",
+     "text": "3교시 연속 수업 — 창문이 닫힌 채 CO₂가 1,180 ppm까지 상승(재실 기여 실측 2.6~6.8 ppm/분·인)."
+    },
+    {
+     "t": "11:05",
+     "node": "lib.rules",
+     "also": [
+      "job.analyst",
+      "lib.regime"
+     ],
+     "text": "hourly 판정: 레짐=인체 & CO₂>1,000 → 환풍기 ON. actuator_state.fan=1 기록 (since=지금, 최소가동 10분 예약)."
+    },
+    {
+     "t": "11:06",
+     "node": "job.plugwatch",
+     "also": [
+      "lib.autoctl",
+      "api.broker",
+      "dev.plug"
+     ],
+     "text": "reconcile: 목표 ON ≠ 실물 OFF → 그 플러그에만 스위치 RPC 발행. 릴레이가 붙고 환풍기 기동(~38 W 실측)."
+    },
+    {
+     "t": "11:07",
+     "node": "web.energy",
+     "also": [
+      "file.plugstate"
+     ],
+     "text": "plug_state.json에 전력이 실리고, 에너지 화면의 팬 칩이 회전 — 판정이 아니라 실측으로 가동을 표시한다(가동 판별 ≥5 W)."
+    },
+    {
+     "t": "11:40",
+     "node": "lib.rules",
+     "text": "환기로 CO₂<700 → OFF 판정. 10분 최소가동이 이미 지났으므로 즉시 반영 — 700~1,000 사이에서는 히스테리시스로 상태를 유지해 껐다켰다(채터링)를 막는다."
+    }
+   ]
+  },
+  {
+   "id": "qc_hold",
+   "label": "센서가 이상하다 — QC가 하루를 접는 날",
+   "intro": "고장난 데이터로 제어하는 것보다 하루를 버리는 것이 낫다는 방어 설계. 2026-09-21 1반에서 실제로 일어난 일이다.",
+   "steps": [
+    {
+     "t": "새벽",
+     "node": "dev.sensor",
+     "text": "1반 SCD30이 간헐적으로 물리 범위 밖 CO₂ 값을 섞어 보낸다. 행은 그대로 저장된다 — 원본은 지우지 않는다."
+    },
+    {
+     "t": "정시마다",
+     "node": "lib.qc",
+     "also": [
+      "job.analyst"
+     ],
+     "text": "range_mask가 범위 밖 값을 무효(NaN) 처리 → 그날 CO₂ 유효율 84.7% < 95% → daily_gate가 그 노드/날 전체를 분석에서 제외."
+    },
+    {
+     "t": "직후",
+     "node": "lib.rules",
+     "text": "레짐=hold → 규칙 계층은 판정하지 않고 이전 상태 유지 = 화면의 판정 보류. 오염된 근거로는 스위치를 만지지 않는다."
+    },
+    {
+     "t": "화면",
+     "node": "web.home",
+     "also": [
+      "web.diagnosis"
+     ],
+     "text": "레짐 칩이 제외로 바뀌고 진단 A 섹션에 사유(co2 valid 84.7% < 95%)가 노출 — 관리자는 센서 재장착/교체를 판단한다."
+    },
+    {
+     "t": "이튿날",
+     "node": "lib.qc",
+     "text": "유효율이 95%를 회복하면 별도 조작 없이 판정·제어가 자동 재개된다."
+    }
+   ]
+  }
+ ],
+ "lineage": [
+  {
+   "label": "공기질 측정값 (co2·voc·pm)",
+   "steps": [
+    "센서 노드 5분 평균|탄생",
+    "MQTT 8883 TLS|이동",
+    "readings|저장",
+    "QC→레짐→예측|가공",
+    "홈·모니터·진단|소비"
+   ]
+  },
+  {
+   "label": "재실 인원수 (occ)",
+   "steps": [
+    "FOMO 온디바이스 추론|탄생 · 영상 즉시 폐기",
+    "MQTT|이동",
+    "occupancy|저장",
+    "재실×CO₂ 상관|가공",
+    "진단 G 섹션|소비"
+   ]
+  },
+  {
+   "label": "제어 판정 (fan·purifier)",
+   "steps": [
+    "GMM 레짐+규칙|탄생",
+    "actuator_state|저장",
+    "autoctl reconcile|가공",
+    "플러그 릴레이|소비(집행)"
+   ]
+  },
+  {
+   "label": "플러그 전력 실측 (apower)",
+   "steps": [
+    "Shelly 계측|탄생",
+    "MQTT status|이동",
+    "plug_state.json|저장",
+    "가동 판별 ≥5W|가공",
+    "에너지 화면 칩|소비"
+   ]
+  },
+  {
+   "label": "정본 설정 (roster·매핑·임계값)",
+   "steps": [
+    "사람이 git 커밋|탄생",
+    "보드 git pull|이동",
+    "nodes·plugs·toml|저장",
+    "기동 시 로드|소비 — 보드 직접 수정 금지"
+   ]
+  }
+ ],
+ "ops": {
+  "intro": "보드 1대(UNO Q, Tailscale aqhub)가 서비스 6종을 무인 운영하고, 교실에는 외부 장치 29대(센서 8·비전 5·플러그 16)가 흩어져 있다. 원칙: 보드 파일은 절대 직접 수정하지 않고 git pull로만 배포하며, sudo가 필요한 조작은 사람 몫이다.",
+  "devices": [
+   {
+    "label": "허브 보드 (Arduino UNO Q)",
+    "host": "ssh aq · /home/arduino/multinode_aq (Tailscale: aqhub)",
+    "services": [
+     {
+      "name": "multinode_aq_hub.service",
+      "port": "—",
+      "restart": "always",
+      "health": "journalctl -u … | grep saved",
+      "d": "MQTT 수집 → SQLite. 죽으면 측정이 유실되므로 최우선 감시 대상."
+     },
+     {
+      "name": "multinode_aq_plugwatch.service",
+      "port": "—",
+      "restart": "always",
+      "health": "plug_state.json updated 최신성",
+      "d": "플러그 관측·명령 집행. sudo 없이 pkill 브래킷 패턴으로 재기동."
+     },
+     {
+      "name": "multinode_aq_web.service",
+      "port": "8501 (테일넷 내부)",
+      "restart": "always",
+      "health": "GET /api/plugs",
+      "d": "관리 포함 전체 기능. Funnel에 태우지 말 것."
+     },
+     {
+      "name": "multinode_aq_web_public.service",
+      "port": "8502 (Funnel 공개)",
+      "restart": "always",
+      "health": "GET /api/plugs",
+      "d": "조회 전용 — 제어 POST는 403."
+     },
+     {
+      "name": "analyst hourly·daily·weekly.timer",
+      "port": "—",
+      "restart": "OnCalendar",
+      "health": "analysis.run_at 최신성 (진단 A)",
+      "d": "판정·QC·모델 재학습. 실패해도 다음 정시에 재시도."
+     }
+    ],
+    "notes": [
+     "배포 = git pull --ff-only (보드 파일 직접 수정 금지)",
+     "sudo·systemctl restart는 사람 몫 — 명령을 출력해 전달",
+     "pkill -f 패턴은 브래킷 형태 plugwatch[.]py (ssh 원격 명령줄 자기 매치 방지)"
+    ]
+   },
+   {
+    "label": "교실 장치 함대 (×29)",
+    "host": "학교 WiFi wi_cne_class_S_2.4G → HiveMQ Cloud 8883",
+    "services": [
+     {
+      "name": "환경 센서 노드 ×8",
+      "port": "MQTT pub",
+      "restart": "상시 전원",
+      "health": "홈 화면 노드 칩",
+      "d": "UNO R4 WiFi. 재부팅 순간 유령 MAC 이력 → nodes.json 허용목록으로 방어."
+     },
+     {
+      "name": "비전 노드 ×5",
+      "port": "MQTT pub",
+      "restart": "매일 08:00 플러그 재시작",
+      "health": "occupancy 최신 행",
+      "d": "WDT 웜리셋 후 카메라 초기화 무한루프 이력 → 일일 재시작으로 안정화."
+     },
+     {
+      "name": "Shelly 플러그 ×16",
+      "port": "MQTT 8883 TLS",
+      "restart": "—",
+      "health": "에너지 화면 미접속 칩",
+      "d": "완전 침묵의 2대 사고 유형: No TLS 저장 · use_client_cert 켜짐. 설정은 AP 원-세션(plug_setup.html)."
+     }
+    ],
+    "notes": [
+     "학교망은 클라이언트 격리 — 플러그 IP 접속은 자리 따라 다름, 확인은 항상 브로커 경유(대시보드)"
+    ]
+   }
+  ],
+  "checks": [
+   "curl http://aqhub:8501/api/plugs — 웹·plugwatch 생존 한 방 확인",
+   "ssh aq systemctl is-active multinode_aq_hub multinode_aq_plugwatch multinode_aq_web",
+   "진단 화면 A — hourly 마지막 실행 시각·QC 제외 목록",
+   "ssh aq journalctl -u multinode_aq_plugwatch -n 20 — auto: … ON/OFF 발행 로그"
+  ]
+ },
+ "diff_ignore": [
+  "legacy/*",
+  ".claude/*",
+  "hub/tests/*",
+  "hub/data/*",
+  "docs/*",
+  "hub/deploy.sh",
+  "hub/aq/__init__.py"
+ ],
+ "glossary_label": "핵심 기술 · 용어",
+ "glossary_html": "<h2>이 프로젝트를 관통하는 설계 문법</h2><div class=\"flow\"><div class=\"card hl\"><b>단일 writer 불변식</b><span>readings·occupancy는 hub.py만, analysis·actuator_state는 analyst.py만 쓴다. \"누가 이 값을 망가뜨렸나\"라는 질문이 성립하지 않게 만드는 규칙 — CI 가드가 지킨다.</span></div><div class=\"card\"><b>브로커 단일 통로</b><span>노드·플러그·보드가 전부 MQTT 하나로 만난다. 장치가 늘어도 연결 방식은 하나뿐이라 8실 확장에 코드 변경이 없었다.</span></div><div class=\"card\"><b>판정 ↔ 집행 분리</b><span>analyst는 목표 상태를 기록만 하고, plugwatch는 실물과 다를 때만 스위치를 만진다(reconcile). 어느 한쪽이 죽어도 다른 쪽이 오동작하지 않는다.</span></div><div class=\"card\"><b>정본은 git</b><span>로스터·매핑·임계값은 저장소가 정본이고 보드에는 git pull로만 간다. \"보드에서 몰래 고친 설정\"이라는 사고 유형을 원천 차단.</span></div><div class=\"card\"><b>의심되면 멈춘다</b><span>QC 미달이면 그날을 통째로 접고(판정 보류) 이전 상태를 유지한다. 나쁜 데이터로 제어하는 것보다 하루를 버리는 쪽을 택했다.</span></div></div><h2>채택 기술 — 무엇을, 왜 이 선택인지</h2><table class=\"cols\"><tr><td>MQTT + HiveMQ Cloud (8883 TLS)</td><td>29대 장치의 다대일 통신을 pub/sub 하나로. 클라우드 브로커라 학교망 클라이언트 격리(장치 간 직접 통신 차단)와 무관하게 모두가 만날 수 있다 — 격리망에서 직결 방식은 애초에 불가능했다.</td></tr><tr><td>SQLite 단일 파일</td><td>보드 한 대·writer 분리 구조에서는 서버형 DB가 과잉. 파일 하나라 백업(CSV 내보내기)과 분석 반출(scp)이 한 명령이다.</td></tr><tr><td>GMM 오염 레짐 모델</td><td>고정 임계값 대신 정규화 CO₂–VOC 평면의 분포로 상태를 분류 — 인체 기원이냐 물질 기원이냐를 구분해야 환기/공기청정을 다르게 걸 수 있다. 후보 모델 자동 학습·기각(거버넌스)까지 포함.</td></tr><tr><td>히스테리시스 + 최소가동 10분</td><td>ON 임계(1,000)와 OFF 임계(700)를 벌려 경계값 근처의 껐다켰다(채터링)를 차단. 릴레이·모터 수명 보호가 목적이다.</td></tr><tr><td>FOMO 엣지 AI (Nicla Vision)</td><td>재실 인원은 CO₂ 해석의 필수 변수지만 교실 영상 저장은 초상권 침해 — 추론을 기기 안에서 끝내고 숫자만 내보내는 것으로 해결. 프라이버시가 기능 요구사항이었다.</td></tr><tr><td>systemd 서비스·타이머</td><td>Restart=always로 무인 자가 복구, OnCalendar로 주기 분석. sudo 없이도 pkill만으로 재기동되도록 유닛을 설계해 원격 운영이 가능하다.</td></tr><tr><td>바닐라 JS SPA + Plotly</td><td>보드에 node·빌드 도구가 없어도 정적 파일 서빙만으로 동작. 화면별 모듈(screens/*)을 app.js가 조립하는 최소 구조.</td></tr></table><h2>화면에서 마주치는 용어</h2><table class=\"cols\"><tr><td>레짐 (청정·인체·물질·복합)</td><td>지금 공기 상태의 종류. 인체=CO₂ 우세(→환기), 물질=VOC 우세(→공기청정), 복합=둘 다. 값이 아니라 분포 위치로 판정한다.</td></tr><tr><td>판정 보류</td><td>레짐이 없거나(수신 없음) QC 제외이거나 값이 없어 규칙을 평가하지 않은 상태. 장치는 이전 상태 그대로 둔다 — 고장 표시가 아니라 안전 정지다.</td></tr><tr><td>유효율 / QC 게이트</td><td>그날 측정 중 물리 범위(CO₂ 350~5,000 등) 안에 든 비율. CO₂ 유효율<95%면 그 노드의 그날 전체를 분석에서 제외한다.</td></tr><tr><td>reconcile (조정)</td><td>판정 목표와 플러그 실물 상태를 비교해 다를 때만 명령을 보내는 방식. 같으면 아무 일도 안 한다.</td></tr><tr><td>가동 판별 ≥5 W</td><td>릴레이 ON이 아니라 실제 전력으로 돌고 있음을 판정. 환풍기 정음 운전(~7 W)까지 가동으로 인정하도록 실측 보정된 값.</td></tr><tr><td>미접속 / 유령 노드</td><td>미접속=플러그가 브로커에 없음(전원·설정 문제). 유령 노드=재부팅 순간 깨진 MAC으로 저장된 행 — 정본 로스터에 없으면 화면·판정에서 차단.</td></tr><tr><td>탐지 인원</td><td>비전 노드가 화각 안에서 센 사람 수. 가림·화각 때문에 실제보다 적게 잡히므로, 상관 분석의 계수는 탐지 인원당 값이다.</td></tr></table><p class=\"note\">가장 흔한 오해: <b>\"판정 보류 = 시스템 고장\"이 아니다.</b> 보류는 \"오늘 이 센서의 데이터는 제어 근거로 쓰기에 부족하다\"는 능동적 판단이며, 데이터가 회복되면 사람 손 없이 자동으로 풀린다. 반대로 <b>\"미접속\"은 실물 쪽 문제</b>(전원·WiFi·플러그 설정)라 사람이 가야 한다.</p>"
 }
