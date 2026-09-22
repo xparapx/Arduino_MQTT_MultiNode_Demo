@@ -2,219 +2,71 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "multinode_aq — 교실 공기질 모니터",
-    "quality_profile": "showcase"
+    "title": "multinode_aq 시스템 아키텍처",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "collect",
+        "label": "수집 경로",
+        "focus": ["NODES", "BROKER", "HUB", "DB"],
+        "note": "교실 장치의 측정값이 브로커를 지나 DB 원본 테이블에 닿는 길 — 이 길의 writer는 hub.py 하나다."
+      },
+      {
+        "id": "control",
+        "label": "자동 제어 루프",
+        "focus": ["DB", "ANALYST", "PLUGWATCH", "BROKER", "PLUGS"],
+        "note": "analyst가 판정을 기록하면 plugwatch가 실물과 비교해 다를 때만 스위치 명령을 발행한다(reconcile)."
+      },
+      {
+        "id": "view",
+        "label": "조회 경로",
+        "focus": ["DB", "WEBAPP", "SPA"],
+        "note": "webapp은 읽기 전용 조립(webdata)으로 5개 화면에 payload를 내려준다."
+      }
+    ]
   },
   "components": [
-    {
-      "id": "env-nodes",
-      "type": "external",
-      "label": "환경 노드",
-      "sublabel": "UNO R4 WiFi ×5",
-      "pos": [
-        40,
-        140
-      ],
-      "size": [
-        140,
-        64
-      ]
-    },
-    {
-      "id": "vision-node",
-      "type": "external",
-      "label": "비전 노드",
-      "sublabel": "Nicla Vision",
-      "pos": [
-        40,
-        320
-      ],
-      "size": [
-        140,
-        64
-      ]
-    },
-    {
-      "id": "hivemq",
-      "type": "messagebus",
-      "label": "HiveMQ Cloud",
-      "sublabel": "MQTT · TLS :8883",
-      "pos": [
-        300,
-        230
-      ],
-      "size": [
-        140,
-        64
-      ]
-    },
-    {
-      "id": "hub",
-      "type": "backend",
-      "label": "hub.py",
-      "sublabel": "MQTT 구독 · 저장",
-      "pos": [
-        540,
-        230
-      ],
-      "size": [
-        130,
-        64
-      ]
-    },
-    {
-      "id": "sensordb",
-      "type": "database",
-      "label": "sensor_data.db",
-      "sublabel": "SQLite · WAL",
-      "pos": [
-        790,
-        230
-      ],
-      "size": [
-        140,
-        64
-      ]
-    },
-    {
-      "id": "analyst",
-      "type": "backend",
-      "label": "analyst.py",
-      "sublabel": "daily·weekly 진단",
-      "pos": [
-        790,
-        40
-      ],
-      "size": [
-        140,
-        64
-      ]
-    },
-    {
-      "id": "webapp",
-      "type": "backend",
-      "label": "webapp.py",
-      "sublabel": ":8501 관리자 · :8502 공용",
-      "pos": [
-        790,
-        470
-      ],
-      "size": [
-        150,
-        64
-      ]
-    },
-    {
-      "id": "browser",
-      "type": "frontend",
-      "label": "브라우저 SPA",
-      "sublabel": "교실 태블릿 · 모바일",
-      "pos": [
-        1060,
-        470
-      ],
-      "size": [
-        140,
-        64
-      ]
-    }
+    {"id": "NODES", "type": "external", "label": "NODES x13", "sublabel": "UNO R4 + Nicla", "pos": [40, 120], "size": [140, 62], "tag": "edge AI"},
+    {"id": "PLUGS", "type": "external", "label": "PLUGS x16", "sublabel": "Shelly Gen3", "pos": [40, 350], "size": [140, 62]},
+    {"id": "BROKER", "type": "messagebus", "label": "BROKER", "sublabel": "HiveMQ 8883 TLS", "pos": [260, 235], "size": [150, 62]},
+    {"id": "HUB", "type": "backend", "label": "HUB", "sublabel": "hub.py collector", "pos": [490, 120], "size": [140, 62]},
+    {"id": "PLUGWATCH", "type": "backend", "label": "PLUGWATCH", "sublabel": "observe + actuate", "pos": [490, 350], "size": [140, 62]},
+    {"id": "DB", "type": "database", "label": "SQLITE", "sublabel": "sensor_data.db", "pos": [710, 120], "size": [140, 62]},
+    {"id": "ANALYST", "type": "backend", "label": "ANALYST", "sublabel": "QC/GMM/rules", "pos": [930, 120], "size": [140, 62], "tag": "systemd timer"},
+    {"id": "WEBAPP", "type": "backend", "label": "WEBAPP", "sublabel": ":8501 / :8502", "pos": [710, 350], "size": [140, 62]},
+    {"id": "SPA", "type": "frontend", "label": "SPA", "sublabel": "5 screens", "pos": [930, 350], "size": [140, 62]}
   ],
   "boundaries": [
-    {
-      "kind": "region",
-      "label": "UNO Q 보드 (aqhub) · systemd",
-      "wraps": [
-        "hub",
-        "sensordb",
-        "analyst",
-        "webapp"
-      ]
-    }
+    {"kind": "region", "label": "UNO Q Board (systemd)", "wraps": ["HUB", "PLUGWATCH", "DB", "ANALYST", "WEBAPP"]}
   ],
   "connections": [
-    {
-      "id": "env-publish",
-      "from": "env-nodes",
-      "to": "hivemq",
-      "label": "CO₂·VOC·온습도 발행"
-    },
-    {
-      "id": "vision-publish",
-      "from": "vision-node",
-      "to": "hivemq",
-      "label": "재실 인원 발행"
-    },
-    {
-      "id": "hub-subscribe",
-      "from": "hivemq",
-      "to": "hub",
-      "label": "구독",
-      "variant": "emphasis"
-    },
-    {
-      "id": "hub-write",
-      "from": "hub",
-      "to": "sensordb",
-      "label": "readings·occupancy 기록",
-      "variant": "emphasis",
-      "labelDy": -26
-    },
-    {
-      "id": "analyst-read",
-      "from": "sensordb",
-      "to": "analyst",
-      "label": "최근 데이터 읽기",
-      "labelDx": -62
-    },
-    {
-      "id": "analyst-write",
-      "from": "analyst",
-      "to": "sensordb",
-      "label": "analysis 기록",
-      "labelDx": 66,
-      "labelDy": 24
-    },
-    {
-      "id": "web-read",
-      "from": "sensordb",
-      "to": "webapp",
-      "label": "SELECT · 60s/5min 캐시",
-      "variant": "emphasis",
-      "fromSide": "bottom",
-      "toSide": "top"
-    },
-    {
-      "id": "web-serve",
-      "from": "webapp",
-      "to": "browser",
-      "label": "SPA + JSON API",
-      "variant": "emphasis"
-    }
+    {"id": "nodes-pub", "from": "NODES", "to": "BROKER", "label": "publish 5min", "variant": "emphasis"},
+    {"id": "plugs-status", "from": "PLUGS", "to": "BROKER", "label": "power/status"},
+    {"id": "broker-hub", "from": "BROKER", "to": "HUB", "label": "subscribe", "variant": "emphasis"},
+    {"id": "hub-db", "from": "HUB", "to": "DB", "label": "raw write", "variant": "emphasis"},
+    {"id": "db-analyst", "from": "DB", "to": "ANALYST", "label": "hourly read"},
+    {"id": "analyst-db", "from": "ANALYST", "to": "DB", "label": "verdict write", "fromSide": "top", "toSide": "top"},
+    {"id": "broker-pw", "from": "BROKER", "to": "PLUGWATCH", "label": "plug status"},
+    {"id": "pw-broker", "from": "PLUGWATCH", "to": "BROKER", "label": "switch RPC", "variant": "security", "fromSide": "bottom", "toSide": "bottom"},
+    {"id": "db-pw", "from": "DB", "to": "PLUGWATCH", "label": "target state", "variant": "dashed", "fromSide": "bottom", "toSide": "top"},
+    {"id": "db-web", "from": "WEBAPP", "to": "DB", "label": "read only", "variant": "dashed", "fromSide": "top", "toSide": "bottom"},
+    {"id": "web-spa", "from": "WEBAPP", "to": "SPA", "label": "/api/* JSON", "variant": "emphasis"}
   ],
   "cards": [
-    {
-      "dot": "cyan",
-      "title": "수집",
-      "items": [
-        "환경 5노드 + 비전 노드가 HiveMQ 로 발행",
-        "hub.py 가 readings·occupancy 의 유일한 writer"
-      ]
-    },
-    {
-      "dot": "emerald",
-      "title": "진단",
-      "items": [
-        "analyst.py 가 systemd 타이머(daily·weekly)로 레짐·밴드 진단",
-        "결과는 analysis·actuator_state 테이블에만 기록"
-      ]
-    },
-    {
-      "dot": "rose",
-      "title": "제공 · 배포",
-      "items": [
-        "webapp.py 2 인스턴스: :8501 관리자, :8502 공용",
-        "배포는 GitHub main → 보드 git pull (보드 직접 수정 금지)"
-      ]
-    }
+    {"dot": "cyan", "title": "설계 불변식", "items": [
+      "readings·occupancy의 writer는 hub.py 하나",
+      "analysis·actuator_state의 writer는 analyst.py 하나",
+      "스위치 명령 발행 경로는 plugwatch 하나"
+    ]},
+    {"dot": "amber", "title": "제어 루프", "items": [
+      "판정(analyst)과 집행(plugwatch)의 분리 — reconcile 방식",
+      "히스테리시스 1,000/700 ppm + 최소가동 10분",
+      "QC 미달이면 판정 보류 — 이전 상태 유지"
+    ]},
+    {"dot": "violet", "title": "운영 원칙", "items": [
+      "정본 설정은 git — 보드에는 pull로만 배포",
+      "모든 장치는 브로커 단일 통로로만 통신",
+      "8502는 조회 전용 공개, 8501은 테일넷 내부"
+    ]}
   ]
 }
