@@ -2,7 +2,7 @@
 
 > 여러 공간에 둔 **센서 노드**가 공기질(미세먼지·CO₂·VOC·NOx·온습도)을 측정해 **MQTT**로 보내면, **허브**가 한 데이터베이스에 모아 웹 대시보드로 실시간 표시하는 멀티노드 IoT 프로젝트.
 
-🔗 **프로젝트개요:** https://xparapx.github.io/Arduino_MQTT_MultiNode_Demo/  
+🗺️ **프로젝트 지도(설계·연결·데이터·운영):** https://xparapx.github.io/Arduino_MQTT_MultiNode_Demo/project-map.html  
 📘 **매뉴얼:** https://xparapx.github.io/Arduino_MQTT_MultiNode_Demo/manual.html
 
 `Arduino UNO R4 WiFi` · `Nano ESP32` · `SEN55` · `SCD30` · `MQTT` · `mosquitto · HiveMQ` · `Arduino UNO Q` · `SQLite` · `Streamlit`
@@ -15,7 +15,7 @@ MQTT·온디바이스 센싱·실시간 대시보드를 한 번에 경험해보�
 
 ## 프로젝트 개요
 
-- **프로젝트개요**(`docs/index.html`) — 요약·흐름도·준비물·기술스택을 한눈에.
+- **프로젝트 지도**(`docs/project-map.html`) — 설계 맵·스크립트 연결·DB 스키마·핵심 기술을 한 장의 인터랙티브 문서로. **지속 갱신되는 정본 개요.**
 - **매뉴얼**(`docs/manual.html`) — 준비물·전체 구조·단계별 구축 가이드(WiFi·브로커·hub.py·펌웨어·대시보드·systemd·트러블슈팅). 모든 코드가 본문에 포함되어 복사 버튼으로 바로 쓸 수 있습니다.
 
 | 단계 | 내용 | 도구 |
@@ -77,7 +77,7 @@ UNO R4 WiFi / Nano ESP32  →   로컬 mosquitto   →   hub.py ─→ SQLite �
 ```
 firmware/    노드 펌웨어 (.ino)
 hub/         허브 파이썬 (수집·대시보드·서비스)
-docs/        프로젝트개요(index.html) · 구축 가이드(manual.html)
+docs/        프로젝트 지도(project-map.html) · 구축 가이드(manual.html)
 ```
 
 ### firmware
