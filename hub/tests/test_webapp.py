@@ -131,8 +131,17 @@ def test_plugs(site, tmp_path):
     assert not p["watcher_stale"] and p["n_online"] == 1 and p["n_running"] == 1
     c4 = next(r for r in p["rooms"] if r["room"] == "CLASS_04")["purifier"]
     assert c4["online"] and c4["output"] and c4["running"] and len(c4["hist"]) == 2
+    # 일별 에너지 적산 파일이 있으면 energy 블록으로 노출
+    eday = now_dt.strftime("%Y-%m-%d")
+    (tmp_path / "plug_energy.json").write_text(json.dumps(
+        {"days": {eday: {"CLASS_04": {"purifier": 12.5}}}, "acc": {}}), encoding="utf-8")
+    p = w.plugs()
+    assert p["energy"]["days"][eday]["CLASS_04"]["purifier"] == 12.5
+    assert p["energy"]["since"] == eday and p["energy"]["today"]
+
     body = get(f"{site['url']}/api/plugs")               # endpoint wired
     assert len(body["rooms"]) == 8
+    assert body["energy"]["days"] == {}                  # 파일 없음 → 빈 적산
     assert body["run_w"]["purifier"] == webdata.WebData.RUN_W["purifier"]
     assert body["version"]                               # store gate needs a version field
 

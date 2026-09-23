@@ -6,7 +6,9 @@
 
 ## 2026-09
 
-### 프로젝트 지도 = 정본 개요로 일원화 (2026-09-22, 전 저장소 공통 결정)
+### 반별 에너지 비교 — 일별 적산 파이프라인 + 에너지 화면 하단 컴포넌트 (2026-09-23)
+
+일간·주간·월간 비교에 필요한 누적 이력이 없어(24h 링뿐) 적산 계층부터 신설: `aq/energy.py`(순수 함수 — 확정 5분 버킷 → KST 일별 Wh, acc 마커로 재시작 이중계산 방지) + plugwatch가 `plug_energy.json`에 기록(버킷 마감 시에만 쓰기 — SD 마모 억제, 200일 보존, **DB 불변식 불침범** — 파일-writer 원칙 유지). webdata `/api/plugs`에 `energy{days,today,since}` 블록. UI: 에너지 화면 하단 "반별 에너지 비교" — 기간 세그먼트(오늘/7일/30일), 반별 가로 스택 막대(공청기 Tealgrn·환풍기 Blues deep — 상단 카드와 색 문법 일치), 총량 내림차순, Wh→kWh 자동 단위, scaleX 성장 모션(transform만, 550ms ease-out), aria-pressed·focus-visible·tabular-nums(design-craft 기준). 커버리지 정직 표기("수집 N/7일·적산 시작일") — 과거 소급 불가는 한계로 명시. 검증: 122 passed(+test_energy 4), 합성 픽스처로 토글·정렬·단위·모션 시각 확인. 주의: 적산은 배포 시점부터 쌓임 — 주간/월간 뷰는 1주/1달 뒤부터 온전.
 
 사용자 결정: 4개 저장소(Env_Monitor·Mealboard·Plant·Traffic)의 README "프로젝트 개요" 링크를 project-map.html로 교체하고 기존 개요 문서(index.html)는 삭제, 지도를 지속 갱신 정본으로 운영. 본 저장소: project-map.json에 **액추에이터 계층 현행화**(Shelly ×16·plugwatch·autoctl·plugs.json·plug_state/cmd/control·에너지 화면 — 노드 41→48·간선 41→51·⑥ 제어 레인 추가) 후 재렌더, docs/index.html 삭제, README 대표 링크 교체.
 

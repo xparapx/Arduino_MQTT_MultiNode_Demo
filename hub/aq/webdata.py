@@ -428,9 +428,19 @@ class WebData:
         rooms = [{"room": room, "purifier": device(room, "purifier"), "fan": device(room, "fan")}
                  for room in sorted(rooms_cfg, key=self._sort_key)]
         devs = [d for r in rooms for d in (r["purifier"], r["fan"]) if d]
+        # 일별 에너지 적산 (plugwatch가 쓰는 plug_energy.json — 읽기 전용)
+        try:
+            with open(Path(self.plug_state_path).parent / "plug_energy.json",
+                      encoding="utf-8") as f:
+                edays = json.load(f).get("days") or {}
+        except (OSError, ValueError):
+            edays = {}
+        energy = {"days": edays,
+                  "today": (now + timedelta(hours=9)).strftime("%Y-%m-%d"),   # KST
+                  "since": min(edays) if edays else None}
         return {"version": f"{updated or ''}:{mode}",   # store gate: state write마다 변경
                 "updated_kst": kst(updated) if updated else None, "watcher_stale": stale,
-                "mode": mode, "run_w": self.RUN_W,
+                "mode": mode, "run_w": self.RUN_W, "energy": energy,
                 "n_online": sum(1 for d in devs if d["online"]),
                 "n_running": sum(1 for d in devs if d["running"]),
                 "n_plugs": len(devs), "rooms": rooms}

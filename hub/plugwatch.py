@@ -23,7 +23,7 @@ from datetime import UTC, datetime
 
 import paho.mqtt.client as mqtt
 
-from aq import autoctl
+from aq import autoctl, energy
 
 BROKER = os.environ["MQTT_BROKER"]
 PORT = int(os.environ.get("MQTT_PORT", "8883"))
@@ -34,6 +34,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PLUGS_PATH = os.path.join(HERE, "config", "plugs.json")
 STATE_PATH = os.path.join(HERE, "plug_state.json")
 CMD_PATH = os.path.join(HERE, "plug_cmd.json")
+ENERGY_PATH = os.path.join(HERE, "plug_energy.json")
 CTRL_PATH = os.path.join(HERE, "control.json")
 DB_PATH = os.path.join(HERE, "sensor_data.db")
 NODES_PATH = os.path.join(HERE, "nodes.json")
@@ -118,6 +119,39 @@ def write_state():
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False)
     os.replace(tmp, STATE_PATH)
+    flush_energy()
+
+
+try:
+    with open(ENERGY_PATH, encoding="utf-8") as f:
+        energy_doc = json.load(f)
+except (OSError, ValueError):
+    energy_doc = {}
+energy_doc.setdefault("days", {})
+energy_doc.setdefault("acc", {})
+
+
+def flush_energy():
+    """Fold finalized 5-min buckets into daily Wh (plug_energy.json, ours alone).
+    Writes only when a bucket actually closed (~5 min cadence, SD-friendly)."""
+    now_bucket = int(time.time()) // BUCKET_S * BUCKET_S
+    dirty = False
+    for room, devs in state.items():
+        for dev, s in devs.items():
+            if not s or not s["hist"]:
+                continue
+            marker = int((energy_doc["acc"].get(room) or {}).get(dev) or 0)
+            adds, new_marker = energy.accumulate(s["hist"], marker, now_bucket)
+            if adds:
+                energy.merge(energy_doc, room, dev, adds, new_marker)
+                dirty = True
+    if not dirty:
+        return
+    energy.prune(energy_doc)
+    tmp = ENERGY_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(energy_doc, f, ensure_ascii=False)
+    os.replace(tmp, ENERGY_PATH)
 
 
 def run_command(client) -> bool:

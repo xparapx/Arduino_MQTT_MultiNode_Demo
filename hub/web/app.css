@@ -384,3 +384,29 @@ svg.chart .hb-over { animation: hb-blink 2.2s ease-in-out infinite; }
 /* (전역 reduced-motion 킬 스위치 제거 2026-09-12 — 학교 데스크탑은 Windows 애니메이션
    효과가 꺼져 있어 임계 초과 점멸·팬 회전·조준선 등 "정보성" 모션까지 전부 사라졌음.
    이 대시보드의 애니메이션은 대부분 상태 표시이므로 OS 설정과 무관하게 항상 동작한다.) */
+
+/* ---- 에너지 비교 (반별 · 일간/주간/월간) -------------------------------------------- */
+.ecmp { margin-top: 14px; }
+.ecmp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-bottom: 12px; flex-wrap: wrap; }
+.esegs { display: flex; gap: 4px; }
+.eseg { background: var(--panel2); border: 1px solid var(--grid); color: var(--dim);
+  border-radius: 6px; padding: 5px 12px; font: inherit; font-size: 12px; cursor: pointer;
+  transition: color 0.15s ease-out, border-color 0.15s ease-out; }
+.eseg.on { color: var(--ink); border-color: var(--dim); font-weight: 700; }
+.eseg:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+.ecmp-body { display: flex; flex-direction: column; gap: 7px; }
+.ecmp-row { display: grid; grid-template-columns: 76px 1fr 88px; align-items: center; gap: 10px; }
+.ecmp-room { font-size: 12px; white-space: nowrap; }
+.ecmp-track { background: var(--panel2); border-radius: 4px; height: 18px; }
+.ecmp-bar { display: flex; height: 100%; border-radius: 4px; overflow: hidden; min-width: 2px;
+  transform: scaleX(0); transform-origin: left;
+  transition: transform 0.55s cubic-bezier(0.22, 0.75, 0.25, 1); }
+.ecmp.grow .ecmp-bar { transform: scaleX(1); }
+.ecmp-val { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums;
+  font-size: 12px; font-weight: 700; text-align: right; white-space: nowrap; }
+.ecmp .lg { display: inline-block; width: 9px; height: 9px; border-radius: 3px; vertical-align: -1px; }
+@media (max-width: 760px) {
+  .ecmp-row { grid-template-columns: 52px 1fr 66px; gap: 6px; }
+  .ecmp-val { font-size: 11px; }
+}
