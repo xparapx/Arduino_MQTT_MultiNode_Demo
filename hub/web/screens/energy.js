@@ -9,9 +9,9 @@
 
   function devRow(dev, ko, d) {
     const color = CH.devColor(dev);                          // 컬러맵 깊은 쪽 = 장치 정체성
-    const w = d && d.online && d.apower !== null ? `${num(d.apower, 1)} W` : "—";
-    return `<div class="enrow"><span style="width:9px;height:9px;border-radius:3px;background:${color};display:inline-block"></span>`
-      + `<span class="tt" style="font-weight:700">${ko}</span>${devChip(d)}<span class="w" style="color:${d && d.running ? "var(--green)" : "var(--dim)"}">${w}</span></div>`
+    // 와트값은 칩 안에만 (중복 표기 제거) — 칩은 우측 정렬, 라벨·점은 칩 폰트에 맞춤
+    return `<div class="enrow"><span class="dot" style="background:${color}"></span>`
+      + `<span class="tt">${ko}</span>${devChip(d)}</div>`
       + (d && d.hist && d.hist.length ? CH.powerBars(d.hist, dev, (P.run_w || {})[dev] || 30)
          : `<div class="empty" style="padding:14px">${d ? (d.online ? "전력 이력 수집 중…" : "플러그 미접속") : "플러그 미설치"}</div>`);
   }

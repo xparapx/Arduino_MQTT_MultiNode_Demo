@@ -241,10 +241,12 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .ctlbar .modes button.on.auto { color: var(--green); }
 .ctlbar .modes button.on.manual { color: var(--orange); }
 /* energy screen device panel */
-.enrow { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
-.enrow .tt { white-space: nowrap; }
-.enrow .w { white-space: nowrap; }
-.enrow .w { font-family: "IBM Plex Mono", monospace; font-size: 21px; font-weight: 800; margin-left: auto; }
+/* 와트값은 칩 안에만(중복 제거) — 칩 우측 정렬, 라벨·점 크기 = 칩 폰트와 통일 */
+.enrow { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+.enrow .dot { width: 12px; height: 12px; border-radius: 4px; display: inline-block; flex: none; }
+.enrow .tt { white-space: nowrap; font-size: 15px; font-weight: 700; }
+.enrow .fanchip { margin-left: auto; font-size: 15px; padding: 5px 14px; gap: 7px; }
+.enrow .fanchip svg { width: 21px; height: 21px; }
 /* vision node ON / OFF chips -- right end of the node-select row (all vision nodes) */
 .vnodes { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
 .vnc { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
@@ -354,10 +356,11 @@ svg.chart .hb-over { animation: hb-blink 2.2s ease-in-out infinite; }
   .g2, .g3, .g5, .g6, .acts { grid-template-columns: 1fr; }
   .g4, .radar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }   /* 레이더 2열 × 4행 */
   /* 에너지 2열 카드: 좁은 폭에서 칩·수치 축소, 라벨 줄바꿈 방지 */
-  .enrow { gap: 4px; }
-  .enrow .w { font-size: 13px; }
-  .enrow .fanchip { padding: 2px 5px; gap: 3px; font-size: 10px; }
-  .enrow .fanchip svg { width: 12px; height: 12px; }
+  .enrow { gap: 5px; }
+  .enrow .dot { width: 9px; height: 9px; border-radius: 3px; }
+  .enrow .tt { font-size: 12px; }
+  .enrow .fanchip { padding: 3px 8px; gap: 4px; font-size: 12px; }
+  .enrow .fanchip svg { width: 15px; height: 15px; }
   .span2, .span3 { grid-column: auto; }
   .g6 > .panel { padding: 8px; }
   .subtabs { gap: 5px; }
