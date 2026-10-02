@@ -1,0 +1,45 @@
+<!doctype html><html lang="ko" data-kind="p" data-w="143" data-h="85"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><style>
+html,body{height:100%} body{word-break:keep-all}
+.fill{position:relative;display:flex;flex-direction:column;gap:3.2mm}
+.guards{display:grid;grid-template-columns:1fr 1.1fr;gap:3.5mm;flex:none}
+.g{border-color:var(--red);border-width:.7mm;background:#fff;display:flex;gap:2.4mm;align-items:center;line-height:1.22;padding:2.2mm 2.8mm}
+.g .sh{flex:none;width:7mm;height:8.3mm}
+.g .h{font-weight:700;color:var(--red)}
+.steps{flex:1;min-height:0;display:grid;grid-template-columns:36mm 7mm 53mm 7mm 36mm}
+.s{display:flex;flex-direction:column;gap:.6mm;justify-content:center;line-height:1.22;padding:2.2mm 2.8mm}
+.s .h{display:flex;align-items:center;gap:1.8mm;font-weight:700;margin-bottom:.8mm}
+#s1{grid-column:1} #s2{grid-column:3} #s3{grid-column:5;border-color:var(--rg-clean);border-width:.7mm;background:var(--rg-clean-bg)} #s3 .num{background:var(--rg-clean)}
+.num{font-size:1em}
+#ov{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+</style></head><body><div class="fig">
+<div class="t">데이터가 스위치를 누르기까지</div>
+<div class="fill">
+ <div class="guards">
+  <div class="panel g" id="ga" data-fit="ga"><svg class="sh" viewBox="0 0 20 24"><path d="M10 1 L19 4.5 V11 C19 17 14.5 21.5 10 23 C5.5 21.5 1 17 1 11 V4.5 Z" fill="#fbe9ec" stroke="#d9534f" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 12 L9 15 L14 8" fill="none" stroke="#d9534f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+   <div><span class="h">검사 탈락 → 보류</span><br>이전 상태 유지</div></div>
+  <div class="panel g" id="gb" data-fit="gb"><svg class="sh" viewBox="0 0 20 24"><path d="M10 1 L19 4.5 V11 C19 17 14.5 21.5 10 23 C5.5 21.5 1 17 1 11 V4.5 Z" fill="#fbe9ec" stroke="#d9534f" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 6 V18" fill="none" stroke="#d9534f" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="3 2.4"/></svg>
+   <div><span class="h">판정·집행 분리</span><br>한쪽이 멈춰도 안전</div></div>
+ </div>
+ <div class="steps">
+  <div class="panel s" id="s1" data-fit="s1"><div class="h"><span class="num">1</span>수집</div><div>5분 평균</div><div>MQTT 수신</div></div>
+  <div class="panel s" id="s2" data-fit="s2"><div class="h"><span class="num">2</span>판정</div><div>품질 검사 <b>95%</b>↑</div><div>GMM 레짐 → 규칙</div><div>목표 상태 기록</div></div>
+  <div class="panel s" id="s3" data-fit="s3"><div class="h"><span class="num">3</span>스위치</div><div>실물 비교</div><div><b>다를 때만</b></div></div>
+ </div>
+ <svg id="ov"></svg>
+</div></div>
+<script>
+const svg=document.getElementById('ov'),NS='http://www.w3.org/2000/svg';
+const U=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--u'))||1;
+const C=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const bx=id=>{const r=document.getElementById(id).getBoundingClientRect(),b=svg.getBoundingClientRect();return {l:r.left-b.left,r:r.right-b.left,t:r.top-b.top,b:r.bottom-b.top,cx:(r.left+r.right)/2-b.left,cy:(r.top+r.bottom)/2-b.top};};
+function line(a,b,c,w,dash){const p=document.createElementNS(NS,'path');p.setAttribute('d',`M${a[0]} ${a[1]} L${b[0]} ${b[1]}`);p.setAttribute('stroke',c);p.setAttribute('stroke-width',w);p.setAttribute('fill','none');p.setAttribute('stroke-linecap','round');if(dash)p.setAttribute('stroke-dasharray',dash);svg.appendChild(p);}
+function arrow(a,b,c){const hl=6.2*U,w=1.8*U;const ang=Math.atan2(b[1]-a[1],b[0]-a[0]),cs=Math.cos(ang),s=Math.sin(ang);
+ line(a,[b[0]-cs*hl*.7,b[1]-s*hl*.7],c,w);const h=document.createElementNS(NS,'path');h.setAttribute('d',`M${b[0]} ${b[1]} L${b[0]-cs*hl-s*hl*.6} ${b[1]-s*hl+cs*hl*.6} L${b[0]-cs*hl+s*hl*.6} ${b[1]-s*hl-cs*hl*.6} Z`);h.setAttribute('fill',c);svg.appendChild(h);}
+function draw(){svg.innerHTML='';const ink=C('--ink'),red=C('--red'),mint=C('--rg-clean');
+ const s1=bx('s1'),s2=bx('s2'),s3=bx('s3'),ga=bx('ga'),gb=bx('gb');
+ arrow([s1.r,s1.cy],[s2.l,s2.cy],ink);arrow([s2.r,s2.cy],[s3.l,s3.cy],mint);
+ const xa=(Math.max(ga.l,s2.l)+Math.min(ga.r,s2.r))/2;line([xa,ga.b],[xa,s2.t],red,1.8*U);
+ const dot=document.createElementNS(NS,'circle');dot.setAttribute('cx',xa);dot.setAttribute('cy',s2.t);dot.setAttribute('r',2.2*U);dot.setAttribute('fill',red);svg.appendChild(dot);
+ const xb=(s2.r+s3.l)/2;line([xb,gb.b],[xb,s3.b],red,1.6*U,`${3*U} ${2.4*U}`);}
+draw();document.fonts.ready.then(draw);
+</script></body></html>

@@ -1,0 +1,74 @@
+<!doctype html><html lang="ko" data-kind="r" data-w="159" data-h="66"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><style>
+html,body{height:100%} body{word-break:keep-all}
+.fill{position:relative}
+.fill svg{width:100%;height:100%}
+svg text{dominant-baseline:middle}
+.b{font-weight:700} .d{fill:var(--dim)} .m{fill:var(--rg-clean);font-weight:700}
+.lg{display:flex;gap:4mm;align-items:center;flex:none}
+.sw{display:inline-block;width:7mm;height:1mm;border-radius:.5mm;vertical-align:middle;margin-right:1.2mm}
+</style></head><body><div class="fig">
+<div class="t">센서 노드 배선 — 납땜 없이 I2C 포트에 케이블 두 개만 꽂는다</div>
+<div class="fill" data-fit="svg">
+<svg viewBox="0 0 592 192" preserveAspectRatio="xMidYMid meet">
+ <!-- 보드 -->
+ <rect x="1" y="1" width="238" height="190" rx="8" fill="#eef0f3" stroke="#d9dde3" stroke-width="1.5"/>
+ <text x="14" y="177" class="b">Arduino UNO R4 WiFi</text>
+ <!-- 실드 -->
+ <rect x="12" y="10" width="216" height="150" rx="6" fill="#fff" stroke="#1a1d24" stroke-width="1.6"/>
+ <text x="24" y="28" class="b">Grove Base Shield</text>
+ <!-- 전압 스위치 -->
+ <rect x="24" y="42" width="62" height="20" rx="4" fill="#fff" stroke="#1a1d24" stroke-width="1.3"/>
+ <rect x="25.5" y="43.5" width="27" height="17" rx="3" fill="#1a1d24"/>
+ <text x="39" y="52.5" style="fill:#fff" class="b" text-anchor="middle">5V</text>
+ <text x="70" y="52.5" class="d" text-anchor="middle">3.3V</text>
+ <text x="24" y="78" >전압 스위치 → <tspan class="b">5V</tspan></text>
+ <!-- 안 쓰는 포트 -->
+ <text x="24" y="104" class="d">다른 포트는 쓰지 않음</text>
+ <g fill="#fff" stroke="#c9ced6" stroke-width="1.2">
+  <rect x="24" y="118" width="16" height="22" rx="2"/><rect x="46" y="118" width="16" height="22" rx="2"/><rect x="68" y="118" width="16" height="22" rx="2"/>
+  <rect x="90" y="118" width="16" height="22" rx="2"/><rect x="112" y="118" width="16" height="22" rx="2"/><rect x="134" y="118" width="16" height="22" rx="2"/>
+ </g>
+ <g fill="#c9ced6">
+  <rect x="29" y="122" width="2" height="6"/><rect x="33" y="122" width="2" height="6"/><rect x="51" y="122" width="2" height="6"/><rect x="55" y="122" width="2" height="6"/>
+  <rect x="73" y="122" width="2" height="6"/><rect x="77" y="122" width="2" height="6"/><rect x="95" y="122" width="2" height="6"/><rect x="99" y="122" width="2" height="6"/>
+  <rect x="117" y="122" width="2" height="6"/><rect x="121" y="122" width="2" height="6"/><rect x="139" y="122" width="2" height="6"/><rect x="143" y="122" width="2" height="6"/>
+ </g>
+ <!-- I2C 포트 묶음 -->
+ <rect x="166" y="40" width="54" height="110" rx="5" fill="#e3f5f4" stroke="#0fa8a2" stroke-width="1.6"/>
+ <text x="193" y="54" class="m" text-anchor="middle">I2C</text>
+ <g id="ports">
+  <rect x="202" y="66" width="16" height="16" rx="2" fill="#fff" stroke="#1a1d24" stroke-width="1.5"/>
+  <rect x="202" y="88" width="16" height="16" rx="2" fill="#fff" stroke="#1a1d24" stroke-width="1.5"/>
+  <rect x="202" y="110" width="16" height="16" rx="2" fill="#fff" stroke="#c9ced6" stroke-width="1.3"/>
+  <rect x="202" y="130" width="16" height="16" rx="2" fill="#fff" stroke="#c9ced6" stroke-width="1.3"/>
+ </g>
+ <!-- 센서 모듈 -->
+ <rect x="378" y="20" width="213" height="62" rx="6" fill="#fff" stroke="#1a1d24" stroke-width="1.6"/>
+ <rect x="368" y="43" width="12" height="16" rx="2" fill="#fff" stroke="#1a1d24" stroke-width="1.5"/>
+ <text x="392" y="40" class="b">SEN55</text><text x="579" y="40" class="d" text-anchor="end">주소 0x69</text>
+ <text x="392" y="64">미세먼지 · VOC · NOx</text>
+ <rect x="378" y="110" width="213" height="62" rx="6" fill="#fff" stroke="#1a1d24" stroke-width="1.6"/>
+ <rect x="368" y="133" width="12" height="16" rx="2" fill="#fff" stroke="#1a1d24" stroke-width="1.5"/>
+ <text x="392" y="130" class="b">SCD30</text><text x="579" y="130" class="d" text-anchor="end">주소 0x61</text>
+ <text x="392" y="154">CO₂ · 온도 · 습도</text>
+ <!-- 케이블 (JS로 4선 생성) -->
+ <g id="cables"></g>
+ <text x="318" y="12" class="d" text-anchor="middle">Grove 4선 케이블 ×2</text>
+</svg>
+</div>
+<div class="lg"><b>Grove 4선 색</b>
+ <span><span class="sw" style="background:#1a1d24"></span>GND 검정</span>
+ <span><span class="sw" style="background:#d9342b"></span>VCC 빨강</span>
+ <span><span class="sw" style="background:#fff;box-shadow:0 0 0 .3mm #8a929e"></span>SDA 흰색</span>
+ <span><span class="sw" style="background:#f2c200"></span>SCL 노랑</span>
+</div>
+</div>
+<script>
+const g=document.getElementById('cables'),NS='http://www.w3.org/2000/svg';
+const W=[['#1a1d24',0],['#d9342b',0],['#ffffff',1],['#f2c200',0]];
+function cable(x1,y1,x2,y2){const mx=(x1+x2)/2;
+ W.forEach(([c,outline],i)=>{const a=y1-5.4+i*3.6,b=y2-5.4+i*3.6;const d=`M${x1} ${a} C${mx} ${a} ${mx} ${b} ${x2} ${b}`;
+  if(outline){const o=document.createElementNS(NS,'path');o.setAttribute('d',d);o.setAttribute('fill','none');o.setAttribute('stroke','#8a929e');o.setAttribute('stroke-width','3.6');g.appendChild(o);}
+  const p=document.createElementNS(NS,'path');p.setAttribute('d',d);p.setAttribute('fill','none');p.setAttribute('stroke',c);p.setAttribute('stroke-width','2.4');p.setAttribute('stroke-linecap','round');g.appendChild(p);});}
+cable(218,74,368,51);cable(218,96,368,141);
+</script></body></html>

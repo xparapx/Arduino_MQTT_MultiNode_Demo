@@ -1,0 +1,33 @@
+<!doctype html><html lang="ko" data-kind="p" data-w="143" data-h="85"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><style>
+html,body{height:100%} body{word-break:keep-all}
+.fill{display:flex;gap:3.5mm;align-items:stretch;min-height:0}
+.shot{position:relative;flex:none;width:72mm;border:.45mm solid var(--grid);border-radius:2.2mm;overflow:hidden;background:#f5f6f8}
+.shot img{position:absolute;left:0;top:0;height:100%;width:auto;display:block}
+.pin{position:absolute;transform:translate(-50%,-50%);box-shadow:0 0 0 .7mm #fff,0 .4mm 1.6mm rgba(0,0,0,.35)}
+.pr{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between;padding:1mm 0}
+.it{display:flex;gap:2.2mm;align-items:center;font-weight:600}
+</style></head><body><div class="fig">
+<div class="t">무엇을, 왜 그 자리에 두었나</div>
+<div class="fill">
+ <div class="shot" id="shot"><img src="../img/home.png" alt="">
+  <span class="num pin" style="left:13.5%;top:63%">1</span>
+  <span class="num pin" style="left:13.5%;top:24.3%">2</span>
+  <span class="num pin" style="left:70.6%;top:8.7%">3</span>
+  <span class="num pin" style="left:82.4%;top:46.3%">4</span>
+  <span class="num pin" style="left:57%;top:79.7%">5</span>
+ </div>
+ <div class="pr" data-fit="pr">
+  <div class="it"><span class="num">1</span>데이터 상태 상시</div>
+  <div class="it"><span class="num">2</span>메뉴 = 질문 순서</div>
+  <div class="it"><span class="num">3</span>중요도순 배치</div>
+  <div class="it"><span class="num">4</span>판정·실물 나란히</div>
+  <div class="it"><span class="num">5</span>색은 정보만</div>
+ </div>
+</div></div>
+<script>
+// 핀 위치는 원본 캡처(1600×760) 좌표 → 상자에 보이는 영역(왼쪽부터 높이 맞춤) 기준 백분율로 환산
+const P=[[115,480],[115,185],[600,66],[700,352],[484,606]];
+function place(){const s=document.getElementById('shot'),r=s.getBoundingClientRect();const sc=r.height/760,vis=r.width/sc;
+ s.querySelectorAll('.pin').forEach((e,i)=>{e.style.left=(P[i][0]/vis*100)+'%';e.style.top=(P[i][1]/760*100)+'%';});}
+place();document.fonts.ready.then(place);
+</script></body></html>

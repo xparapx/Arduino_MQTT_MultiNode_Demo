@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko" data-kind="p" data-w="286" data-h="83">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../design/base.css">
+<style>
+  /* 결과 칸 하단 한 줄 스토리 — "수업 두 시간 동안 CO₂가 어떻게 되는가" 타임라인. 1반 9/15 사례(08시 전후 740 → 09:10 1,204 ppm ≈ 7 ppm/분)와 τ 중앙값 42분으로 그린 모식도. 문 개폐는 기록되지 않았으므로 "활짝" 등 조건별 τ는 쓰지 않는다. */
+  html, body { height: 100%; }
+  .fig { gap: 1.2mm; }
+  .plot { flex: 1; min-height: 0; }
+  svg { width: 100%; height: 100%; }
+  .co2 { fill: none; stroke: var(--co2); stroke-width: 5; stroke-linejoin: round; stroke-linecap: round; }
+  .novent { fill: none; stroke: var(--dim); stroke-width: 3; stroke-dasharray: 9 8; opacity: .75; }
+  .band { fill: var(--panel2); }
+  .ax { stroke: var(--grid); stroke-width: 1.5; }
+  .gridline { stroke-width: 1.5; }
+  .thr { stroke-width: 3; }
+  .lab { fill: var(--dim); }
+  .co2t { fill: var(--co2-deep); font-weight: 700; }
+  .thrt { fill: var(--thr); font-weight: 700; }
+  .chipbg { fill: color-mix(in srgb, var(--rg-human) 16%, #fff); stroke: color-mix(in srgb, var(--rg-human) 55%, transparent); stroke-width: 2.5; }
+  .chipt { fill: var(--rg-human); font-weight: 700; }
+  .mid { text-anchor: middle; } .end { text-anchor: end; }
+</style>
+</head>
+<body>
+<div class="fig">
+  <div class="t">수업 한 시간이면 기준을 넘고, 쉬는 시간 10분 환기로는 1/5만 돌아온다<span class="sub">실측값 모식도</span></div>
+  <div class="plot" data-fit="plot"><svg id="s" viewBox="0 0 1066 236" preserveAspectRatio="xMidYMid meet"></svg></div>
+</div>
+<script>
+(() => {
+  const W = 1066, H = 236, L = 140, R = 1058, T = 16, B = H - 30;
+  const t0 = 0, t1 = 120, y0 = 400, y1 = 1700;
+  const X = t => L + (t - t0) / (t1 - t0) * (R - L);
+  const Y = v => T + (y1 - v) / (y1 - y0) * (B - T);
+  const rate = 7, base = 420, tau = 42;                     // ppm/분 (1반 9/15: 740→1,204 ppm/65분), 실외 기준, τ 중앙값
+  // 모식 곡선: 1교시 상승(50분 ≈ 1,050) → 쉬는 시간 10분 맞통풍(τ 42 → 초과분의 21% 감소) → 2교시 상승 → 쉬는 시간
+  const pts = []; let v = 700;
+  for (let t = 0; t <= 120; t += 0.5) {
+    const inBreak = (t > 50 && t <= 60) || (t > 110 && t <= 120);
+    if (t > 0) v = inBreak ? base + (v - base) * Math.exp(-0.5 / tau) : v + rate * 0.5;
+    pts.push([t, v]);
+  }
+  const path = pts.map(([t, v], i) => (i ? "L" : "M") + X(t).toFixed(1) + " " + Y(v).toFixed(1)).join(" ");
+  // 환기 없이: 50분 이후 계속 상승 (상단에서 잘림)
+  const nv = []; for (let t = 50; t <= 120; t += 1) { const vv = 700 + rate * t; if (vv > y1) break; nv.push([t, vv]); }
+  const nvPath = nv.map(([t, v], i) => (i ? "L" : "M") + X(t).toFixed(1) + " " + Y(v).toFixed(1)).join(" ");
+  const nvEnd = nv[nv.length - 1];
+  const s = [];
+  // 쉬는 시간 띠
+  s.push(`<rect class="band" x="${X(50)}" y="${T}" width="${X(60) - X(50)}" height="${B - T}"/>`);
+  s.push(`<rect class="band" x="${X(110)}" y="${T}" width="${X(120) - X(110)}" height="${B - T}"/>`);
+  // 격자·축
+  for (const g of [500, 1000, 1500]) {
+    s.push(`<line class="${g === 1000 ? "thr" : "gridline"}" x1="${L}" x2="${R}" y1="${Y(g)}" y2="${Y(g)}"/>`);
+    s.push(g === 1000 ? `<text class="thrt end" x="${L - 10}" y="${Y(g) + 8}">기준 1,000</text>` : `<text class="lab end" x="${L - 10}" y="${Y(g) + 8}">${g.toLocaleString()}</text>`);
+  }
+  s.push(`<line class="ax" x1="${L}" x2="${R}" y1="${B}" y2="${B}"/>`);
+  s.push(`<text class="lab" x="${L - 10}" y="${T + 4}" text-anchor="end">ppm</text>`);
+  // x축 라벨 (수업·쉬는 시간)
+  s.push(`<text class="mid" x="${X(25)}" y="${B + 26}">1교시 50분</text>`);
+  s.push(`<text class="lab mid" x="${X(55)}" y="${B + 26}">쉬는 시간</text>`);
+  s.push(`<text class="mid" x="${X(85)}" y="${B + 26}">2교시 50분</text>`);
+  s.push(`<text class="lab end" x="${R}" y="${B + 26}">쉬는 시간</text>`);
+  // 곡선
+  s.push(`<path class="novent" d="${nvPath}"/>`);
+  s.push(`<path class="co2" d="${path}"/>`);
+  // 주석
+  s.push(`<circle cx="${X(0)}" cy="${Y(700)}" r="7" fill="var(--co2)"/>`);
+  s.push(`<text x="${X(0) + 16}" y="${Y(700) + 30}">수업 시작 700 ppm</text>`);
+  const tc = (1000 - 700) / rate; s.push(`<circle cx="${X(tc)}" cy="${Y(1000)}" r="8" fill="var(--co2-deep)"/>`);
+  s.push(`<text class="co2t end" x="${X(tc) - 14}" y="${Y(1000) - 14}">약 50분이면 1,000 ppm 초과</text>`);
+  s.push(`<text class="lab end" x="${X(95)}" y="${Y(700 + rate * 95) - 12}">환기 없이 ↗</text>`);
+  s.push(`<text class="mid" x="${X(52)}" y="${Y(1000) + 44}">맞통풍 10분: τ 42분이면</text>`);
+  s.push(`<text class="mid" x="${X(52)}" y="${Y(1000) + 70}">초과분의 약 20%만 빠진다</text>`);
+  // 결론 칩 — 환기 수칙(안), 두 줄
+  const cw = 300, ch = 64, cx = R - cw, cy = Y(1000) + 14;
+  s.push(`<rect class="chipbg" x="${cx}" y="${cy}" width="${cw}" height="${ch}" rx="10"/>`);
+  s.push(`<text class="chipt mid" x="${cx + cw / 2}" y="${cy + 26}">→ 쉬는 시간마다 맞통풍</text>`);
+  s.push(`<text class="chipt mid" x="${cx + cw / 2}" y="${cy + 54}">점심시간엔 창문 전부</text>`);
+  document.getElementById("s").innerHTML = s.join("");
+})();
+</script>
+</body>
+</html>

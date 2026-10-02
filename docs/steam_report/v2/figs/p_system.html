@@ -1,0 +1,41 @@
+<!doctype html><html lang="ko" data-kind="p" data-w="143" data-h="85"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><style>
+html,body{height:100%} body{word-break:keep-all}
+.fill{display:flex;flex-direction:column;gap:2.4mm}
+.dg{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:44mm 9mm 33mm 9mm 44mm;grid-template-rows:1fr 1.3fr;gap:3mm 0}
+.box{display:flex;flex-direction:column;justify-content:center;gap:.4mm;line-height:1.25}
+.box .h{font-weight:700}
+#sen{grid-column:1;grid-row:1} #vis{grid-column:1;grid-row:2} #hub{grid-column:3;grid-row:1/3} #dash{grid-column:5;grid-row:1} #plug{grid-column:5;grid-row:2}
+#hub{border-color:var(--ink);border-width:.7mm}
+#plug{border-color:var(--rg-clean);border-width:.7mm;background:var(--rg-clean-bg)}
+.co2{color:var(--co2-deep);font-weight:700} .voc{color:var(--voc);font-weight:700} .pm{color:var(--pm);font-weight:700} .fan{color:var(--fan);font-weight:700} .pur{color:var(--purifier);font-weight:700}
+.lg{display:flex;gap:6mm;color:var(--dim);flex:none} .lg b{color:var(--ink)} .lg .m{color:var(--rg-clean)}
+#ov{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+</style></head><body><div class="fig">
+<div class="t">측정에서 제어까지 한 줄기</div>
+<div class="fill">
+ <div class="dg">
+  <div class="panel box" id="sen" data-fit="sen"><div class="h">센서 노드 ×8</div><div><span class="co2">CO₂</span>·<span class="voc">VOC</span>·<span class="pm">먼지</span></div><div>5분 평균</div></div>
+  <div class="panel box" id="vis" data-fit="vis"><div class="h">비전 노드 ×5</div><div>인원 수만</div></div>
+  <div class="panel box" id="hub" data-fit="hub"><div class="h">허브</div><div class="h">UNO Q</div><div>수집·저장</div><div>품질 검사</div><div>레짐 판정</div><div>제어 추론</div></div>
+  <div class="panel box" id="plug" data-fit="plug"><div class="h">플러그 ×16</div><div><span class="fan">환풍기</span> 8</div><div><span class="pur">공청기</span> 8</div></div>
+  <div class="panel box" id="dash" data-fit="dash"><div class="h">대시보드</div><div>PC·폰 조회</div></div>
+  <svg id="ov"></svg>
+ </div>
+ <div class="lg"><span><b>→</b> 데이터 (MQTT)</span><span><span class="m">→</span> 명령 <span class="m">⇠</span> 전력 실측</span></div>
+</div></div>
+<script>
+const svg=document.getElementById('ov'),NS='http://www.w3.org/2000/svg';
+const U=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--u'))||1;
+const C=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const pt=(id,s,f=.5)=>{const r=document.getElementById(id).getBoundingClientRect(),b=svg.getBoundingClientRect();const x=r.left-b.left,y=r.top-b.top,w=r.width,h=r.height;return s==='r'?[x+w,y+h*f]:s==='l'?[x,y+h*f]:s==='t'?[x+w*f,y]:[x+w*f,y+h];};
+function arrow(a,b,c,o={}){const hl=6.2*U,w=1.8*U;let d,ang;
+ if(o.curve){const mx=(a[0]+b[0])/2;ang=b[0]>a[0]?0:Math.PI;const ex=b[0]-Math.cos(ang)*hl*.7;d=`M${a[0]} ${a[1]} C${mx} ${a[1]} ${mx} ${b[1]} ${ex} ${b[1]}`;}
+ else{ang=Math.atan2(b[1]-a[1],b[0]-a[0]);d=`M${a[0]} ${a[1]} L${b[0]-Math.cos(ang)*hl*.7} ${b[1]-Math.sin(ang)*hl*.7}`;}
+ const cs=Math.cos(ang),s=Math.sin(ang);const p=document.createElementNS(NS,'path');p.setAttribute('d',d);p.setAttribute('stroke',c);p.setAttribute('stroke-width',w);p.setAttribute('fill','none');p.setAttribute('stroke-linecap','round');if(o.dash)p.setAttribute('stroke-dasharray',`${2.6*U} ${2.2*U}`);svg.appendChild(p);
+ const h=document.createElementNS(NS,'path');h.setAttribute('d',`M${b[0]} ${b[1]} L${b[0]-cs*hl-s*hl*.6} ${b[1]-s*hl+cs*hl*.6} L${b[0]-cs*hl+s*hl*.6} ${b[1]-s*hl-cs*hl*.6} Z`);h.setAttribute('fill',c);svg.appendChild(h);}
+function draw(){svg.innerHTML='';const ink=C('--ink'),mint=C('--rg-clean');
+ arrow(pt('sen','r'),pt('hub','l',.3),ink,{curve:1});arrow(pt('vis','r'),pt('hub','l',.7),ink,{curve:1});
+ arrow(pt('hub','r',.2),pt('dash','l',.5),ink,{curve:1});
+ arrow(pt('hub','r',.6),pt('plug','l',.3),mint,{curve:1});arrow(pt('plug','l',.7),pt('hub','r',.86),mint,{curve:1,dash:1});}
+draw();document.fonts.ready.then(draw);
+</script></body></html>

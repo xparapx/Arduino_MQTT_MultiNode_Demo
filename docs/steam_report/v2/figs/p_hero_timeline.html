@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko" data-kind="p" data-w="286" data-h="42">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../design/base.css">
+<style>
+  /* 방법·과정 칸 하단 — 단계적 확장 타임라인 (시범 2대 → 8교실 → 73일 본 수집 → 플러그 16대 → 공유). 글 두 줄을 대신한다. */
+  html, body { height: 100%; }
+  .fig { gap: 1.2mm; }
+  .plot { flex: 1; min-height: 0; }
+  svg { width: 100%; height: 100%; }
+  .line { stroke: var(--grid); stroke-width: 6; stroke-linecap: round; }
+  .seg-m { stroke: var(--co2); stroke-width: 6; }
+  .seg-c { stroke: var(--rg-human); stroke-width: 6; stroke-linecap: round; }
+  .nd { fill: var(--ink); } .nd.m { fill: var(--co2-deep); } .nd.c { fill: var(--rg-human); }
+  .nt { fill: #fff; font-weight: 700; text-anchor: middle; }
+  .d { font-weight: 700; text-anchor: middle; }
+  .l { fill: var(--dim); text-anchor: middle; }
+  .cap { fill: var(--co2-deep); font-weight: 700; text-anchor: middle; }
+</style>
+</head>
+<body>
+<div class="fig">
+  <div class="t">단계적 확장 — 시범 2대에서 16대 자동 제어까지<span class="sub">2026년</span></div>
+  <div class="plot" data-fit="plot"><svg id="s" viewBox="0 0 1066 101" preserveAspectRatio="xMidYMid meet"></svg></div>
+</div>
+<script>
+(() => {
+  const W = 1066, L = 100, R = W - 100, Y = 18;
+  const steps = [
+    ["봄", "허브·시범 노드 2대", ""],
+    ["7월 초", "8교실·비전 5대 설치", ""],
+    ["7월 7일", "73일 본 수집 시작", "m"],
+    ["9월 14·19일", "플러그 16대 제어", "c"],
+    ["10월", "성과발표·공유", "c"],
+  ];
+  const n = steps.length, X = i => L + i * (R - L) / (n - 1);
+  const s = [];
+  s.push(`<line class="line" x1="${L}" x2="${R}" y1="${Y}" y2="${Y}"/>`);
+  s.push(`<line class="seg-m" x1="${X(2)}" x2="${X(3)}" y1="${Y}" y2="${Y}"/>`);
+  s.push(`<line class="seg-c" x1="${X(3)}" x2="${R}" y1="${Y}" y2="${Y}"/>`);
+  steps.forEach(([d, l, k], i) => {
+    s.push(`<circle class="nd ${k}" cx="${X(i)}" cy="${Y}" r="17"/>`);
+    s.push(`<text class="nt" x="${X(i)}" y="${Y + 8}">${i + 1}</text>`);
+    s.push(`<text class="d" x="${X(i)}" y="${Y + 48}">${d}</text>`);
+    s.push(`<text class="l" x="${X(i)}" y="${Y + 76}">${l}</text>`);
+  });
+  document.getElementById("s").innerHTML = s.join("");
+})();
+</script>
+</body>
+</html>

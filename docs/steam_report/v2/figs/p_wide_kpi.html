@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko" data-kind="p" data-w="286" data-h="40">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../design/base.css">
+<style>
+  /* 결과 칸 상단 KPI 띠 — 웹앱 홈의 상태 카드(.panel + 왼쪽 색 띠 + 작은 라벨 / 큰 숫자 / 보조줄)를 그대로 옮긴다 */
+  html, body { height: 100%; } .fig { padding: 0.5mm 0.5mm; }
+  .tiles { display: flex; gap: 1.6mm; height: 100%; }
+  .tile { position: relative; display: flex; flex-direction: column; justify-content: space-between;
+    padding: 1.8mm 1.6mm 1.8mm 3.6mm; min-width: 0; border-radius: 2.4mm; }
+  .tile::before { content: ""; position: absolute; left: 0; top: 2mm; bottom: 2mm; width: 1.3mm;
+    border-radius: 0 0.9mm 0.9mm 0; background: var(--kc, var(--ink)); }
+  .lab { color: var(--dim); white-space: nowrap; line-height: 1.1; }
+  .v { display: flex; align-items: baseline; gap: .15em; white-space: nowrap; color: var(--kc, var(--ink)); }
+  .v .kpi { font-size: 33pt; letter-spacing: -0.03em; }
+  .v .u { font-weight: 700; }
+  .sub { white-space: nowrap; line-height: 1.1; display: flex; align-items: center; } .sub .dot { flex: none; }
+  .k-ink { --kc: var(--ink); } .k-co2 { --kc: var(--co2-deep); } .k-occ { --kc: var(--co2); }
+  .k-rg { --kc: var(--rg-human); } .k-tau { --kc: var(--rg-clean); } .k-dev { --kc: var(--fan); }
+  .rg b { font-weight: 700; } .rg .s { color: var(--dim); padding: 0 .04em; }
+</style>
+</head>
+<body>
+<div class="fig">
+  <div class="tiles">
+    <div class="panel tile k-ink" style="flex: 0.95">
+      <div class="lab">무인 연속 측정</div>
+      <div class="v"><span class="kpi">73</span><span class="u">일</span></div>
+      <div class="sub"><b>157,744</b>건</div>
+    </div>
+    <div class="panel tile k-co2" style="flex: 1.07">
+      <div class="lab">주중 낮 CO₂</div>
+      <div class="v"><span class="kpi">39</span><span class="u">%</span></div>
+      <div class="sub">1,000 ppm 초과</div>
+    </div>
+    <div class="panel tile k-occ" style="flex: 1">
+      <div class="lab">탐지 1명당 CO₂</div>
+      <div class="v"><span class="kpi">+194</span><span class="u">ppm</span></div>
+      <div class="sub">ρ 0.31–0.58</div>
+    </div>
+    <div class="panel tile k-rg" style="flex: 1.02">
+      <div class="lab">오염 레짐</div>
+      <div class="v"><span class="kpi">4</span><span class="u">개</span></div>
+      <div class="sub rg"><b style="color:var(--rg-clean)">62</b><span class="s">·</span><b style="color:var(--rg-human)">15</b><span class="s">·</span><b style="color:var(--rg-matter)">15</b><span class="s">·</span><b style="color:var(--rg-mixed)">9</b><span class="s">&thinsp;%</span></div>
+    </div>
+    <div class="panel tile k-tau" style="flex: 1">
+      <div class="lab">환기 회복 τ</div>
+      <div class="v"><span class="kpi">42</span><span class="u">분</span></div>
+      <div class="sub">520건 중앙값</div>
+    </div>
+    <div class="panel tile k-dev" style="flex: 1.14">
+      <div class="lab">플러그 자동 제어</div>
+      <div class="v"><span class="kpi">16</span><span class="u">대</span></div>
+      <div class="sub"><b style="color:var(--fan)">환풍기</b>&thinsp;8<span class="dim" style="padding:0 .15em">·</span><b style="color:var(--purifier)">청정기</b>&thinsp;8</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

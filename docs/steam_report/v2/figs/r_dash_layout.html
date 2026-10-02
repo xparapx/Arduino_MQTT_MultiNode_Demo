@@ -1,0 +1,37 @@
+<!doctype html><html lang="ko" data-kind="r" data-w="159" data-h="70"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><style>
+html,body{height:100%} body{word-break:keep-all}
+.fill{display:flex;gap:3.2mm;align-items:stretch}
+/* 캡처 + 번호 핀 */
+.shot{position:relative;flex:none;width:92mm;align-self:stretch;border:.3mm solid var(--grid);border-radius:1.4mm;overflow:hidden;background:#f5f6f8}
+.shot img{position:absolute;left:0;top:0;height:100%;width:auto;display:block}
+.pin{position:absolute;transform:translate(-50%,-50%);box-shadow:0 0 0 .5mm #fff,0 .3mm 1.2mm rgba(0,0,0,.35)}
+/* 원칙 목록 */
+.pr{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between}
+.it{display:flex;gap:1.5mm;align-items:flex-start}
+.it .num{margin-top:.1mm}
+.it .d{color:var(--dim)}
+</style></head><body><div class="fig">
+<div class="t">대시보드 화면 설계 — 무엇을, 왜 그 자리에 두었는가</div>
+<div class="fill">
+ <div class="shot" id="shot"><img src="../img/home.png" alt="">
+  <span class="num pin" style="left:7.2%;top:63%">1</span>
+  <span class="num pin" style="left:7.2%;top:24.3%">2</span>
+  <span class="num pin" style="left:37.5%;top:8.7%">3</span>
+  <span class="num pin" style="left:43.7%;top:46.3%">4</span>
+  <span class="num pin" style="left:30.3%;top:79.7%">5</span>
+ </div>
+ <div class="pr" data-fit="pr">
+  <div class="it"><span class="num">1</span><div><b>믿어도 되는 데이터인가</b><div class="d">수집·노드·분석 상태를 늘 보이게</div></div></div>
+  <div class="it"><span class="num">2</span><div><b>메뉴 = 질문 순서</b><div class="d">지금? → 변화? → 왜? → 무엇을? → 비용?</div></div></div>
+  <div class="it"><span class="num">3</span><div><b>위에서 아래로 중요도순</b><div class="d">상태 → 교실별 판정 → 경보</div></div></div>
+  <div class="it"><span class="num">4</span><div><b>판정과 실물을 나란히</b><div class="d">분석 결과 옆에 플러그 실측, 다를 때만 빨강</div></div></div>
+  <div class="it"><span class="num">5</span><div><b>색과 움직임은 정보만</b><div class="d">레짐 4색 고정, 가동은 회전으로 표시</div></div></div>
+ </div>
+</div></div>
+<script>
+// 핀 위치: 원본 캡처(1600×760) 좌표 → 상자에 보이는 영역(왼쪽부터 높이 맞춤) 기준 백분율
+const P=[[115,480],[115,185],[600,66],[700,352],[1057,606]];
+function place(){const s=document.getElementById("shot"),r=s.getBoundingClientRect();const sc=r.height/760,vis=r.width/sc;
+ s.querySelectorAll(".pin").forEach((e,i)=>{e.style.left=(P[i][0]/vis*100)+"%";e.style.top=(P[i][1]/760*100)+"%";});}
+place();document.fonts.ready.then(place);
+</script></body></html>

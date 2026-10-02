@@ -1,0 +1,36 @@
+<!doctype html><html lang="ko" data-kind="p" data-w="143" data-h="85"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><style>
+html,body{height:100%} body{word-break:keep-all}
+.fill{position:relative;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr;gap:5.6mm}
+.card{display:flex;flex-direction:column;gap:1.2mm;justify-content:center;padding:2.4mm 2.6mm}
+.card .h{font-weight:700;line-height:1.2}
+.card.x{border-color:var(--rg-clean);border-width:.7mm;background:var(--rg-clean-bg)} .card.x .num{background:var(--rg-clean)}
+.card.loop{border-style:dashed;border-color:var(--rg-clean);background:#fff} .card.loop .h{color:var(--rg-clean)}
+#ov{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+</style></head><body><div class="fig">
+<div class="t">탐구 사이클 7단계 <span class="sub">⑥·⑦은 계획 밖 확장</span></div>
+<div class="fill">
+ <div class="panel card" id="c1" data-fit="c1"><span class="num">1</span><div class="h">문제<br>발견</div></div>
+ <div class="panel card" id="c2" data-fit="c2"><span class="num">2</span><div class="h">측정<br>설계</div></div>
+ <div class="panel card" id="c3" data-fit="c3"><span class="num">3</span><div class="h">데이터<br>수집</div></div>
+ <div class="panel card" id="c4" data-fit="c4"><span class="num">4</span><div class="h">분석·<br>모델링</div></div>
+ <div class="panel card loop" id="c0" data-fit="c0"><div class="h">↻ 다시<br>①로</div></div>
+ <div class="panel card x" id="c7" data-fit="c7"><span class="num">7</span><div class="h">제안·<br>공유</div></div>
+ <div class="panel card x" id="c6" data-fit="c6"><span class="num">6</span><div class="h">확장:<br>제어</div></div>
+ <div class="panel card" id="c5" data-fit="c5"><span class="num">5</span><div class="h">인사<br>이트</div></div>
+ <svg id="ov"></svg>
+</div></div>
+<script>
+const svg=document.getElementById('ov'),NS='http://www.w3.org/2000/svg';
+const U=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--u'))||1;
+const C=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const pt=(id,s,f=.5)=>{const r=document.getElementById(id).getBoundingClientRect(),b=svg.getBoundingClientRect();const x=r.left-b.left,y=r.top-b.top,w=r.width,h=r.height;return s==='r'?[x+w,y+h*f]:s==='l'?[x,y+h*f]:s==='t'?[x+w*f,y]:[x+w*f,y+h];};
+function arrow(a,b,c,o={}){const hl=6.2*U,w=1.8*U;const ang=Math.atan2(b[1]-a[1],b[0]-a[0]),cs=Math.cos(ang),s=Math.sin(ang);
+ const e=[b[0]-cs*hl*.7,b[1]-s*hl*.7];const p=document.createElementNS(NS,'path');p.setAttribute('d',`M${a[0]} ${a[1]} L${e[0]} ${e[1]}`);
+ p.setAttribute('stroke',c);p.setAttribute('stroke-width',w);p.setAttribute('fill','none');p.setAttribute('stroke-linecap','round');if(o.dash)p.setAttribute('stroke-dasharray',`${2.6*U} ${2.2*U}`);svg.appendChild(p);
+ const h=document.createElementNS(NS,'path');h.setAttribute('d',`M${b[0]} ${b[1]} L${b[0]-cs*hl-s*hl*.6} ${b[1]-s*hl+cs*hl*.6} L${b[0]-cs*hl+s*hl*.6} ${b[1]-s*hl-cs*hl*.6} Z`);h.setAttribute('fill',c);svg.appendChild(h);}
+function draw(){svg.innerHTML='';const ink=C('--ink'),mint=C('--rg-clean');
+ arrow(pt('c1','r'),pt('c2','l'),ink);arrow(pt('c2','r'),pt('c3','l'),ink);arrow(pt('c3','r'),pt('c4','l'),ink);
+ arrow(pt('c4','b'),pt('c5','t'),ink);arrow(pt('c5','l'),pt('c6','r'),mint);arrow(pt('c6','l'),pt('c7','r'),mint);
+ arrow(pt('c7','l'),pt('c0','r'),mint,{dash:1});arrow(pt('c0','t'),pt('c1','b'),mint,{dash:1});}
+draw();document.fonts.ready.then(draw);
+</script></body></html>

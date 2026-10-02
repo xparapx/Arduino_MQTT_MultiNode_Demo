@@ -1,0 +1,30 @@
+<!doctype html><html lang="ko" data-kind="p" data-w="143" data-h="85"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><style>
+html,body{height:100%} body{word-break:keep-all}
+.fill{display:flex;flex-direction:column;gap:2.4mm}
+.quad{flex:1;min-height:0;display:grid;grid-template-columns:7.5mm 1fr 1fr;grid-template-rows:1fr 1fr auto;gap:2mm}
+.ylab{grid-row:1/3;min-height:0;overflow:hidden;writing-mode:vertical-rl;transform:rotate(180deg);text-align:center;color:var(--dim);font-weight:600}
+.xlab{grid-column:2/4;text-align:center;color:var(--dim);font-weight:600;line-height:1.1}
+.q{display:flex;flex-direction:column;justify-content:center;gap:1.2mm;border-width:.55mm;padding:2mm 2.6mm}
+.q .top{display:flex;align-items:center;gap:2.4mm;font-weight:700}
+.q.clean{background:var(--rg-clean-bg);border-color:var(--rg-clean)} .q.matter{background:var(--rg-matter-bg);border-color:var(--rg-matter)}
+.q.human{background:var(--rg-human-bg);border-color:var(--rg-human)} .q.mixed{background:var(--rg-mixed-bg);border-color:var(--rg-mixed)}
+.q.clean .pc{color:var(--rg-clean)} .q.matter .pc{color:var(--rg-matter)} .q.human .pc{color:var(--rg-human)} .q.mixed .pc{color:var(--rg-mixed)}
+.pc{font-size:var(--fs)}
+.act{display:flex;align-items:center;gap:1.6mm}
+.c-fan{--rc:var(--fan)} .c-pur{--rc:var(--purifier)}
+.chip{background:#fff;border-width:.45mm}
+.kp{flex:none;display:flex;justify-content:space-between;align-items:center;padding:1.5mm 3.4mm;border:none;background:var(--panel2)}
+.kp span{white-space:nowrap}
+</style></head><body><div class="fig">
+<div class="t">원인이 다르면 해법도 다르다</div>
+<div class="fill">
+ <div class="quad">
+  <div class="ylab">VOC · 물질 →</div>
+  <div class="panel q matter" data-fit="m"><div class="top"><span class="chip r-matter">물질</span><span class="pc">15%</span></div><div class="act"><span class="chip c-pur"><span class="dot"></span>공청기</span></div></div>
+  <div class="panel q mixed" data-fit="x"><div class="top"><span class="chip r-mixed">복합</span><span class="pc">9%</span></div><div class="act"><span class="chip c-fan"><span class="dot"></span>환풍기</span>+<span class="chip c-pur"><span class="dot"></span>공청기</span></div></div>
+  <div class="panel q clean" data-fit="c"><div class="top"><span class="chip r-clean">청정</span><span class="pc">62%</span></div><div class="act">유지 (조치 없음)</div></div>
+  <div class="panel q human" data-fit="h"><div class="top"><span class="chip r-human">인체</span><span class="pc">15%</span></div><div class="act"><span class="chip c-fan"><span class="dot"></span>환풍기</span></div></div>
+  <div class="xlab">CO₂ · 사람 →</div>
+ </div>
+ <div class="panel kp" data-fit="kp"><span>플러그 <b>16대</b></span><span><b>1,000/700</b> ppm</span><span>최소 <b>10분</b></span><span>τ <b>42분</b></span></div>
+</div></div></body></html>

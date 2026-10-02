@@ -1,7 +1,15 @@
-# 성과발표회 보고서·포스터 — 인수인계 (2026-10-03)
+# 성과발표회 보고서·포스터 — 인수인계 (2026-10-03, v2 갱신)
 
 2026 융합형 연구과제 성과발표회(고교) 제출용 **학생 버전 결과보고서 + 포스터** 작업의 현재 상태와 이어서 할 일.
 이 저장소는 공개이므로 학생·교사 이름이 들어간 파일(보고서 빌더, hwpx)은 커밋하지 않고 PC 바탕화면 폴더에 둔다.
+
+## 0. v2 (2026-10-03 오후) — 현재 정본은 이것
+1차(아래 1~6절)의 그림을 전부 **HTML 컴포넌트(웹앱 라이트 테마 토큰)** 로 다시 만들고 도메인 검토를 반영한 것이 v2다.
+- 정본 파일: `바탕화면\STEAM클럽 성과발표회 참가\1팀\결과보고서 및 포스터_MintCap_학생버전_v2.hwpx`, 그림 묶음 `…\1팀\차트_v2\`.
+- 작업 폴더: `…\빌드소스_학생버전\v2\` — `design/`(base.css·DESIGN.md), `figs/*.html`, `render.mjs`, `build_charts.py`, `data/export_json.py→data.json`, `build_report_v2.py` + `poster_fill_v2.py`(이름 포함, 비공개), `poster_text.json`, `POSTER_PLAN.md`, `REVIEW.md`(도메인 검토 — 수치 오류·확인 필요 항목 목록).
+- 저장소 사본(이름 없음): `docs/steam_report/v2/` — design, figs, out(PNG 28), render.mjs, build_charts.py, export_json.py, data.json, REVIEW.md.
+- 다시 만들기: `cd v2 && python build_charts.py && node render.mjs` (그림 전부) → `uv run --with pillow python build_report_v2.py` (hwpx).
+- **미완**: ① 한/글에서 열어 조판 확인(포스터 1쪽, 결과 칸 여유 3.7mm가 가장 빡빡) ② REVIEW.md "확인 필요" 7건(비전 보드 종류, 단계적 확장 날짜, 모델 기각 운영 기록, 매일 재시작 시행 여부, 1,000 ppm 기준 조문, 허브 위치) ③ 39%(방학 포함) vs 학기 중 ≈55% 중 헤드라인 선택 ④ 사진 자리 2곳.
 
 ## 1. 산출물과 위치
 
