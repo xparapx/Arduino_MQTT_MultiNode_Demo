@@ -8,6 +8,7 @@ import sqlite3
 import sys
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -62,7 +63,14 @@ def test_live_and_stats(site):
     assert [r["key"] for r in n["radar"]] == webdata.GAUGE_KEYS
     assert all(0 <= r["r"] <= 1 for r in n["radar"])
     assert len({x["color"] for x in live["nodes"]}) == 8            # stable per-node colours
-    st = w.stats()
+    # stats()의 창은 "지금부터 N일". 픽스처는 고정된 과거 구간이라 기본 28일로는 날짜가 지나면
+    # 창 밖으로 밀려 빈 결과가 된다 — 픽스처 끝까지 거슬러 올라가도록 창을 명시한다.
+    con = sqlite3.connect(site["dir"] / "sensor_data.db")
+    hi = datetime.strptime(con.execute("SELECT MAX(ts) FROM readings").fetchone()[0],
+                           "%Y-%m-%d %H:%M:%S")
+    age = (datetime.now(timezone.utc).replace(tzinfo=None) - hi).days
+    days = max(webdata.STATS_DAYS, age + webdata.STATS_DAYS)
+    st = w.stats(days)
     assert set(st["box"]) == set(webdata.GAUGE_KEYS)
     co2 = st["box"]["co2"]
     assert co2["q1"] <= co2["median"] <= co2["q3"]
@@ -87,7 +95,7 @@ def test_live_and_stats(site):
     g = st["dow"]["co2"]                                        # Mon..Sun x 24h median grid
     assert len(g) == 7 and all(len(r) == 24 for r in g)
     assert any(v is not None for r in g for v in r)
-    assert w.stats() is st                                          # memoised on the bucket
+    assert w.stats(days) is st                                      # memoised on the bucket
 
 
 def test_series_records_occupancy(site):
