@@ -1,2 +1,3 @@
-/* 한마당 3종 포스터용 크기 체계(확대 인쇄 전제): 본문 9pt / 제목 14pt 굵게 — 두 단계만, 큰 숫자는 .kpi */
-html[data-kind="m"] { --fs: 9pt; --fs-t: 14pt; --u: 0.86; }
+/* 한마당 3종 포스터용 크기 체계: 카드 안 글자는 표 제목(12pt)을 넘지 않는다 — 본문 9pt / 헤드라인 12pt, 큰 숫자(.kpi)도 12pt */
+html[data-kind="m"] { --fs: 9pt; --fs-t: 12pt; --u: 0.86; }
+html[data-kind="m"] .kpi { font-size: var(--fs-t); }
