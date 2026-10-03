@@ -1,0 +1,31 @@
+<!doctype html><html lang="ko" data-kind="m" data-w="123" data-h="27" data-scale="3.2"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><link rel="stylesheet" href="../design/base_m.css"><style>
+html,body{height:100%} body{word-break:keep-all}
+.c-pm{--rc:var(--pm)} .c-fan{--rc:var(--fan)} .c-pur{--rc:var(--purifier)}
+.fan{color:var(--fan);font-weight:700} .pur{color:var(--purifier);font-weight:700}
+.rg-clean{color:var(--rg-clean);font-weight:700} .rg-human{color:var(--rg-human);font-weight:700} .rg-matter{color:var(--rg-matter);font-weight:700} .rg-mixed{color:var(--rg-mixed);font-weight:700}
+#ov{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+
+.fill{position:relative;display:grid;grid-template-columns:40mm 15mm 28mm 34mm;gap:0 1.3mm;align-items:stretch}
+.box{display:flex;flex-direction:column;justify-content:center;gap:.1mm;line-height:1.28;padding:.9mm 1.72mm}
+.box .h{font-weight:700}
+#hub{border-color:var(--ink);border-width:.35mm} #out{border-color:var(--rg-clean);border-width:.35mm;background:var(--rg-clean-bg)}
+.chips{display:flex;gap:.8mm;margin:.3mm 0}</style></head><body><div class="fig">
+<div class="fill">
+ <div class="panel box" id="nod" data-fit="nod"><div class="h">센서 노드 ×8 <span class="dim" style="font-weight:400">· 5분 평균</span></div><div>UNO R4·SEN55·SCD30</div><div class="chips"><span class="chip c-co2">CO₂</span><span class="chip c-voc">VOC</span><span class="chip c-pm">먼지</span></div><div class="h">비전 노드 ×5 <span class="dim" style="font-weight:400">· FOMO</span></div><div>영상 비전송, 인원 수만</div></div>
+ <div class="panel box soft" id="brk" data-fit="brk" style="text-align:center"><div class="h">MQTT</div><div>TLS</div><div>브로커</div></div>
+ <div class="panel box" id="hub" data-fit="hub"><div class="h">허브 UNO Q</div><div>수집·저장</div><div>품질 검사</div><div>레짐 판정·제어</div><div>대시보드</div></div>
+ <div class="panel box" id="out" data-fit="out"><div class="h">스마트플러그 ×16</div><div><span class="fan">환풍기</span> 8 · <span class="pur">공기청정기</span> 8</div><div>전력 실측·원격 제어</div><div class="h">대시보드</div><div>PC·폰, 조회 전용</div></div>
+ <svg id="ov"></svg>
+</div></div><script>
+const svg=document.getElementById('ov'),NS='http://www.w3.org/2000/svg';
+const U=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--u'))||1;
+const C=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const pt=(id,s,f=.5)=>{const r=document.getElementById(id).getBoundingClientRect(),b=svg.getBoundingClientRect();const x=r.left-b.left,y=r.top-b.top,w=r.width,h=r.height;return s==='r'?[x+w,y+h*f]:s==='l'?[x,y+h*f]:s==='t'?[x+w*f,y]:[x+w*f,y+h];};
+function arrow(a,b,c,o={}){const hl=6.4*U,w=1.9*U;let d,ang;
+ if(o.curve){const mx=(a[0]+b[0])/2;ang=b[0]>a[0]?0:Math.PI;d=`M${a[0]} ${a[1]} C${mx} ${a[1]} ${mx} ${b[1]} ${b[0]-Math.cos(ang)*hl*.7} ${b[1]}`;}
+ else{ang=Math.atan2(b[1]-a[1],b[0]-a[0]);d=`M${a[0]} ${a[1]} L${b[0]-Math.cos(ang)*hl*.7} ${b[1]-Math.sin(ang)*hl*.7}`;}
+ const cs=Math.cos(ang),s=Math.sin(ang);const p=document.createElementNS(NS,'path');p.setAttribute('d',d);p.setAttribute('stroke',c);p.setAttribute('stroke-width',w);p.setAttribute('fill','none');p.setAttribute('stroke-linecap','round');if(o.dash)p.setAttribute('stroke-dasharray',`${2.6*U} ${2.2*U}`);svg.appendChild(p);
+ const h=document.createElementNS(NS,'path');h.setAttribute('d',`M${b[0]} ${b[1]} L${b[0]-cs*hl-s*hl*.6} ${b[1]-s*hl+cs*hl*.6} L${b[0]-cs*hl+s*hl*.6} ${b[1]-s*hl-cs*hl*.6} Z`);h.setAttribute('fill',c);svg.appendChild(h);}
+function draw(){svg.innerHTML='';const ink=C('--ink'),mint=C('--rg-clean');arrow(pt('nod','r'),pt('brk','l'),ink);arrow(pt('brk','r'),pt('hub','l'),ink);arrow(pt('hub','r',.3),pt('out','l',.3),mint);arrow(pt('out','l',.7),pt('hub','r',.7),mint,{dash:1});}
+draw();document.fonts.ready.then(draw);
+</script></body></html>

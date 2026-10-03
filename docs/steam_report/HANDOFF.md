@@ -61,3 +61,8 @@ report2/build_report.py   # hwpx 조립: 섹션0(보고서) + poster_fill.py(섹
 - 학교 유선망에서는 Tailscale이 막혀 보드 접속이 안 될 때가 있다(먼저 `tailscale status`로 자기 노드가 online인지 확인).
 - Edge 헤드리스 캡처는 Git Bash에서 파일이 안 생길 수 있어 node(CDP) 또는 PowerShell `Start-Process`로 실행한다.
 - 한/글 COM의 파일 접근 보안 대화상자는 UIA invoke로 닫히지 않고 실제 마우스 클릭만 통한다.
+
+## 7. 한마당(충남 온누리 AI·SW 학생동아리) 포스터 3종 — v2 (2026-10-03 저녁)
+- 같은 디자인 시스템으로 중앙 포스터의 카드 5종(`m_system, m_dash, m_analysis, m_flow, m_control`), 단계 카드 3종(`m_flow1~3`), 소형 차트 2종(`m_exceed, m_decay` 48×39mm), 화면 2×2(`m_dash_screens`)를 교체. 크기 체계 `data-kind="m"`(`design/base_m.css`: 7.5/9pt, 확대 인쇄 전제, 렌더 4.5배).
+- 빌더: 바탕화면 `빌드소스_학생버전/poster3/build_poster3_v2.py`(양식 `formx/`, 캡처 `shots/`) → `1팀/2. 제출 양식(포스터 3종)_공주고_MintCap_v2.hwpx`. 제목·캡션·Q&A 문체를 개조식으로, "납땜" 표현과 수치(157,744건·15/16대)를 정정.
+- 미확인: 한/글 조판(사용자가 열어 확인). 사진 자리 6곳은 그대로.

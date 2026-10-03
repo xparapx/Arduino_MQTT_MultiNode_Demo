@@ -13,7 +13,7 @@ KR = {f"CLASS_0{i}": f"{i}반" for i in range(1, 9)}
 
 # ---------------------------------------------------------------- 공통 JS
 LIB = r"""
-const PX=96/25.4, root=document.documentElement, P=(root.dataset.kind==='p'), U=P?1.65:1;
+const PX=96/25.4, root=document.documentElement, KIND=root.dataset.kind, P=(KIND==='p'||KIND==='m'), M=(KIND==='m'), U=KIND==='p'?1.65:(KIND==='m'?0.72:1);
 const cs=getComputedStyle(root), C=n=>cs.getPropertyValue(n).trim();
 const K={co2:C('--co2'),co2deep:C('--co2-deep'),ink:C('--ink'),dim:C('--dim'),grid:C('--grid'),row:C('--rowline'),thr:C('--thr'),
  bar:C('--bar'),acc:C('--acc'),green:C('--green'),panel2:C('--panel2'),
@@ -95,16 +95,17 @@ function draw_hourly(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{}
 function draw_exceed(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{},svg);
  const rows=D.table, mean=rows.reduce((a,r)=>a+r.over1000*r.n,0)/rows.reduce((a,r)=>a+r.n,0), ticks=[0,20,40];   // 표본수 가중 = 8개 교실 합산 초과율 (39.0%)
  const lbl='전체(8개 교실 합산) '+Math.round(mean)+'%';
- let kw=0; if(P){ kw=tw('08–16시')+FS*1.2; }
+ let kw=0; if(P&&!M){ kw=tw('08–16시')+FS*1.2; }
  const f=frame(0,0,W-kw,H,{yLabels:ticks.map(String),yTitle:1,xLabels:1,right:P?FS*0.4:tw(lbl,600)+FS*0.8});
  const sx=lin(-0.5,rows.length-0.5,f.x0,f.x1), sy=lin(0,53,f.y1,f.y0), bw=(f.x1-f.x0)/rows.length*0.6;
  yAxis(g,f,sy,ticks,{title:P?'1,000 ppm 초과 비율 (%)':'1,000 ppm 초과 비율 (%)'}); xAxis(g,f,sx,rows.map((r,i)=>i),{fmt:i=>D.kr[rows[i].room]});
- bars(g,f,sx,sy,rows.map((r,i)=>({x:i,v:r.over1000,label:Math.round(r.over1000)})),{bw});
+ bars(g,f,sx,sy,rows.map((r,i)=>({x:i,v:r.over1000,label:M?null:Math.round(r.over1000)})),{bw});
  const ym=sy(mean); E('line',{x1:f.x0,x2:f.x1+FS*0.5,y1:ym,y2:ym,stroke:K.ink,'stroke-width':LW*0.6,'stroke-dasharray':DASH},g);
- if(P){ const kx=f.x1+kw-FS*0.2, ky=f.y0-FS*0.2;
+ if(P&&!M){ const kx=f.x1+kw-FS*0.2, ky=f.y0-FS*0.2;
   T(g,kx,ky,'8개 교실',{a:'end',c:K.dim,b:'hanging'}); T(g,kx,ky+FS*1.25,'합산',{a:'end',c:K.dim,b:'hanging'});
   const t=T(g,kx,ky+FS*2.7,Math.round(mean)+'%',{a:'end',b:'hanging',w:700}); t.setAttribute('style','font-size:calc(var(--fs-t)*1.5);letter-spacing:-0.02em');
   T(g,kx,ky+FS*5.4,'주중',{a:'end',c:K.dim,b:'hanging'}); T(g,kx,ky+FS*6.65,'08–16시',{a:'end',c:K.dim,b:'hanging'}); }
+ else if(M) T(g,f.x0+FS*0.3,ym-FS*0.5,'합산 '+Math.round(mean)+'%',{w:700,halo:1});
  else T(g,f.x1+FS*0.7,ym,lbl,{b:'middle',w:600});
 }
 /* ---------------- 4. 재실–CO₂ ---------------- */
@@ -191,10 +192,10 @@ function decayCase(g,x,y,W,H){ const c=D.dc, ymax=Math.ceil(Math.max(...c.series
  // (data.json의 fit 표본은 결측 샘플(14:45) 때문에 시간축이 5분 어긋나 있어 쓰지 않음)
  const tEnd=tm(c.fit[c.fit.length-1][0]), fit=[]; for(let t=0;t<=tEnd-st;t+=1) fit.push([sx(st+t),sy((c.co2_0-c.baseline)*Math.exp(-t/c.tau)+c.baseline)]);
  E('path',{d:path(fit),fill:'none',stroke:K.ink,'stroke-width':LW*0.8,'stroke-dasharray':DASH,'stroke-linejoin':'round'},g);
- const lx=P?sx(st+13):sx(st+40), ly=P?sy(ymax*0.30):sy(ymax*0.63);   // 보고서: 곡선 오른쪽 위 / 포스터: 곡선 아래(우상단은 KPI)
+ const lx=M?sx(st+40):(P?sx(st+13):sx(st+40)), ly=M?sy(ymax*0.72):(P?sy(ymax*0.30):sy(ymax*0.63));   // 보고서: 곡선 오른쪽 위 / 포스터: 곡선 아래(우상단은 KPI)
  T(g,lx,ly,'지수 감쇠 적합',{c:K.ink,w:700,halo:1}); T(g,lx,ly+FS*1.2,'τ = '+Math.round(c.tau)+'분',{c:K.ink,w:700,halo:1});
  T(g,ser[0][0]-FS*0.3,ser[0][1]+FS*1.9,P?'측정값':'CO₂ 측정값',{c:K.co2deep,w:600,halo:1});
- const n=c.series.length; if(c.series[n-1][1]>c.series[n-3][1]+100) T(g,ser[n-2][0]-FS*0.3,ser[n-1][1]+FS*0.35,'다시 재실 →',{a:'end',c:K.dim,halo:1});
+ const n=c.series.length; if(!M&&c.series[n-1][1]>c.series[n-3][1]+100) T(g,ser[n-2][0]-FS*0.3,ser[n-1][1]+FS*0.35,'다시 재실 →',{a:'end',c:K.dim,halo:1});
  return f;
 }
 function decayRooms(g,x,y,W,H){ const b=D.by_room, rooms=Object.keys(b), ticks=[0,20,40,60,80];
@@ -207,7 +208,8 @@ function decayRooms(g,x,y,W,H){ const b=D.by_room, rooms=Object.keys(b), ticks=[
  T(g,f.x0+FS*0.2,ym-FS*0.35,'전체 중앙값 '+Math.round(D.tau_med)+'분',{c:K.green,w:700,halo:1});
 }
 function draw_decay(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{},svg);
- if(P){ const f=decayCase(g,0,0,W,H);
+ if(M){ decayCase(g,0,0,W,H); }
+ else if(P){ const f=decayCase(g,0,0,W,H);
   const kx=f.x1-FS*0.2, ky=f.y0+FS*0.3; const t=T(g,kx,ky,Math.round(D.tau_med)+'분',{a:'end',b:'hanging',w:700,c:K.green}); t.setAttribute('style','font-size:calc(var(--fs-t)*1.5);letter-spacing:-0.02em');
   T(g,kx,ky+FS*2.6,'τ 중앙값 · 520건',{a:'end',b:'hanging',c:K.dim}); }
  else { const lw=W*0.55; decayCase(g,0,0,lw,H); decayRooms(g,lw+FS*1.0,0,W-lw-FS*1.0,H); }
@@ -231,6 +233,7 @@ CHARTS = {
   "exceed": dict(
     r=(159, 56, "교실별 CO₂ 기준(1,000 ppm) 초과율", "주중 08–16시 · 73일(방학 포함)"),
     p=(143, 85, "교실별 CO₂ 기준 초과율", None),
+    m=(48, 39, "교실별 CO₂ 기준 초과율", None),
     data={"table": S["table"], "kr": KR}, fn="draw_exceed"),
   "occ": dict(
     r=(159, 70, "재실 인원과 CO₂의 관계", "Spearman ρ 0.31–0.58, 4개 교실 · 탐지 인원 기준"),
@@ -243,13 +246,14 @@ CHARTS = {
   "decay": dict(
     r=(159, 66, "환기 이후 CO₂의 지수적 감쇠 특성", "4반 · 9월 14일 사례, 전체 감쇠 사건 520건"),
     p=(143, 85, "환기 이후 CO₂의 지수적 감쇠 특성", None, 6),
+    m=(48, 39, "환기 이후 CO₂ 감쇠", "4반 9/14"),
     data={"dc": DATA["decay_case"], "by_room": DATA["decay_rooms"]["by_room"], "tau_med": DATA["decay_rooms"]["tau_med"], "kr": KR}, fn="draw_decay"),
 }
 
 TEMPLATE = """<!doctype html>
 <html lang="ko" data-kind="{kind}" data-w="{w}" data-h="{h}">
 <head><meta charset="utf-8"><title>{name}</title>
-<link rel="stylesheet" href="../design/base.css">
+<link rel="stylesheet" href="../design/base.css">{mcss}
 <style>html,body{{height:100%}} .fill svg{{width:100%;height:100%}}</style>
 </head>
 <body><div class="fig">
@@ -265,11 +269,12 @@ run({fn});
 def build():
     made = []
     for cid, c in CHARTS.items():
-        for kind in ("r", "p"):
+        for kind in ("r", "p", "m"):
+            if kind not in c: continue
             w, h, title, sub = c[kind][:4]; idx = c[kind][4] if len(c[kind]) > 4 else None
             if idx: title = f'<span class="idx">{idx}</span>' + title
             name = f"{kind}_{cid}"
-            html = TEMPLATE.format(kind=kind, w=w, h=h, name=name, title=title,
+            html = TEMPLATE.format(kind=kind, w=w, h=h, name=name, title=title, mcss='<link rel="stylesheet" href="../design/base_m.css">' if kind == "m" else "",
                                    sub=f' <span class="sub">({sub})</span>' if sub else "",
                                    data=json.dumps(c["data"], ensure_ascii=False, separators=(",", ":")), lib=LIB, fn=c["fn"])
             p = os.path.join(FIGS, name + ".html")

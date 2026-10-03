@@ -1,0 +1,36 @@
+<!doctype html><html lang="ko" data-kind="m" data-w="174" data-h="22" data-scale="3.2"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><link rel="stylesheet" href="../design/base_m.css"><style>
+html,body{height:100%} body{word-break:keep-all}
+.c-pm{--rc:var(--pm)} .c-fan{--rc:var(--fan)} .c-pur{--rc:var(--purifier)}
+.fan{color:var(--fan);font-weight:700} .pur{color:var(--purifier);font-weight:700}
+.rg-clean{color:var(--rg-clean);font-weight:700} .rg-human{color:var(--rg-human);font-weight:700} .rg-matter{color:var(--rg-matter);font-weight:700} .rg-mixed{color:var(--rg-mixed);font-weight:700}
+#ov{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+
+.fill{position:relative;display:grid;grid-template-columns:33mm 58mm 34mm 36.9mm;gap:0 3mm;align-items:stretch}
+.s{display:flex;flex-direction:column;justify-content:center;gap:.15mm;line-height:1.28;padding:.9mm 1.72mm}
+.s .h{font-weight:700}
+#s3{border-color:var(--rg-clean);border-width:.35mm;background:var(--rg-clean-bg)}
+.gs{display:flex;flex-direction:column;justify-content:center;gap:1mm}
+.g{border-color:var(--red);border-width:.3mm;padding:.5mm 1.4mm;display:flex;gap:1mm;align-items:center;line-height:1.25}
+.g .sh{flex:none;width:3mm;height:3.5mm} .g b{color:var(--red)}</style></head><body><div class="fig">
+<div class="fill">
+ <div class="panel s" id="s1" data-fit="s1"><div class="h">측정 → 수집</div><div>5분 평균, MQTT</div><div>허브 SQLite 저장</div></div>
+ <div class="panel s" id="s2" data-fit="s2"><div class="h">품질 검사 → 레짐 → 규칙 → 목표 상태</div><div>유효율 <b>95% 이상</b>만 판정 · GMM 레짐</div><div>환풍기 ON <b>1,000</b> · OFF <b>700</b> ppm</div><div>공기청정기 VOC <b>200/120</b> · 최소 10분</div></div>
+ <div class="panel s" id="s3" data-fit="s3"><div class="h">실물 비교 → 스위치</div><div>실제 상태와 비교</div><div><b>다를 때만</b> 명령</div></div>
+ <div class="gs" data-fit="gs">
+  <div class="panel g"><svg class="sh" viewBox="0 0 20 24"><path d="M10 1 L19 4.5 V11 C19 17 14.5 21.5 10 23 C5.5 21.5 1 17 1 11 V4.5 Z" fill="#fbe9ec" stroke="#d9534f" stroke-width="2" stroke-linejoin="round"/><path d="M6 12 L9 15 L14 8" fill="none" stroke="#d9534f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>검사 미통과 → 판정 생략</b><br>이전 상태 유지</div></div>
+  <div class="panel g"><svg class="sh" viewBox="0 0 20 24"><path d="M10 1 L19 4.5 V11 C19 17 14.5 21.5 10 23 C5.5 21.5 1 17 1 11 V4.5 Z" fill="#fbe9ec" stroke="#d9534f" stroke-width="2" stroke-linejoin="round"/><path d="M10 6 V18" fill="none" stroke="#d9534f" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="3 2.4"/></svg><div><b>판정·집행 모듈 분리</b></div></div>
+ </div>
+ <svg id="ov"></svg>
+</div></div><script>
+const svg=document.getElementById('ov'),NS='http://www.w3.org/2000/svg';
+const U=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--u'))||1;
+const C=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const pt=(id,s,f=.5)=>{const r=document.getElementById(id).getBoundingClientRect(),b=svg.getBoundingClientRect();const x=r.left-b.left,y=r.top-b.top,w=r.width,h=r.height;return s==='r'?[x+w,y+h*f]:s==='l'?[x,y+h*f]:s==='t'?[x+w*f,y]:[x+w*f,y+h];};
+function arrow(a,b,c,o={}){const hl=6.4*U,w=1.9*U;let d,ang;
+ if(o.curve){const mx=(a[0]+b[0])/2;ang=b[0]>a[0]?0:Math.PI;d=`M${a[0]} ${a[1]} C${mx} ${a[1]} ${mx} ${b[1]} ${b[0]-Math.cos(ang)*hl*.7} ${b[1]}`;}
+ else{ang=Math.atan2(b[1]-a[1],b[0]-a[0]);d=`M${a[0]} ${a[1]} L${b[0]-Math.cos(ang)*hl*.7} ${b[1]-Math.sin(ang)*hl*.7}`;}
+ const cs=Math.cos(ang),s=Math.sin(ang);const p=document.createElementNS(NS,'path');p.setAttribute('d',d);p.setAttribute('stroke',c);p.setAttribute('stroke-width',w);p.setAttribute('fill','none');p.setAttribute('stroke-linecap','round');if(o.dash)p.setAttribute('stroke-dasharray',`${2.6*U} ${2.2*U}`);svg.appendChild(p);
+ const h=document.createElementNS(NS,'path');h.setAttribute('d',`M${b[0]} ${b[1]} L${b[0]-cs*hl-s*hl*.6} ${b[1]-s*hl+cs*hl*.6} L${b[0]-cs*hl+s*hl*.6} ${b[1]-s*hl-cs*hl*.6} Z`);h.setAttribute('fill',c);svg.appendChild(h);}
+function draw(){svg.innerHTML='';const ink=C('--ink'),mint=C('--rg-clean');arrow(pt('s1','r'),pt('s2','l'),ink);arrow(pt('s2','r'),pt('s3','l'),mint);}
+draw();document.fonts.ready.then(draw);
+</script></body></html>

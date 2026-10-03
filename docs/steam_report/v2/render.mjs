@@ -37,7 +37,7 @@ for (const file of files) {
   const html = readFileSync(file, "utf-8");
   const attr = (k, d) => { const m = html.match(new RegExp(`<html[^>]*\\sdata-${k}="([^"]+)"`)); return m ? m[1] : d; };
   const kind = attr("kind", "r"), wmm = +attr("w", 159), hmm = +attr("h", 60);
-  const scale = +attr("scale", kind === "r" ? 3.2 : 2.4);            // r: ~307 dpi, p: ~230 dpi
+  const scale = +attr("scale", kind === "r" ? 3.2 : kind === "m" ? 4.5 : 2.4);   // r ~307 dpi, p ~230 dpi, m(한마당, 확대 인쇄) ~430 dpi
   const W = Math.round(wmm * PX), H = Math.round(hmm * PX);
   await send("Emulation.setDeviceMetricsOverride", { width: W, height: H, deviceScaleFactor: scale, mobile: false });
   await send("Page.navigate", { url: pathToFileURL(file).href });

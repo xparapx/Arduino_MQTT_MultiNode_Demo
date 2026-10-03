@@ -1,0 +1,30 @@
+<!doctype html><html lang="ko" data-kind="m" data-w="123" data-h="27" data-scale="3.2"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><link rel="stylesheet" href="../design/base_m.css"><style>
+html,body{height:100%} body{word-break:keep-all}
+.c-pm{--rc:var(--pm)} .c-fan{--rc:var(--fan)} .c-pur{--rc:var(--purifier)}
+.fan{color:var(--fan);font-weight:700} .pur{color:var(--purifier);font-weight:700}
+.rg-clean{color:var(--rg-clean);font-weight:700} .rg-human{color:var(--rg-human);font-weight:700} .rg-matter{color:var(--rg-matter);font-weight:700} .rg-mixed{color:var(--rg-mixed);font-weight:700}
+#ov{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+
+.fill{display:grid;grid-template-columns:66mm 1fr;gap:2mm}
+.q{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.2mm}
+.c{display:flex;align-items:center;gap:1.2mm;padding:.6mm 1.5mm;border-width:.3mm;min-height:0}
+.c.clean{background:var(--rg-clean-bg);border-color:var(--rg-clean)} .c.human{background:var(--rg-human-bg);border-color:var(--rg-human)}
+.c.matter{background:var(--rg-matter-bg);border-color:var(--rg-matter)} .c.mixed{background:var(--rg-mixed-bg);border-color:var(--rg-mixed)}
+.c .chip{background:#fff;line-height:1.15}
+.kp{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.2mm}
+.t2{display:flex;flex-direction:column;justify-content:center;padding:.6mm 1.5mm;border:none;background:var(--panel2);line-height:1.2;min-height:0}
+.t2 .n{font-size:var(--fs-t);font-weight:700} .t2 .l{color:var(--dim)}</style></head><body><div class="fig">
+<div class="fill">
+ <div class="q">
+  <div class="panel c clean" data-fit="c1"><span class="chip r-clean">청정</span>→ 유지</div>
+  <div class="panel c human" data-fit="c2"><span class="chip r-human">인체</span>→ <span class="fan">환풍기</span></div>
+  <div class="panel c matter" data-fit="c3"><span class="chip r-matter">물질</span>→ <span class="pur">공기청정기</span></div>
+  <div class="panel c mixed" data-fit="c4"><span class="chip r-mixed">복합</span>→ <span class="fan">환풍기</span>+<span class="pur">공기청정기</span></div>
+ </div>
+ <div class="kp">
+  <div class="panel t2" data-fit="k1"><div class="n">플러그 16대</div><div class="l">15대 실가동 확인</div></div>
+  <div class="panel t2" data-fit="k2"><div class="n">1,000 · 700</div><div class="l">ppm ON · OFF</div></div>
+  <div class="panel t2" data-fit="k3"><div class="n">최소 10분</div><div class="l">가동 유지</div></div>
+  <div class="panel t2" data-fit="k4"><div class="n">τ 42분</div><div class="l">회복 중앙값</div></div>
+ </div>
+</div></div></body></html>

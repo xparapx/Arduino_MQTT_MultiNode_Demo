@@ -1,0 +1,30 @@
+<!doctype html><html lang="ko" data-kind="m" data-w="123" data-h="27" data-scale="3.2"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><link rel="stylesheet" href="../design/base_m.css"><style>
+html,body{height:100%} body{word-break:keep-all}
+.c-pm{--rc:var(--pm)} .c-fan{--rc:var(--fan)} .c-pur{--rc:var(--purifier)}
+.fan{color:var(--fan);font-weight:700} .pur{color:var(--purifier);font-weight:700}
+.rg-clean{color:var(--rg-clean);font-weight:700} .rg-human{color:var(--rg-human);font-weight:700} .rg-matter{color:var(--rg-matter);font-weight:700} .rg-mixed{color:var(--rg-mixed);font-weight:700}
+#ov{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+
+.fill{position:relative;display:grid;grid-template-columns:38.5mm 38.5mm 38.5mm;justify-content:space-between}
+.s{display:flex;flex-direction:column;justify-content:center;gap:.1mm;line-height:1.28;padding:.9mm 1.72mm}
+.s .h{font-weight:700}
+#s3{border-color:var(--rg-clean);border-width:.35mm;background:var(--rg-clean-bg)}
+.chips{display:flex;gap:.8mm;margin:.25mm 0;align-items:center}</style></head><body><div class="fig">
+<div class="fill">
+ <div class="panel s" id="s1" data-fit="s1"><div class="h">패턴 분석</div><div>73일 · <b>157,744</b>건</div><div>주중 8–16시 <b>39%</b> 초과</div><div>(방학 포함)</div><div>두 봉우리 · 주중에만</div></div>
+ <div class="panel s" id="s2" data-fit="s2"><div class="h">레짐 모델링</div><div>CO₂–VOC 평면, 4개 레짐</div><div class="chips"><span class="chip r-clean">청정 62</span><span class="chip r-human">인체 15</span></div><div class="chips"><span class="chip r-matter">물질 15</span><span class="chip r-mixed">복합 9</span><span class="dim">%</span></div><div>탐지 1명당 <b>+194</b> ppm</div></div>
+ <div class="panel s" id="s3" data-fit="s3"><div class="h">인사이트</div><div><span class="rg-human">인체</span> → <span class="fan">환풍기</span></div><div><span class="rg-matter">물질</span> → <span class="pur">공기청정기</span></div><div><span class="rg-mixed">복합</span> → 둘 다</div><div>환기 회복 τ <b>42분</b></div></div>
+ <svg id="ov"></svg>
+</div></div><script>
+const svg=document.getElementById('ov'),NS='http://www.w3.org/2000/svg';
+const U=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--u'))||1;
+const C=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const pt=(id,s,f=.5)=>{const r=document.getElementById(id).getBoundingClientRect(),b=svg.getBoundingClientRect();const x=r.left-b.left,y=r.top-b.top,w=r.width,h=r.height;return s==='r'?[x+w,y+h*f]:s==='l'?[x,y+h*f]:s==='t'?[x+w*f,y]:[x+w*f,y+h];};
+function arrow(a,b,c,o={}){const hl=6.4*U,w=1.9*U;let d,ang;
+ if(o.curve){const mx=(a[0]+b[0])/2;ang=b[0]>a[0]?0:Math.PI;d=`M${a[0]} ${a[1]} C${mx} ${a[1]} ${mx} ${b[1]} ${b[0]-Math.cos(ang)*hl*.7} ${b[1]}`;}
+ else{ang=Math.atan2(b[1]-a[1],b[0]-a[0]);d=`M${a[0]} ${a[1]} L${b[0]-Math.cos(ang)*hl*.7} ${b[1]-Math.sin(ang)*hl*.7}`;}
+ const cs=Math.cos(ang),s=Math.sin(ang);const p=document.createElementNS(NS,'path');p.setAttribute('d',d);p.setAttribute('stroke',c);p.setAttribute('stroke-width',w);p.setAttribute('fill','none');p.setAttribute('stroke-linecap','round');if(o.dash)p.setAttribute('stroke-dasharray',`${2.6*U} ${2.2*U}`);svg.appendChild(p);
+ const h=document.createElementNS(NS,'path');h.setAttribute('d',`M${b[0]} ${b[1]} L${b[0]-cs*hl-s*hl*.6} ${b[1]-s*hl+cs*hl*.6} L${b[0]-cs*hl+s*hl*.6} ${b[1]-s*hl-cs*hl*.6} Z`);h.setAttribute('fill',c);svg.appendChild(h);}
+function draw(){svg.innerHTML='';const ink=C('--ink'),mint=C('--rg-clean');arrow(pt('s1','r'),pt('s2','l'),ink);arrow(pt('s2','r'),pt('s3','l'),ink);}
+draw();document.fonts.ready.then(draw);
+</script></body></html>

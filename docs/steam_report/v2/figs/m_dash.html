@@ -1,0 +1,17 @@
+<!doctype html><html lang="ko" data-kind="m" data-w="123" data-h="27" data-scale="3.2"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><link rel="stylesheet" href="../design/base_m.css"><style>
+html,body{height:100%} body{word-break:keep-all}
+.c-pm{--rc:var(--pm)} .c-fan{--rc:var(--fan)} .c-pur{--rc:var(--purifier)}
+.fan{color:var(--fan);font-weight:700} .pur{color:var(--purifier);font-weight:700}
+.rg-clean{color:var(--rg-clean);font-weight:700} .rg-human{color:var(--rg-human);font-weight:700} .rg-matter{color:var(--rg-matter);font-weight:700} .rg-mixed{color:var(--rg-mixed);font-weight:700}
+#ov{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+
+.fill{display:grid;grid-template-columns:repeat(5,1fr);gap:1.4mm}
+.k{display:flex;flex-direction:column;justify-content:center;gap:.4mm;line-height:1.25;padding:1mm 1.5mm}
+.k .h{font-weight:700} .k .d{color:var(--dim)}</style></head><body><div class="fig">
+<div class="fill">
+ <div class="panel k" data-fit="k1"><div class="h">데이터 상태 상시 표시</div><div class="d">수집·노드·분석 상태</div></div>
+ <div class="panel k" data-fit="k2"><div class="h">메뉴 = 질문 순서</div><div class="d">지금→변화→원인<br>→조치→비용</div></div>
+ <div class="panel k" data-fit="k3"><div class="h">중요도순 배치</div><div class="d">상태 → 판정<br>→ 경보</div></div>
+ <div class="panel k" data-fit="k4"><div class="h">판정과 실물 나란히</div><div class="d">다를 때만<br><span style="color:var(--red);font-weight:700">빨강</span> 표시</div></div>
+ <div class="panel k" data-fit="k5"><div class="h">색·움직임은 정보만</div><div class="d">레짐 4색 고정<br>가동 = 회전</div></div>
+</div></div></body></html>
