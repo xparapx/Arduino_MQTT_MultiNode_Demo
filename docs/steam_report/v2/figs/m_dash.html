@@ -1,17 +1,31 @@
 <!doctype html><html lang="ko" data-kind="m" data-w="123" data-h="27" data-scale="3.2"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><link rel="stylesheet" href="../design/base_m.css"><style>
 html,body{height:100%} body{word-break:keep-all}
-.c-pm{--rc:var(--pm)} .c-fan{--rc:var(--fan)} .c-pur{--rc:var(--purifier)}
+.fig{padding:0;gap:0}
+/* 색 블록 문법: 틴트 배경 + 왼쪽 색 띠, 테두리 없음 */
+.b{border-radius:1.8mm;padding:1mm 1.6mm;display:flex;flex-direction:column;justify-content:center;gap:.3mm;line-height:1.25;min-height:0;min-width:0;border-left:1.3mm solid var(--bc,transparent)}
+.b .h{font-size:var(--fs-t);font-weight:700;line-height:1.12;display:flex;align-items:center;gap:1.1mm;letter-spacing:-.01em}
+.ic{width:6.7mm;height:6.7mm;flex:none;color:var(--bc,var(--ink))}
+.t-co2{background:var(--co2-tint);--bc:var(--co2)} .t-voc{background:var(--voc-tint);--bc:var(--voc)}
+.t-clean{background:var(--rg-clean-bg);--bc:var(--rg-clean)} .t-human{background:var(--rg-human-bg);--bc:var(--rg-human)}
+.t-matter{background:var(--rg-matter-bg);--bc:var(--rg-matter)} .t-mixed{background:var(--rg-mixed-bg);--bc:var(--rg-mixed)}
+.t-gray{background:var(--panel2);--bc:var(--gray)} .t-blue{background:color-mix(in srgb,var(--blue) 16%,#fff);--bc:var(--blue)}
+.t-acc{background:color-mix(in srgb,var(--acc) 18%,#fff);--bc:var(--acc)}
 .fan{color:var(--fan);font-weight:700} .pur{color:var(--purifier);font-weight:700}
-.rg-clean{color:var(--rg-clean);font-weight:700} .rg-human{color:var(--rg-human);font-weight:700} .rg-matter{color:var(--rg-matter);font-weight:700} .rg-mixed{color:var(--rg-mixed);font-weight:700}
-#ov{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.rg-clean{color:var(--rg-clean)} .rg-human{color:var(--rg-human)} .rg-matter{color:var(--rg-matter)} .rg-mixed{color:var(--rg-mixed)}
+.lab{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.15;color:var(--dim);gap:.2mm;min-width:0}
+.lab .ar{width:0;height:0;border-left:2.6mm solid var(--gray);border-top:1.9mm solid transparent;border-bottom:1.9mm solid transparent;margin:.4mm 0}
+.lab .ad{width:0;height:0;border-top:2.6mm solid var(--gray);border-left:1.9mm solid transparent;border-right:1.9mm solid transparent;margin:.4mm 0}
+.kpi{font-size:calc(var(--fs-t)*1.5);letter-spacing:-.03em}
 
-.fill{display:grid;grid-template-columns:repeat(5,1fr);gap:1.4mm}
-.k{display:flex;flex-direction:column;justify-content:center;gap:.4mm;line-height:1.25;padding:1mm 1.5mm}
-.k .h{font-weight:700} .k .d{color:var(--dim)}</style></head><body><div class="fig">
+.fill{display:grid;grid-template-columns:repeat(5,1fr);gap:1.1mm;height:100%}
+.b{padding:.9mm 1.4mm;gap:.4mm;justify-content:space-between}
+.no{display:inline-flex;align-items:center;justify-content:center;width:7mm;height:7mm;border-radius:50%;background:var(--blue);color:#fff;font-weight:700;font-size:var(--fs-t);line-height:1;flex:none}
+.b .h{line-height:1.1;display:block}
+.b .d{color:var(--ink)}</style></head><body><div class="fig">
 <div class="fill">
- <div class="panel k" data-fit="k1"><div class="h">데이터 상태 상시 표시</div><div class="d">수집·노드·분석 상태</div></div>
- <div class="panel k" data-fit="k2"><div class="h">메뉴 = 질문 순서</div><div class="d">지금→변화→원인<br>→조치→비용</div></div>
- <div class="panel k" data-fit="k3"><div class="h">중요도순 배치</div><div class="d">상태 → 판정<br>→ 경보</div></div>
- <div class="panel k" data-fit="k4"><div class="h">판정과 실물 나란히</div><div class="d">다를 때만<br><span style="color:var(--red);font-weight:700">빨강</span> 표시</div></div>
- <div class="panel k" data-fit="k5"><div class="h">색·움직임은 정보만</div><div class="d">레짐 4색 고정<br>가동 = 회전</div></div>
+ <div class="b t-blue" data-fit="k1"><span class="no">1</span><div class="h">상태<br>상시 표시</div><div class="d">수집·노드·분석</div></div>
+ <div class="b t-blue" data-fit="k2"><span class="no">2</span><div class="h">메뉴 =<br>질문 순서</div><div class="d">지금→…→비용</div></div>
+ <div class="b t-blue" data-fit="k3"><span class="no">3</span><div class="h">중요도순<br>배치</div><div class="d">상태·판정·경보</div></div>
+ <div class="b t-blue" data-fit="k4"><span class="no">4</span><div class="h">판정·실물<br>나란히</div><div class="d">다를 때만 <span style="color:var(--red);font-weight:700">빨강</span></div></div>
+ <div class="b t-blue" data-fit="k5"><span class="no">5</span><div class="h">색·움직임<br>= 정보</div><div class="d">레짐 4색 고정</div></div>
 </div></div></body></html>

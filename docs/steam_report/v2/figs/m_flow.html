@@ -1,36 +1,37 @@
 <!doctype html><html lang="ko" data-kind="m" data-w="174" data-h="22" data-scale="3.2"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><link rel="stylesheet" href="../design/base_m.css"><style>
 html,body{height:100%} body{word-break:keep-all}
-.c-pm{--rc:var(--pm)} .c-fan{--rc:var(--fan)} .c-pur{--rc:var(--purifier)}
+.fig{padding:0;gap:0}
+/* 색 블록 문법: 틴트 배경 + 왼쪽 색 띠, 테두리 없음 */
+.b{border-radius:1.8mm;padding:1mm 1.6mm;display:flex;flex-direction:column;justify-content:center;gap:.3mm;line-height:1.25;min-height:0;min-width:0;border-left:1.3mm solid var(--bc,transparent)}
+.b .h{font-size:var(--fs-t);font-weight:700;line-height:1.12;display:flex;align-items:center;gap:1.1mm;letter-spacing:-.01em}
+.ic{width:6.7mm;height:6.7mm;flex:none;color:var(--bc,var(--ink))}
+.t-co2{background:var(--co2-tint);--bc:var(--co2)} .t-voc{background:var(--voc-tint);--bc:var(--voc)}
+.t-clean{background:var(--rg-clean-bg);--bc:var(--rg-clean)} .t-human{background:var(--rg-human-bg);--bc:var(--rg-human)}
+.t-matter{background:var(--rg-matter-bg);--bc:var(--rg-matter)} .t-mixed{background:var(--rg-mixed-bg);--bc:var(--rg-mixed)}
+.t-gray{background:var(--panel2);--bc:var(--gray)} .t-blue{background:color-mix(in srgb,var(--blue) 16%,#fff);--bc:var(--blue)}
+.t-acc{background:color-mix(in srgb,var(--acc) 18%,#fff);--bc:var(--acc)}
 .fan{color:var(--fan);font-weight:700} .pur{color:var(--purifier);font-weight:700}
-.rg-clean{color:var(--rg-clean);font-weight:700} .rg-human{color:var(--rg-human);font-weight:700} .rg-matter{color:var(--rg-matter);font-weight:700} .rg-mixed{color:var(--rg-mixed);font-weight:700}
-#ov{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.rg-clean{color:var(--rg-clean)} .rg-human{color:var(--rg-human)} .rg-matter{color:var(--rg-matter)} .rg-mixed{color:var(--rg-mixed)}
+.lab{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.15;color:var(--dim);gap:.2mm;min-width:0}
+.lab .ar{width:0;height:0;border-left:2.6mm solid var(--gray);border-top:1.9mm solid transparent;border-bottom:1.9mm solid transparent;margin:.4mm 0}
+.lab .ad{width:0;height:0;border-top:2.6mm solid var(--gray);border-left:1.9mm solid transparent;border-right:1.9mm solid transparent;margin:.4mm 0}
+.kpi{font-size:calc(var(--fs-t)*1.5);letter-spacing:-.03em}
 
-.fill{position:relative;display:grid;grid-template-columns:33mm 58mm 34mm 36.9mm;gap:0 3mm;align-items:stretch}
-.s{display:flex;flex-direction:column;justify-content:center;gap:.15mm;line-height:1.28;padding:.9mm 1.72mm}
-.s .h{font-weight:700}
-#s3{border-color:var(--rg-clean);border-width:.35mm;background:var(--rg-clean-bg)}
-.gs{display:flex;flex-direction:column;justify-content:center;gap:1mm}
-.g{border-color:var(--red);border-width:.3mm;padding:.5mm 1.4mm;display:flex;gap:1mm;align-items:center;line-height:1.25}
-.g .sh{flex:none;width:3mm;height:3.5mm} .g b{color:var(--red)}</style></head><body><div class="fig">
+.fill{display:flex;flex-direction:column;gap:1.2mm;height:100%}
+.pills{display:flex;align-items:stretch;gap:0;flex:none}
+.p{flex-direction:row;border-radius:5mm;padding:1.2mm 2.4mm;display:flex;align-items:center;gap:1.1mm;font-size:var(--fs-t);font-weight:700;line-height:1.1;letter-spacing:-.01em;white-space:nowrap;border-left:none}
+.p .ic{width:6mm;height:6mm}
+.pa{flex:1;display:flex;align-items:center;justify-content:center;min-width:3.6mm}
+.gl{display:flex;flex-direction:column;gap:.5mm;justify-content:center;flex:1;min-height:0;line-height:1.25}
+.gl div{display:flex;align-items:center;gap:1.2mm} .gl .ic{width:4.6mm;height:4.6mm;color:var(--red)} .gl b{color:var(--red)}</style></head><body><div class="fig">
 <div class="fill">
- <div class="panel s" id="s1" data-fit="s1"><div class="h">측정 → 수집</div><div>5분 평균, MQTT</div><div>허브 SQLite 저장</div></div>
- <div class="panel s" id="s2" data-fit="s2"><div class="h">품질 검사 → 레짐 → 규칙 → 목표 상태</div><div>유효율 <b>95% 이상</b>만 판정 · GMM 레짐</div><div>환풍기 ON <b>1,000</b> · OFF <b>700</b> ppm</div><div>공기청정기 VOC <b>200/120</b> · 최소 10분</div></div>
- <div class="panel s" id="s3" data-fit="s3"><div class="h">실물 비교 → 스위치</div><div>실제 상태와 비교</div><div><b>다를 때만</b> 명령</div></div>
- <div class="gs" data-fit="gs">
-  <div class="panel g"><svg class="sh" viewBox="0 0 20 24"><path d="M10 1 L19 4.5 V11 C19 17 14.5 21.5 10 23 C5.5 21.5 1 17 1 11 V4.5 Z" fill="#fbe9ec" stroke="#d9534f" stroke-width="2" stroke-linejoin="round"/><path d="M6 12 L9 15 L14 8" fill="none" stroke="#d9534f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>검사 미통과 → 판정 생략</b><br>이전 상태 유지</div></div>
-  <div class="panel g"><svg class="sh" viewBox="0 0 20 24"><path d="M10 1 L19 4.5 V11 C19 17 14.5 21.5 10 23 C5.5 21.5 1 17 1 11 V4.5 Z" fill="#fbe9ec" stroke="#d9534f" stroke-width="2" stroke-linejoin="round"/><path d="M10 6 V18" fill="none" stroke="#d9534f" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="3 2.4"/></svg><div><b>판정·집행 모듈 분리</b></div></div>
+ <div class="pills" data-fit="pills">
+  <div class="b p t-gray"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="7" width="14" height="10" rx="2"/><path d="M8 7V4M12 7V4M16 7V4M8 20v-3M12 20v-3M16 20v-3M9 11h6M9 14h4"/></svg>측정 → 수집</div><div class="pa"><div class="lab"><div class="ar"></div></div></div>
+  <div class="b p t-matter"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-6 7v6l-4 2v-8z"/></svg>품질 검사 → 레짐 → 규칙 → 목표</div><div class="pa"><div class="lab"><div class="ar" style="border-left-color:var(--rg-clean)"></div></div></div>
+  <div class="b p t-clean"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="4"/><circle cx="16" cy="12" r="2.5"/></svg>실물 비교 → 명령</div>
  </div>
- <svg id="ov"></svg>
-</div></div><script>
-const svg=document.getElementById('ov'),NS='http://www.w3.org/2000/svg';
-const U=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--u'))||1;
-const C=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const pt=(id,s,f=.5)=>{const r=document.getElementById(id).getBoundingClientRect(),b=svg.getBoundingClientRect();const x=r.left-b.left,y=r.top-b.top,w=r.width,h=r.height;return s==='r'?[x+w,y+h*f]:s==='l'?[x,y+h*f]:s==='t'?[x+w*f,y]:[x+w*f,y+h];};
-function arrow(a,b,c,o={}){const hl=6.4*U,w=1.9*U;let d,ang;
- if(o.curve){const mx=(a[0]+b[0])/2;ang=b[0]>a[0]?0:Math.PI;d=`M${a[0]} ${a[1]} C${mx} ${a[1]} ${mx} ${b[1]} ${b[0]-Math.cos(ang)*hl*.7} ${b[1]}`;}
- else{ang=Math.atan2(b[1]-a[1],b[0]-a[0]);d=`M${a[0]} ${a[1]} L${b[0]-Math.cos(ang)*hl*.7} ${b[1]-Math.sin(ang)*hl*.7}`;}
- const cs=Math.cos(ang),s=Math.sin(ang);const p=document.createElementNS(NS,'path');p.setAttribute('d',d);p.setAttribute('stroke',c);p.setAttribute('stroke-width',w);p.setAttribute('fill','none');p.setAttribute('stroke-linecap','round');if(o.dash)p.setAttribute('stroke-dasharray',`${2.6*U} ${2.2*U}`);svg.appendChild(p);
- const h=document.createElementNS(NS,'path');h.setAttribute('d',`M${b[0]} ${b[1]} L${b[0]-cs*hl-s*hl*.6} ${b[1]-s*hl+cs*hl*.6} L${b[0]-cs*hl+s*hl*.6} ${b[1]-s*hl-cs*hl*.6} Z`);h.setAttribute('fill',c);svg.appendChild(h);}
-function draw(){svg.innerHTML='';const ink=C('--ink'),mint=C('--rg-clean');arrow(pt('s1','r'),pt('s2','l'),ink);arrow(pt('s2','r'),pt('s3','l'),mint);}
-draw();document.fonts.ready.then(draw);
-</script></body></html>
+ <div class="gl" data-fit="gl">
+  <div><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg><span><b>품질 검사 미통과 → 판정 생략</b>·이전 상태 유지 &nbsp;·&nbsp; 규칙 환풍기 1,000/700 ppm · 공기청정기 VOC 200/120 · 최소 10분</span></div>
+  <div><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M12 8v8" stroke-dasharray="2 2"/></svg><span><b>판정 모듈·집행 모듈 분리</b> — 플러그 실제 상태와 비교해 <b>다를 때만</b> 명령, 한쪽이 멈춰도 오동작 없음</span></div>
+ </div>
+</div></div></body></html>

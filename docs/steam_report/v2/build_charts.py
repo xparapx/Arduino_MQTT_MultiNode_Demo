@@ -98,7 +98,7 @@ function draw_exceed(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{}
  let kw=0; if(P&&!M){ kw=tw('08–16시')+FS*1.2; }
  const f=frame(0,0,W-kw,H,{yLabels:ticks.map(String),yTitle:1,xLabels:1,right:P?FS*0.4:tw(lbl,600)+FS*0.8});
  const sx=lin(-0.5,rows.length-0.5,f.x0,f.x1), sy=lin(0,53,f.y1,f.y0), bw=(f.x1-f.x0)/rows.length*0.6;
- yAxis(g,f,sy,ticks,{title:P?'1,000 ppm 초과 비율 (%)':'1,000 ppm 초과 비율 (%)'}); xAxis(g,f,sx,rows.map((r,i)=>i),{fmt:i=>D.kr[rows[i].room]});
+ yAxis(g,f,sy,ticks,{title:M?'주중 08–16시, %':'1,000 ppm 초과 비율 (%)'}); xAxis(g,f,sx,rows.map((r,i)=>i),{fmt:i=>D.kr[rows[i].room]});
  bars(g,f,sx,sy,rows.map((r,i)=>({x:i,v:r.over1000,label:M?null:Math.round(r.over1000)})),{bw});
  const ym=sy(mean); E('line',{x1:f.x0,x2:f.x1+FS*0.5,y1:ym,y2:ym,stroke:K.ink,'stroke-width':LW*0.6,'stroke-dasharray':DASH},g);
  if(P&&!M){ const kx=f.x1+kw-FS*0.2, ky=f.y0-FS*0.2;
@@ -179,12 +179,12 @@ function draw_regime(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{}
 function decayCase(g,x,y,W,H){ const c=D.dc, ymax=Math.ceil(Math.max(...c.series.map(p=>p[1]))/1000)*1000, ticks=[]; for(let v=0;v<=ymax;v+=1000) ticks.push(v);
  const f=frame(x,y,W,H,{yLabels:ticks.map(fmt),yTitle:1,xLabels:1,xTitle:!P,right:FS*0.8});
  const ts=c.series.map(p=>tm(p[0])), t0=ts[0]-3, t1=ts[ts.length-1]+3; const sx=lin(t0,t1,f.x0,f.x1), sy=lin(0,ymax,f.y1,f.y0);
- const xt=[]; for(let m=Math.ceil(t0/30)*30;m<=t1;m+=30) xt.push(m);
+ const xt=[]; for(let m=Math.ceil(t0/30)*30;m<=t1;m+=(M?60:30)) xt.push(m);
  const hhmm=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
  const mo=+c.start.slice(5,7), dd=+c.start.slice(8,10);
  yAxis(g,f,sy,ticks,{title:'CO₂ (ppm)'}); xAxis(g,f,sx,xt,{fmt:hhmm,title:P?null:'시각 — '+D.kr[c.room]+', '+mo+'월 '+dd+'일 환기'});
  const st=tm(c.start.slice(11)); E('line',{x1:sx(st),x2:sx(st),y1:f.y0+FS*0.2,y2:f.y1,stroke:K.dim,'stroke-width':LT,'stroke-dasharray':'2 2'},g);
- T(g,sx(st)+FS*0.5,f.y0+FS*0.9,'환기 시작 '+hhmm(st),{c:K.dim,halo:1});
+ if(!M) T(g,sx(st)+FS*0.5,f.y0+FS*0.9,'환기 시작 '+hhmm(st),{c:K.dim,halo:1});
  const ser=c.series.map(([t,v])=>[sx(tm(t)),sy(v)]);
  E('path',{d:path(ser),fill:'none',stroke:K.co2,'stroke-width':LW*0.8,'stroke-linejoin':'round'},g);
  for(const [a,b] of ser) E('circle',{cx:a,cy:b,r:mm(P?0.7:0.45),fill:K.co2},g);
@@ -193,8 +193,8 @@ function decayCase(g,x,y,W,H){ const c=D.dc, ymax=Math.ceil(Math.max(...c.series
  const tEnd=tm(c.fit[c.fit.length-1][0]), fit=[]; for(let t=0;t<=tEnd-st;t+=1) fit.push([sx(st+t),sy((c.co2_0-c.baseline)*Math.exp(-t/c.tau)+c.baseline)]);
  E('path',{d:path(fit),fill:'none',stroke:K.ink,'stroke-width':LW*0.8,'stroke-dasharray':DASH,'stroke-linejoin':'round'},g);
  const lx=M?sx(st+40):(P?sx(st+13):sx(st+40)), ly=M?sy(ymax*0.72):(P?sy(ymax*0.30):sy(ymax*0.63));   // 보고서: 곡선 오른쪽 위 / 포스터: 곡선 아래(우상단은 KPI)
- T(g,lx,ly,'지수 감쇠 적합',{c:K.ink,w:700,halo:1}); T(g,lx,ly+FS*1.2,'τ = '+Math.round(c.tau)+'분',{c:K.ink,w:700,halo:1});
- T(g,ser[0][0]-FS*0.3,ser[0][1]+FS*1.9,P?'측정값':'CO₂ 측정값',{c:K.co2deep,w:600,halo:1});
+ if(M) T(g,lx,ly,'τ = '+Math.round(c.tau)+'분',{c:K.ink,w:700,halo:1}); else { T(g,lx,ly,'지수 감쇠 적합',{c:K.ink,w:700,halo:1}); T(g,lx,ly+FS*1.2,'τ = '+Math.round(c.tau)+'분',{c:K.ink,w:700,halo:1}); }
+ if(!M) T(g,ser[0][0]-FS*0.3,ser[0][1]+FS*1.9,P?'측정값':'CO₂ 측정값',{c:K.co2deep,w:600,halo:1});
  const n=c.series.length; if(!M&&c.series[n-1][1]>c.series[n-3][1]+100) T(g,ser[n-2][0]-FS*0.3,ser[n-1][1]+FS*0.35,'다시 재실 →',{a:'end',c:K.dim,halo:1});
  return f;
 }
@@ -233,7 +233,7 @@ CHARTS = {
   "exceed": dict(
     r=(159, 56, "교실별 CO₂ 기준(1,000 ppm) 초과율", "주중 08–16시 · 73일(방학 포함)"),
     p=(143, 85, "교실별 CO₂ 기준 초과율", None),
-    m=(48, 39, "교실별 CO₂ 기준 초과율", None),
+    m=(48, 39, "CO₂ 기준 초과율", None),
     data={"table": S["table"], "kr": KR}, fn="draw_exceed"),
   "occ": dict(
     r=(159, 70, "재실 인원과 CO₂의 관계", "Spearman ρ 0.31–0.58, 4개 교실 · 탐지 인원 기준"),
@@ -246,7 +246,7 @@ CHARTS = {
   "decay": dict(
     r=(159, 66, "환기 이후 CO₂의 지수적 감쇠 특성", "4반 · 9월 14일 사례, 전체 감쇠 사건 520건"),
     p=(143, 85, "환기 이후 CO₂의 지수적 감쇠 특성", None, 6),
-    m=(48, 39, "환기 이후 CO₂ 감쇠", "4반 9/14"),
+    m=(48, 39, "환기 후 CO₂ 감쇠", None),
     data={"dc": DATA["decay_case"], "by_room": DATA["decay_rooms"]["by_room"], "tau_med": DATA["decay_rooms"]["tau_med"], "kr": KR}, fn="draw_decay"),
 }
 

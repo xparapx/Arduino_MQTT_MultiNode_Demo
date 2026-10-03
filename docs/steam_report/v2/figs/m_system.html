@@ -1,31 +1,34 @@
 <!doctype html><html lang="ko" data-kind="m" data-w="123" data-h="27" data-scale="3.2"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><link rel="stylesheet" href="../design/base_m.css"><style>
 html,body{height:100%} body{word-break:keep-all}
-.c-pm{--rc:var(--pm)} .c-fan{--rc:var(--fan)} .c-pur{--rc:var(--purifier)}
+.fig{padding:0;gap:0}
+/* 색 블록 문법: 틴트 배경 + 왼쪽 색 띠, 테두리 없음 */
+.b{border-radius:1.8mm;padding:1mm 1.6mm;display:flex;flex-direction:column;justify-content:center;gap:.3mm;line-height:1.25;min-height:0;min-width:0;border-left:1.3mm solid var(--bc,transparent)}
+.b .h{font-size:var(--fs-t);font-weight:700;line-height:1.12;display:flex;align-items:center;gap:1.1mm;letter-spacing:-.01em}
+.ic{width:6.7mm;height:6.7mm;flex:none;color:var(--bc,var(--ink))}
+.t-co2{background:var(--co2-tint);--bc:var(--co2)} .t-voc{background:var(--voc-tint);--bc:var(--voc)}
+.t-clean{background:var(--rg-clean-bg);--bc:var(--rg-clean)} .t-human{background:var(--rg-human-bg);--bc:var(--rg-human)}
+.t-matter{background:var(--rg-matter-bg);--bc:var(--rg-matter)} .t-mixed{background:var(--rg-mixed-bg);--bc:var(--rg-mixed)}
+.t-gray{background:var(--panel2);--bc:var(--gray)} .t-blue{background:color-mix(in srgb,var(--blue) 16%,#fff);--bc:var(--blue)}
+.t-acc{background:color-mix(in srgb,var(--acc) 18%,#fff);--bc:var(--acc)}
 .fan{color:var(--fan);font-weight:700} .pur{color:var(--purifier);font-weight:700}
-.rg-clean{color:var(--rg-clean);font-weight:700} .rg-human{color:var(--rg-human);font-weight:700} .rg-matter{color:var(--rg-matter);font-weight:700} .rg-mixed{color:var(--rg-mixed);font-weight:700}
-#ov{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.rg-clean{color:var(--rg-clean)} .rg-human{color:var(--rg-human)} .rg-matter{color:var(--rg-matter)} .rg-mixed{color:var(--rg-mixed)}
+.lab{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.15;color:var(--dim);gap:.2mm;min-width:0}
+.lab .ar{width:0;height:0;border-left:2.6mm solid var(--gray);border-top:1.9mm solid transparent;border-bottom:1.9mm solid transparent;margin:.4mm 0}
+.lab .ad{width:0;height:0;border-top:2.6mm solid var(--gray);border-left:1.9mm solid transparent;border-right:1.9mm solid transparent;margin:.4mm 0}
+.kpi{font-size:calc(var(--fs-t)*1.5);letter-spacing:-.03em}
 
-.fill{position:relative;display:grid;grid-template-columns:40mm 15mm 28mm 34mm;gap:0 1.3mm;align-items:stretch}
-.box{display:flex;flex-direction:column;justify-content:center;gap:.1mm;line-height:1.28;padding:.9mm 1.72mm}
-.box .h{font-weight:700}
-#hub{border-color:var(--ink);border-width:.35mm} #out{border-color:var(--rg-clean);border-width:.35mm;background:var(--rg-clean-bg)}
-.chips{display:flex;gap:.8mm;margin:.3mm 0}</style></head><body><div class="fig">
+.fill{display:grid;grid-template-columns:28mm 12mm 13mm 6mm 24mm 10mm 30mm;grid-template-rows:1fr 1fr;gap:1.2mm 0;height:100%}
+.col2{grid-row:1/3}
+#brk{text-align:center;align-items:center;padding:1mm .8mm} #hub{text-align:center;align-items:center}
+.ic.big{width:8mm;height:8mm}</style></head><body><div class="fig">
 <div class="fill">
- <div class="panel box" id="nod" data-fit="nod"><div class="h">센서 노드 ×8 <span class="dim" style="font-weight:400">· 5분 평균</span></div><div>UNO R4·SEN55·SCD30</div><div class="chips"><span class="chip c-co2">CO₂</span><span class="chip c-voc">VOC</span><span class="chip c-pm">먼지</span></div><div class="h">비전 노드 ×5 <span class="dim" style="font-weight:400">· FOMO</span></div><div>영상 비전송, 인원 수만</div></div>
- <div class="panel box soft" id="brk" data-fit="brk" style="text-align:center"><div class="h">MQTT</div><div>TLS</div><div>브로커</div></div>
- <div class="panel box" id="hub" data-fit="hub"><div class="h">허브 UNO Q</div><div>수집·저장</div><div>품질 검사</div><div>레짐 판정·제어</div><div>대시보드</div></div>
- <div class="panel box" id="out" data-fit="out"><div class="h">스마트플러그 ×16</div><div><span class="fan">환풍기</span> 8 · <span class="pur">공기청정기</span> 8</div><div>전력 실측·원격 제어</div><div class="h">대시보드</div><div>PC·폰, 조회 전용</div></div>
- <svg id="ov"></svg>
-</div></div><script>
-const svg=document.getElementById('ov'),NS='http://www.w3.org/2000/svg';
-const U=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--u'))||1;
-const C=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const pt=(id,s,f=.5)=>{const r=document.getElementById(id).getBoundingClientRect(),b=svg.getBoundingClientRect();const x=r.left-b.left,y=r.top-b.top,w=r.width,h=r.height;return s==='r'?[x+w,y+h*f]:s==='l'?[x,y+h*f]:s==='t'?[x+w*f,y]:[x+w*f,y+h];};
-function arrow(a,b,c,o={}){const hl=6.4*U,w=1.9*U;let d,ang;
- if(o.curve){const mx=(a[0]+b[0])/2;ang=b[0]>a[0]?0:Math.PI;d=`M${a[0]} ${a[1]} C${mx} ${a[1]} ${mx} ${b[1]} ${b[0]-Math.cos(ang)*hl*.7} ${b[1]}`;}
- else{ang=Math.atan2(b[1]-a[1],b[0]-a[0]);d=`M${a[0]} ${a[1]} L${b[0]-Math.cos(ang)*hl*.7} ${b[1]-Math.sin(ang)*hl*.7}`;}
- const cs=Math.cos(ang),s=Math.sin(ang);const p=document.createElementNS(NS,'path');p.setAttribute('d',d);p.setAttribute('stroke',c);p.setAttribute('stroke-width',w);p.setAttribute('fill','none');p.setAttribute('stroke-linecap','round');if(o.dash)p.setAttribute('stroke-dasharray',`${2.6*U} ${2.2*U}`);svg.appendChild(p);
- const h=document.createElementNS(NS,'path');h.setAttribute('d',`M${b[0]} ${b[1]} L${b[0]-cs*hl-s*hl*.6} ${b[1]-s*hl+cs*hl*.6} L${b[0]-cs*hl+s*hl*.6} ${b[1]-s*hl-cs*hl*.6} Z`);h.setAttribute('fill',c);svg.appendChild(h);}
-function draw(){svg.innerHTML='';const ink=C('--ink'),mint=C('--rg-clean');arrow(pt('nod','r'),pt('brk','l'),ink);arrow(pt('brk','r'),pt('hub','l'),ink);arrow(pt('hub','r',.3),pt('out','l',.3),mint);arrow(pt('out','l',.7),pt('hub','r',.7),mint,{dash:1});}
-draw();document.fonts.ready.then(draw);
-</script></body></html>
+ <div class="b t-co2" data-fit="sen"><div class="h"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="7" width="14" height="10" rx="2"/><path d="M8 7V4M12 7V4M16 7V4M8 20v-3M12 20v-3M16 20v-3M9 11h6M9 14h4"/></svg>센서 ×8</div><div>R4·SEN55·SCD30</div></div>
+ <div class="b t-human" data-fit="vis"><div class="h"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="12" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 7l1.5-3h5L16 7"/></svg>비전 ×5</div><div>FOMO · 인원 수만</div></div>
+ <div class="lab col2" style="grid-column:2;grid-row:1/3" data-fit="a1"><div>MQTT</div><div class="ar"></div><div>5분평균</div></div>
+ <div class="b t-gray col2" id="brk" style="grid-column:3" data-fit="brk"><svg class="ic big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 8.5a3.8 3.8 0 0 1 .5 7.5z"/><path d="M12 16v-5M9.5 13.5 12 11l2.5 2.5"/></svg><div><b>TLS</b></div><div>브로커</div></div>
+ <div class="lab col2" style="grid-column:4;grid-row:1/3"><div class="ar"></div></div>
+ <div class="b t-acc col2" id="hub" style="grid-column:5" data-fit="hub"><svg class="ic big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="10" y="10" width="4" height="4"/><path d="M9 6V3M15 6V3M9 21v-3M15 21v-3M6 9H3M6 15H3M21 9h-3M21 15h-3"/></svg><div class="h" style="justify-content:center">UNO Q</div><div>허브·수집·저장</div><div>판정·제어·웹</div></div>
+ <div class="lab col2" style="grid-column:6;grid-row:1/3" data-fit="a3"><div>명령 ↓</div><div class="ar"></div><div>전력 ↑</div></div>
+ <div class="b t-clean" style="grid-column:7;grid-row:1" data-fit="plug"><div class="h"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v5M16 3v5M5 8h14v3a7 7 0 0 1-14 0zM12 18v3"/></svg>플러그</div><div><span class="pur">공청기</span> 8 · <span class="fan">환풍기</span> 8</div></div>
+ <div class="b t-gray" style="grid-column:7;grid-row:2" data-fit="dash"><div class="h"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M6 12l3-3 3 2 4-4"/></svg>대시보드</div><div>PC·폰 조회 전용</div></div>
+</div></div></body></html>

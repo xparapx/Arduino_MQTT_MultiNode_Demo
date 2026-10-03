@@ -1,30 +1,37 @@
 <!doctype html><html lang="ko" data-kind="m" data-w="123" data-h="27" data-scale="3.2"><head><meta charset="utf-8"><link rel="stylesheet" href="../design/base.css"><link rel="stylesheet" href="../design/base_m.css"><style>
 html,body{height:100%} body{word-break:keep-all}
-.c-pm{--rc:var(--pm)} .c-fan{--rc:var(--fan)} .c-pur{--rc:var(--purifier)}
+.fig{padding:0;gap:0}
+/* 색 블록 문법: 틴트 배경 + 왼쪽 색 띠, 테두리 없음 */
+.b{border-radius:1.8mm;padding:1mm 1.6mm;display:flex;flex-direction:column;justify-content:center;gap:.3mm;line-height:1.25;min-height:0;min-width:0;border-left:1.3mm solid var(--bc,transparent)}
+.b .h{font-size:var(--fs-t);font-weight:700;line-height:1.12;display:flex;align-items:center;gap:1.1mm;letter-spacing:-.01em}
+.ic{width:6.7mm;height:6.7mm;flex:none;color:var(--bc,var(--ink))}
+.t-co2{background:var(--co2-tint);--bc:var(--co2)} .t-voc{background:var(--voc-tint);--bc:var(--voc)}
+.t-clean{background:var(--rg-clean-bg);--bc:var(--rg-clean)} .t-human{background:var(--rg-human-bg);--bc:var(--rg-human)}
+.t-matter{background:var(--rg-matter-bg);--bc:var(--rg-matter)} .t-mixed{background:var(--rg-mixed-bg);--bc:var(--rg-mixed)}
+.t-gray{background:var(--panel2);--bc:var(--gray)} .t-blue{background:color-mix(in srgb,var(--blue) 16%,#fff);--bc:var(--blue)}
+.t-acc{background:color-mix(in srgb,var(--acc) 18%,#fff);--bc:var(--acc)}
 .fan{color:var(--fan);font-weight:700} .pur{color:var(--purifier);font-weight:700}
-.rg-clean{color:var(--rg-clean);font-weight:700} .rg-human{color:var(--rg-human);font-weight:700} .rg-matter{color:var(--rg-matter);font-weight:700} .rg-mixed{color:var(--rg-mixed);font-weight:700}
-#ov{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.rg-clean{color:var(--rg-clean)} .rg-human{color:var(--rg-human)} .rg-matter{color:var(--rg-matter)} .rg-mixed{color:var(--rg-mixed)}
+.lab{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.15;color:var(--dim);gap:.2mm;min-width:0}
+.lab .ar{width:0;height:0;border-left:2.6mm solid var(--gray);border-top:1.9mm solid transparent;border-bottom:1.9mm solid transparent;margin:.4mm 0}
+.lab .ad{width:0;height:0;border-top:2.6mm solid var(--gray);border-left:1.9mm solid transparent;border-right:1.9mm solid transparent;margin:.4mm 0}
+.kpi{font-size:calc(var(--fs-t)*1.5);letter-spacing:-.03em}
 
-.fill{display:grid;grid-template-columns:66mm 1fr;gap:2mm}
-.q{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.2mm}
-.c{display:flex;align-items:center;gap:1.2mm;padding:.6mm 1.5mm;border-width:.3mm;min-height:0}
-.c.clean{background:var(--rg-clean-bg);border-color:var(--rg-clean)} .c.human{background:var(--rg-human-bg);border-color:var(--rg-human)}
-.c.matter{background:var(--rg-matter-bg);border-color:var(--rg-matter)} .c.mixed{background:var(--rg-mixed-bg);border-color:var(--rg-mixed)}
-.c .chip{background:#fff;line-height:1.15}
-.kp{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.2mm}
-.t2{display:flex;flex-direction:column;justify-content:center;padding:.6mm 1.5mm;border:none;background:var(--panel2);line-height:1.2;min-height:0}
-.t2 .n{font-size:var(--fs-t);font-weight:700} .t2 .l{color:var(--dim)}</style></head><body><div class="fig">
+.fill{display:grid;grid-template-columns:59.5mm 1fr;gap:1.6mm;height:100%}
+.q,.kp{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.2mm;min-height:0}
+.b{padding:.7mm 1.4mm;gap:.1mm;border-left:none}
+.kp .b{background:var(--panel2)} .kp .kpi{line-height:1.05} .kp .l{line-height:1.15}</style></head><body><div class="fig">
 <div class="fill">
  <div class="q">
-  <div class="panel c clean" data-fit="c1"><span class="chip r-clean">청정</span>→ 유지</div>
-  <div class="panel c human" data-fit="c2"><span class="chip r-human">인체</span>→ <span class="fan">환풍기</span></div>
-  <div class="panel c matter" data-fit="c3"><span class="chip r-matter">물질</span>→ <span class="pur">공기청정기</span></div>
-  <div class="panel c mixed" data-fit="c4"><span class="chip r-mixed">복합</span>→ <span class="fan">환풍기</span>+<span class="pur">공기청정기</span></div>
+  <div class="b t-matter" data-fit="c1"><div class="h"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="2.5"/><path d="M9 8h6M9 11h6M9 14h6M10 18h4"/></svg>물질</div><div><b>15%</b> → <span class="pur">공기청정기</span></div></div>
+  <div class="b t-mixed" data-fit="c2"><div class="h"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 4.5-9 4.5-9-4.5zM3 13l9 4.5 9-4.5M3 17l9 4.5 9-4.5"/></svg>복합</div><div><b>9%</b> → 둘 다 가동</div></div>
+  <div class="b t-clean" data-fit="c3"><div class="h"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>청정</div><div><b>62%</b> → 유지</div></div>
+  <div class="b t-human" data-fit="c4"><div class="h"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.8"/><path d="M12 10.2c0-4 1.5-6.5 3.5-6.5s2.5 3 0 5.5M13.6 12.9c3.5 2 4.7 4.7 3.7 6.4s-4 1-5.3-2.3M10.4 12.9c-3.5 2-6 1.5-6.8-.3S5 8.6 8.6 9.4"/></svg>인체</div><div><b>15%</b> → <span class="fan">환풍기</span></div></div>
  </div>
  <div class="kp">
-  <div class="panel t2" data-fit="k1"><div class="n">플러그 16대</div><div class="l">15대 실가동 확인</div></div>
-  <div class="panel t2" data-fit="k2"><div class="n">1,000 · 700</div><div class="l">ppm ON · OFF</div></div>
-  <div class="panel t2" data-fit="k3"><div class="n">최소 10분</div><div class="l">가동 유지</div></div>
-  <div class="panel t2" data-fit="k4"><div class="n">τ 42분</div><div class="l">회복 중앙값</div></div>
+  <div class="b" data-fit="k1"><div class="kpi">16대</div><div class="l">플러그 · 15대 실가동</div></div>
+  <div class="b" data-fit="k2"><div class="kpi">1,000</div><div class="l">ON · OFF 700 ppm</div></div>
+  <div class="b" data-fit="k3"><div class="kpi">10분</div><div class="l">최소 가동 유지</div></div>
+  <div class="b" data-fit="k4"><div class="kpi">τ 42분</div><div class="l">환기 회복 중앙값</div></div>
  </div>
 </div></div></body></html>
