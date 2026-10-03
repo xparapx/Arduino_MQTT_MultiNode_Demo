@@ -9,7 +9,8 @@
 - 작업 폴더: `…\빌드소스_학생버전\v2\` — `design/`(base.css·DESIGN.md), `figs/*.html`, `render.mjs`, `build_charts.py`, `data/export_json.py→data.json`, `build_report_v2.py` + `poster_fill_v2.py`(이름 포함, 비공개), `poster_text.json`, `POSTER_PLAN.md`, `REVIEW.md`(도메인 검토 — 수치 오류·확인 필요 항목 목록).
 - 저장소 사본(이름 없음): `docs/steam_report/v2/` — design, figs, out(PNG 28), render.mjs, build_charts.py, export_json.py, data.json, REVIEW.md.
 - 다시 만들기: `cd v2 && python build_charts.py && node render.mjs` (그림 전부) → `uv run --with pillow python build_report_v2.py` (hwpx).
-- **미완**: ① 한/글에서 열어 조판 확인(포스터 1쪽, 결과 칸 여유 3.7mm가 가장 빡빡) ② REVIEW.md "확인 필요" 7건(비전 보드 종류, 단계적 확장 날짜, 모델 기각 운영 기록, 매일 재시작 시행 여부, 1,000 ppm 기준 조문, 허브 위치) ③ 39%(방학 포함) vs 학기 중 ≈55% 중 헤드라인 선택 ④ 사진 자리 2곳.
+- v2.1(10-03 저녁, 사용자 피드백): 문체를 연구보고서 개조식으로 전환(구호·'~하면 ~한다' 제목 제거, 그림 제목은 명사형), 포스터 8장에 번호 배지·탐구 순서 재배치(사이클→시스템→주중·주말→인원–CO₂→레짐→감쇠→맞춤 조치→제어 로직), 표3에 "주요 인사이트" 표제 행(10mm) 삽입(글 칸 183.5→173.5mm, 표 전체 높이 불변).
+- **미완**: ① 한/글에서 열어 조판 확인(포스터 1쪽, 결과 칸 추정 167/173.5mm가 가장 빡빡) ② REVIEW.md "확인 필요" 7건(비전 보드 종류, 단계적 확장 날짜, 모델 기각 운영 기록, 매일 재시작 시행 여부, 1,000 ppm 기준 조문, 허브 위치) ③ 39%(방학 포함) vs 학기 중 ≈55% 중 헤드라인 선택 ④ 사진 자리 2곳.
 
 ## 1. 산출물과 위치
 

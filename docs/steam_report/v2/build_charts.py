@@ -71,7 +71,7 @@ function draw_day(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{},sv
  T(g,sx(12*60+52),sy(735)+FS*1.15,'점심',{a:'middle',c:K.dim,halo:1});
  T(g,sx(9*60+5),sy(1204)-FS*0.45,'1교시',{a:'middle',c:K.dim,halo:1});
  const ax=f.x1, ay=sy(1975);
- T(g,ax,ay,P?'하교 후 환기 없음':'하교 후 환기 안 됨',{a:'end',c:K.dim,halo:1}); T(g,ax,ay+FS*1.2,'→ 천천히 감소',{a:'end',c:K.dim,halo:1});
+ T(g,ax,ay,'하교 후',{a:'end',c:K.dim,halo:1}); T(g,ax,ay+FS*1.2,'완만한 감소',{a:'end',c:K.dim,halo:1});
 }
 /* ---------------- 2. 시간대별 주중/주말 ---------------- */
 function draw_hourly(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{},svg);
@@ -88,7 +88,7 @@ function draw_hourly(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{}
   T(g,f.x0+FS*0.4,f.y0+FS*0.9,name,{w:700});
   if(!i){ T(g,sx(10.6),sy(1270),P?'가운데 50%':'가운데 50% 범위',{a:'middle',c:K.co2deep,halo:1}); T(g,sx(20.3),sy(640)-FS*0.45,'중앙값',{a:'middle',c:K.co2deep,halo:1,w:600}); }
   else { const cx=(f.x0+f.x1)/2; if(P) T(g,cx,sy(760),'종일 약 470 ppm',{a:'middle',c:K.dim,halo:1});
-   else { T(g,cx,sy(800),'하루 종일 약 470 ppm',{a:'middle',c:K.dim,halo:1}); T(g,cx,sy(800)+FS*1.25,'사람이 없으면 오르지 않는다',{a:'middle',c:K.dim,halo:1}); } }
+   else { T(g,cx,sy(800),'하루 종일 약 470 ppm',{a:'middle',c:K.dim,halo:1}); T(g,cx,sy(800)+FS*1.25,'(재실 없음)',{a:'middle',c:K.dim,halo:1}); } }
  });
 }
 /* ---------------- 3. 교실별 초과율 ---------------- */
@@ -221,28 +221,28 @@ S = DATA["stats"]
 share = DATA["regime"]["share"]
 CHARTS = {
   "day": dict(
-    r=(159, 68, "수업일 하루 — 사람이 들어오면 CO₂가 오른다", "1반 · 2026년 9월 15일 화요일"),
-    p=(143, 85, "사람이 들어오면 CO₂가 오른다", "1반, 9월 15일"),
+    r=(159, 68, "수업일 하루의 CO₂ 농도와 재실 인원 변화", "1반 · 2026년 9월 15일 화요일"),
+    p=(143, 85, "수업일 하루의 CO₂와 재실 인원", "1반, 9월 15일"),
     data={"co2": DATA["day"]["co2"], "occ": DATA["day"]["occ"]}, fn="draw_day"),
   "hourly": dict(
-    r=(159, 62, "두 봉우리는 주중에만 나타난다", "73일 · 8개 교실 · 시간대별 중앙값과 가운데 50% 범위"),
-    p=(143, 85, "두 봉우리는 주중에만 나타난다", None),
+    r=(159, 62, "주중·주말 시간대별 CO₂ 분포 비교", "73일 · 8개 교실 · 시간대별 중앙값과 가운데 50% 범위"),
+    p=(143, 85, "주중·주말 시간대별 CO₂ 분포 비교", None, 3),
     data={"hourly": DATA["hourly"]}, fn="draw_hourly"),
   "exceed": dict(
-    r=(159, 56, "주중 낮의 31–45%가 1,000 ppm을 넘는다", "주중 08–16시 · 73일(방학 포함) · 교실별"),
-    p=(143, 85, "주중 낮의 31–45%가 기준 초과", None),
+    r=(159, 56, "교실별 CO₂ 기준(1,000 ppm) 초과율", "주중 08–16시 · 73일(방학 포함)"),
+    p=(143, 85, "교실별 CO₂ 기준 초과율", None),
     data={"table": S["table"], "kr": KR}, fn="draw_exceed"),
   "occ": dict(
-    r=(159, 70, "사람이 늘면 높아지고, 더 빨리 오른다", "재실–CO₂ Spearman ρ 0.31–0.58, 4개 교실"),
-    p=(143, 85, "사람이 늘면 CO₂가 높아진다", None),
+    r=(159, 70, "재실 인원과 CO₂의 관계", "Spearman ρ 0.31–0.58, 4개 교실 · 탐지 인원 기준"),
+    p=(143, 85, "재실 인원과 CO₂의 관계", None, 4),
     data={"sc": DATA["occ_scatter"], "rates": S["rates"], "kr": KR}, fn="draw_occ"),
   "regime": dict(
-    r=(159, 84, "교실 공기는 4개의 레짐으로 갈린다", "최근 30일 · 정규화 CO₂–VOC 평면 · 짙을수록 많은 시간"),
-    p=(143, 85, "공기는 4개의 레짐으로 갈린다", "최근 30일"),
+    r=(159, 84, "CO₂–VOC 평면의 4개 레짐 분포", "최근 30일 · 표준화 평면 · 짙을수록 많은 시간"),
+    p=(143, 85, "4개 레짐으로 나타나는 교실 공기질", None, 5),
     data={"regime": DATA["regime"], "share": share}, fn="draw_regime"),
   "decay": dict(
-    r=(159, 66, "환기하면 CO₂는 지수적으로 줄어든다", "4반 · 9월 14일 사례, 전체 감쇠 사건 520건"),
-    p=(143, 85, "환기하면 지수적으로 줄어든다", "4반 · 9월 14일"),
+    r=(159, 66, "환기 이후 CO₂의 지수적 감쇠 특성", "4반 · 9월 14일 사례, 전체 감쇠 사건 520건"),
+    p=(143, 85, "환기 이후 CO₂의 지수적 감쇠 특성", None, 6),
     data={"dc": DATA["decay_case"], "by_room": DATA["decay_rooms"]["by_room"], "tau_med": DATA["decay_rooms"]["tau_med"], "kr": KR}, fn="draw_decay"),
 }
 
@@ -266,7 +266,8 @@ def build():
     made = []
     for cid, c in CHARTS.items():
         for kind in ("r", "p"):
-            w, h, title, sub = c[kind]
+            w, h, title, sub = c[kind][:4]; idx = c[kind][4] if len(c[kind]) > 4 else None
+            if idx: title = f'<span class="idx">{idx}</span>' + title
             name = f"{kind}_{cid}"
             html = TEMPLATE.format(kind=kind, w=w, h=h, name=name, title=title,
                                    sub=f' <span class="sub">({sub})</span>' if sub else "",

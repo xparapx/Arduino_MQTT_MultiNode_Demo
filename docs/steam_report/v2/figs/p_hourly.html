@@ -5,7 +5,7 @@
 <style>html,body{height:100%} .fill svg{width:100%;height:100%}</style>
 </head>
 <body><div class="fig">
-<div class="t">두 봉우리는 주중에만 나타난다</div>
+<div class="t"><span class="idx">3</span>주중·주말 시간대별 CO₂ 분포 비교</div>
 <div class="fill" data-fit="plot"><svg width="100%" height="100%"></svg></div>
 </div>
 <script>const D={"hourly":{"weekday":[[0,455,508,672],[1,450,502,656],[2,447,502,636],[3,445,500,615],[4,443,501,597],[5,444,501,583],[6,443,500,577],[7,445,500,573],[8,485,614,885],[9,488,725,1519],[10,482,737,1680],[11,472,776,1634],[12,477,735,1581],[13,474,739,1203],[14,475,921,1831],[15,474,808,1679],[16,468,761,1686],[17,470,717,1332],[18,467,660,1125],[19,462,628,986],[20,464,572,847],[21,472,561,815],[22,474,548,776],[23,468,530,731]],"weekend":[[0,434,491,563],[1,435,491,565],[2,435,491,551],[3,436,491,546],[4,438,494,547],[5,440,495,545],[6,443,496,542],[7,442,491,536],[8,439,486,536],[9,439,478,531],[10,438,473,526],[11,436,468,523],[12,433,464,517],[13,427,459,511],[14,423,454,505],[15,422,451,500],[16,417,450,500],[17,414,449,499],[18,412,449,503],[19,413,455,499],[20,414,459,504],[21,422,464,507],[22,425,467,509],[23,425,468,514]]}};
@@ -68,7 +68,7 @@ function draw_day(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{},sv
  T(g,sx(12*60+52),sy(735)+FS*1.15,'점심',{a:'middle',c:K.dim,halo:1});
  T(g,sx(9*60+5),sy(1204)-FS*0.45,'1교시',{a:'middle',c:K.dim,halo:1});
  const ax=f.x1, ay=sy(1975);
- T(g,ax,ay,P?'하교 후 환기 없음':'하교 후 환기 안 됨',{a:'end',c:K.dim,halo:1}); T(g,ax,ay+FS*1.2,'→ 천천히 감소',{a:'end',c:K.dim,halo:1});
+ T(g,ax,ay,'하교 후',{a:'end',c:K.dim,halo:1}); T(g,ax,ay+FS*1.2,'완만한 감소',{a:'end',c:K.dim,halo:1});
 }
 /* ---------------- 2. 시간대별 주중/주말 ---------------- */
 function draw_hourly(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{},svg);
@@ -85,7 +85,7 @@ function draw_hourly(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{}
   T(g,f.x0+FS*0.4,f.y0+FS*0.9,name,{w:700});
   if(!i){ T(g,sx(10.6),sy(1270),P?'가운데 50%':'가운데 50% 범위',{a:'middle',c:K.co2deep,halo:1}); T(g,sx(20.3),sy(640)-FS*0.45,'중앙값',{a:'middle',c:K.co2deep,halo:1,w:600}); }
   else { const cx=(f.x0+f.x1)/2; if(P) T(g,cx,sy(760),'종일 약 470 ppm',{a:'middle',c:K.dim,halo:1});
-   else { T(g,cx,sy(800),'하루 종일 약 470 ppm',{a:'middle',c:K.dim,halo:1}); T(g,cx,sy(800)+FS*1.25,'사람이 없으면 오르지 않는다',{a:'middle',c:K.dim,halo:1}); } }
+   else { T(g,cx,sy(800),'하루 종일 약 470 ppm',{a:'middle',c:K.dim,halo:1}); T(g,cx,sy(800)+FS*1.25,'(재실 없음)',{a:'middle',c:K.dim,halo:1}); } }
  });
 }
 /* ---------------- 3. 교실별 초과율 ---------------- */

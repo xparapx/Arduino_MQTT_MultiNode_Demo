@@ -5,7 +5,7 @@
 <style>html,body{height:100%} .fill svg{width:100%;height:100%}</style>
 </head>
 <body><div class="fig">
-<div class="t">환기하면 CO₂는 지수적으로 줄어든다 <span class="sub">(4반 · 9월 14일 사례, 전체 감쇠 사건 520건)</span></div>
+<div class="t">환기 이후 CO₂의 지수적 감쇠 특성 <span class="sub">(4반 · 9월 14일 사례, 전체 감쇠 사건 520건)</span></div>
 <div class="fill" data-fit="plot"><svg width="100%" height="100%"></svg></div>
 </div>
 <script>const D={"dc":{"room":"CLASS_04","start":"2026-09-14 14:20","tau":36.5,"co2_0":2858,"baseline":420,"series":[["13:50",2365],["13:55",2462],["14:00",2576],["14:05",2612],["14:10",2680],["14:15",2769],["14:20",2858],["14:25",2643],["14:30",2511],["14:35",2292],["14:40",2190],["14:50",1778],["14:55",1738],["15:00",1521],["15:05",959],["15:10",898],["15:15",818],["15:20",716],["15:25",684],["15:30",565],["15:35",656],["15:40",729],["15:45",1010],["15:50",1255]],"fit":[["14:20",2858],["14:25",2546],["14:30",2274],["14:35",2037],["14:40",1830],["14:50",1650],["14:55",1492],["15:00",1355],["15:05",1236],["15:10",1131],["15:15",1040],["15:20",961],["15:25",892],["15:30",831],["15:35",779]]},"by_room":{"CLASS_01":34.8,"CLASS_02":41.1,"CLASS_03":37.3,"CLASS_04":36.6,"CLASS_05":45.8,"CLASS_06":43.5,"CLASS_07":57.1,"CLASS_08":63.9},"tau_med":42.2,"kr":{"CLASS_01":"1반","CLASS_02":"2반","CLASS_03":"3반","CLASS_04":"4반","CLASS_05":"5반","CLASS_06":"6반","CLASS_07":"7반","CLASS_08":"8반"}};
@@ -68,7 +68,7 @@ function draw_day(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{},sv
  T(g,sx(12*60+52),sy(735)+FS*1.15,'점심',{a:'middle',c:K.dim,halo:1});
  T(g,sx(9*60+5),sy(1204)-FS*0.45,'1교시',{a:'middle',c:K.dim,halo:1});
  const ax=f.x1, ay=sy(1975);
- T(g,ax,ay,P?'하교 후 환기 없음':'하교 후 환기 안 됨',{a:'end',c:K.dim,halo:1}); T(g,ax,ay+FS*1.2,'→ 천천히 감소',{a:'end',c:K.dim,halo:1});
+ T(g,ax,ay,'하교 후',{a:'end',c:K.dim,halo:1}); T(g,ax,ay+FS*1.2,'완만한 감소',{a:'end',c:K.dim,halo:1});
 }
 /* ---------------- 2. 시간대별 주중/주말 ---------------- */
 function draw_hourly(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{},svg);
@@ -85,7 +85,7 @@ function draw_hourly(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{}
   T(g,f.x0+FS*0.4,f.y0+FS*0.9,name,{w:700});
   if(!i){ T(g,sx(10.6),sy(1270),P?'가운데 50%':'가운데 50% 범위',{a:'middle',c:K.co2deep,halo:1}); T(g,sx(20.3),sy(640)-FS*0.45,'중앙값',{a:'middle',c:K.co2deep,halo:1,w:600}); }
   else { const cx=(f.x0+f.x1)/2; if(P) T(g,cx,sy(760),'종일 약 470 ppm',{a:'middle',c:K.dim,halo:1});
-   else { T(g,cx,sy(800),'하루 종일 약 470 ppm',{a:'middle',c:K.dim,halo:1}); T(g,cx,sy(800)+FS*1.25,'사람이 없으면 오르지 않는다',{a:'middle',c:K.dim,halo:1}); } }
+   else { T(g,cx,sy(800),'하루 종일 약 470 ppm',{a:'middle',c:K.dim,halo:1}); T(g,cx,sy(800)+FS*1.25,'(재실 없음)',{a:'middle',c:K.dim,halo:1}); } }
  });
 }
 /* ---------------- 3. 교실별 초과율 ---------------- */

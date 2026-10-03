@@ -13,6 +13,7 @@
 - 디자인 시스템 `docs/steam_report/v2/design/{base.css,DESIGN.md}`: `hub/web/app.css` 라이트 토큰을 그대로 가져옴(CO₂ #fd8d3c=YlOrRd 중앙값, VOC #ce4457=matter 중앙값, 레짐 4색, 장치 색, 패널·칩). 글자 두 단계(보고서 10.5/12pt, 포스터 17/22pt), IBM Plex Sans KR. 렌더러 `render.mjs`(Edge CDP, `<html data-kind data-w data-h>` mm 규격, OVERFLOW 보고).
 - 에이전트: D1 도식 7종, D2 데이터 차트 6종×2(`build_charts.py`, data.json 인라인 → JS가 px 실측으로 SVG), D3 포스터 아트디렉터(POSTER_PLAN, p_wide_kpi/p_wide_story/p_hero_timeline, poster_text.json), DX 도메인 검토(`v2/REVIEW.md`: 수치 오류 6건·과장 4곳 — 39%는 **방학 포함** 값(학기 중만 ≈55%), "40분 만에 700→1,200" 오기(≈65분), "활짝 환기 τ 25분" 근거 없음, r² 0.08–0.21, 16대 중 15대 실가동, 레짐 비율은 GMM이 아닌 4분면 규칙). 본문 전면 반영, 감쇠 대표 사건을 4반 9/14(τ 37분, 기준선 근처까지 하강)로 교체.
 - hwpx 빌더 v2(바탕화면 `빌드소스_학생버전/v2/build_report_v2.py` + `poster_fill_v2.py`, 이름 포함이라 비공개): 성찰 칸 3pt charPr 버그 → cp16, 제목·그림에 keepWithNext paraPr 복제(55·56), 그림은 생성 mm 그대로 1:1 삽입. 구조 검증 통과(zip·XML·charPr/paraPr·BinData 25). **한/글 조판 확인은 미완**(COM 자동화는 SetCursorPos 실패 = 화면 잠금) — 사용자가 열어 PDF로 확인해야 함.
+- v2.1 피드백 반영: 사용자가 한/글에서 열어 보고 "AI 문체"(구호식 제목, '~하면 ~한다') 지적 → 그림 제목 전부 명사형("환기 이후 CO₂의 지수적 감쇠 특성" 등), 본문 개조식 재작성, 포스터 8장 번호 배지(`.t .idx`)·탐구 순서 재배치, 표3에 "주요 인사이트" 행 삽입(poster_fill_v2가 rowCnt 6→7, 글 칸 −10mm).
 - 산출: `결과보고서 및 포스터_MintCap_학생버전_v2.hwpx`, `차트_v2/`(보고서용 13·포스터용 15 PNG + html 소스 + 한눈에 모음). 저장소에는 이름 없는 도구·그림만(`docs/steam_report/v2/`).
 
 ### 성과발표회 학생 버전 보고서·포스터 — 차트 전면 재작성 + 인수인계 (2026-10-01 ~ 10-03)
