@@ -20,12 +20,7 @@ html.kiosk body { font-family: "IBM Plex Sans KR", system-ui, "Malgun Gothic", "
 .k-brand small { display: block; font-size: 24px; font-weight: 500; color: var(--dim); }
 .k-clock { font-size: 112px; font-weight: 600; line-height: 1; margin-top: 22px; letter-spacing: -0.02em; }
 .k-date { font-size: 28px; font-weight: 500; color: var(--dim); margin-top: 8px; }
-.k-head { margin-top: 22px; padding: 16px 20px; border-radius: 10px; border: 1px solid var(--grid);
-  background: color-mix(in srgb, var(--gc, var(--dim)) 16%, var(--panel)); }
-.k-head .l { font-size: 24px; color: var(--dim); }
-.k-head .w { font-size: 60px; font-weight: 700; line-height: 1.15; color: var(--gc, var(--dim)); }
-.k-head .d { font-size: 26px; font-weight: 500; white-space: nowrap; }
-.k-list { margin-top: 18px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.k-list { margin-top: 26px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .k-row { flex: 1; display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--rowline); min-height: 0;
   position: relative; }
 .k-row:first-child { border-top: 0; }

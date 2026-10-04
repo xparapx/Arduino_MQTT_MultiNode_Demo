@@ -114,18 +114,7 @@
     setTimeout(renderClock, 60050 - (Date.now() % 60000));
   }
   function renderSide() {
-    const c = snapshot(), valid = c.rooms.filter((r) => r.valid);
-    const n = { good: 0, mid: 0, bad: 0 };
-    for (const r of valid) n[r.grade]++;
-    const g = !valid.length ? "none" : n.bad ? "bad" : n.mid ? "mid" : "good";
-    const all = valid.length === c.rooms.length;
-    const word = !valid.length ? (c.net === "loading" || !D.status ? "확인 중" : "측정 없음")
-      : n.bad ? `나쁨 ${n.bad}곳` : n.mid ? `보통 ${n.mid}곳` : all ? "모두 좋음" : `좋음 ${n.good}곳`;
-    const detail = !valid.length ? "" : all ? `${valid.length}곳 중 ${n.good}곳 좋음`
-      : `${c.rooms.length}곳 중 ${valid.length}곳 측정`;
-    const head = $("k-head");
-    head.className = `k-head g-${g}`;
-    head.innerHTML = `<div class="w">${word}</div><div class="d">${detail}&nbsp;</div>`;
+    const c = snapshot();
     $("k-list").innerHTML = c.rooms.map((r) =>
       `<div class="k-row g-${r.grade}"><span class="bar"></span><span class="nm">${room(r.label)}</span>`
       + `<span class="gw">${r.valid ? GRADE_KO[r.grade] : ""}</span>`
