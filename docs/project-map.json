@@ -1,6 +1,6 @@
 {
  "title": "multinode_aq 프로젝트 지도",
- "subtitle": "교실 공기질 IoT·엣지 AI — 수집·분석·표시·자동 제어 (기준 코드: 2026-09-22 · 715f860)",
+ "subtitle": "교실 공기질 IoT·엣지 AI — 수집·분석·표시·자동 제어 (기준 코드: 2026-10-04 · 715f860)",
  "overview": {
   "intro": "8개 교실의 센서 노드와 5개 교실의 비전 노드가 MQTT(HiveMQ Cloud, TLS)로 측정값을 올리고, 보드(UNO Q)의 네 프로세스가 이를 수집·분석·표시·집행한다. 설계 불변식: sensor_data.db의 readings·occupancy는 hub.py만, analysis·actuator_state는 analyst.py만 쓴다. 스마트플러그 제어 명령은 plugwatch.py 한 곳에서만 발행된다.",
   "lanes": [
@@ -373,6 +373,13 @@
    "s": "관리",
    "d": "CSV 내보내기·reset 등 내부 포트 전용 기능.",
    "row": 8
+  },
+  "file.plugenergy": {
+   "c": "data",
+   "n": "hub/plug_energy.json",
+   "s": "일별 Wh 적산 (gitignore)",
+   "d": "plugwatch가 5분 평균 전력을 장치별 일별 Wh로 적산해 쌓는 런타임 파일. 에너지 화면의 \"반별 에너지 비교\"(오늘/주간/월간 스택 막대)가 /api/plugs의 energy 번들로 이것을 소비한다.",
+   "row": 4
   }
  },
  "edges": [
@@ -681,6 +688,18 @@
    "web.admin",
    "imp",
    ""
+  ],
+  [
+   "job.plugwatch",
+   "file.plugenergy",
+   "wr",
+   "일별 Wh 적산"
+  ],
+  [
+   "api.webapp",
+   "file.plugenergy",
+   "rd",
+   "/api/plugs energy"
   ]
  ],
  "dbs": [

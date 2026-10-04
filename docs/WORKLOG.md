@@ -6,6 +6,13 @@
 
 ## 2026-10
 
+### plugwatch 정지 발견(9/25~) + 지도 현행화 (2026-10-04)
+
+- **plugwatch 서비스가 9/25부터 정지** — 유닛 파일은 /etc/systemd/system에 있으나 systemd가 "not found"(daemon-reload 미실행 상태). 적산(plug_energy)·플러그 상태·자동 제어가 모두 멈춰 있었음. 복구는 sudo 한 줄(사용자): `ssh q "sudo systemctl daemon-reload && sudo systemctl enable --now multinode_aq_plugwatch"`.
+- 보드 pull + web 재시작(pkill 경로)으로 PWA 아이콘·webmanifest MIME 등 최신 커밋 반영.
+- **반별 에너지 비교 컴포넌트는 9/22 타 세션 구현 확인**(6e7c991 — 오늘/주간/월간 스택 막대) — 신규 작업 불필요, plugwatch 복구 시 데이터 소생.
+- 지도 현행화: file.plugenergy 노드 + plugwatch/webapp 간선 2개 추가(44노드·53간선), 기준일 2026-10-04.
+
 ### 성과발표회 학생 버전 v2 — 그림 전부 HTML 컴포넌트로 재작성(웹앱 컬러 토큰), 도메인 검토 반영 (2026-10-03)
 
 사용자가 1차 산출물의 HWP PDF를 보고 "품질이 그닥" — 진단: 그림 글자 9pt vs 본문 12–14pt(읽히지 않음), 색이 웹앱과 달라 색 언어 단절, 도식이 글상자 나열. 요구: 양식은 유지하되 내부 인포그래픽 자유 배치, **웹앱 UI 컬러 컨셉 그대로**(CO₂·VOC·레짐 색 포함), 글 외 모든 시각물은 HTML 컴포넌트, 보고서와 차트 파일 분리 제공, 디자인 3 + 도메인 1 서브에이전트.
