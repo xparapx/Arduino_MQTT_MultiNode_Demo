@@ -12,6 +12,8 @@
   const $ = (id) => document.getElementById(id);
   const root = $("k-root"), main = $("k-main"), stage = $("k-stage");
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  /** Display name on the hallway screen: CLASS_03 -> 1-3 (API labels stay the join key). */
+  const room = (label) => { const m = /^CLASS_0*(\d+)$/.exec(label || ""); return esc(m ? `1-${m[1]}` : label); };
 
   // ---- options -----------------------------------------------------------------------
   const q = new URLSearchParams(location.search);
@@ -123,9 +125,9 @@
       : `${c.rooms.length}곳 중 ${valid.length}곳 측정`;
     const head = $("k-head");
     head.className = `k-head g-${g}`;
-    head.innerHTML = `<div class="l">지금 우리 학교</div><div class="w">${word}</div><div class="d">${detail}&nbsp;</div>`;
+    head.innerHTML = `<div class="w">${word}</div><div class="d">${detail}&nbsp;</div>`;
     $("k-list").innerHTML = c.rooms.map((r) =>
-      `<div class="k-row g-${r.grade}"><span class="bar"></span><span class="nm">${esc(r.label)}</span>`
+      `<div class="k-row g-${r.grade}"><span class="bar"></span><span class="nm">${room(r.label)}</span>`
       + `<span class="gw">${r.valid ? GRADE_KO[r.grade] : ""}</span>`
       + `<span class="v">${r.valid ? num(r.co2) : "—"}</span></div>`).join("");
     // freshness: network first, then the hub's own ingest health
@@ -168,7 +170,7 @@
         const doing = fanOn && purOn ? "장치 2대 가동" : fanOn ? "환풍기 가동" : purOn ? "공청기 가동" : "";
         const reg = r.valid && r.a && r.a.judged && r.a.regime && r.a.regime !== "hold" ? regimeChip(r.a.regime) : "";
         return `<div class="tile g-${r.grade} k-rise${ring.has(r.label) ? " k-alert" : ""}" style="--i:${i}">`
-          + `<div class="top"><span class="nm">${esc(r.label)}</span><span class="gw">${GRADE_KO[r.grade]}</span></div>`
+          + `<div class="top"><span class="nm">${room(r.label)}</span><span class="gw">${GRADE_KO[r.grade]}</span></div>`
           + `<div class="gauge"><svg viewBox="0 0 236 236" aria-hidden="true"><g transform="rotate(135 118 118)" fill="none" stroke-width="16" stroke-linecap="round">`
           + `<circle class="trk" cx="118" cy="118" r="100" stroke-dasharray="${LEN} 629"/>`
           + (r.valid ? `<circle class="arc" cx="118" cy="118" r="100" stroke-dasharray="${LEN} 629" style="--len:${LEN};--off:${(LEN * (1 - frac)).toFixed(1)};--i:${i}"/>` : "")
@@ -202,7 +204,7 @@
     key: (c) => (c.plugs.mode === "manual" ? "수동 운전" : "자동 제어"),
     html(c) {
       const P = c.plugs, wh = todayWh(P);
-      const rows = P.rooms.map((r, i) => `<div class="rw k-rise" style="--i:${i}"><span class="nm">${esc(r.room)}</span>${devChip(r.fan)}${devChip(r.purifier)}</div>`).join("");
+      const rows = P.rooms.map((r, i) => `<div class="rw k-rise" style="--i:${i}"><span class="nm">${room(r.room)}</span>${devChip(r.fan)}${devChip(r.purifier)}</div>`).join("");
       return `<div class="s2"><div class="k-panel tbl2"><div class="hd"><span></span><span>환풍기</span><span>공기청정기</span></div>${rows}</div>`
         + `<div class="tiles"><div class="k-panel k-stat k-rise" style="--i:2"><div class="l">지금 가동 중</div>`
         + `<div class="v"><span data-count="${P.n_running}">${P.n_running}</span><small> / ${P.n_online}대</small></div>`
@@ -225,10 +227,10 @@
       const rows = [...valid, ...c.rooms.filter((r) => !r.valid)];
       const top = Math.max(1500, valid[0].co2 * 1.2), map = CH.cmap("co2");
       const body = rows.map((r, i) => {
-        if (!r.valid) return `<div class="r k-rise" style="--i:${i}"><span class="nm" style="color:var(--dim)">${esc(r.label)}</span><div class="trk"><span class="val" style="left:0;color:var(--dim)">측정 없음</span></div></div>`;
+        if (!r.valid) return `<div class="r k-rise" style="--i:${i}"><span class="nm" style="color:var(--dim)">${room(r.label)}</span><div class="trk"><span class="val" style="left:0;color:var(--dim)">측정 없음</span></div></div>`;
         const w = r.co2 / top * 100, over = r.co2 > c.thr.co2On;
         const soon = !over && r.f && r.f.co2_pred > c.thr.co2On ? `<em>↑ 곧 높아져요</em>` : "";   // CO2 예측만 (alert는 VOC도 포함)
-        return `<div class="r k-rise" style="--i:${i}"><span class="nm">${esc(r.label)}</span><div class="trk">`
+        return `<div class="r k-rise" style="--i:${i}"><span class="nm">${room(r.label)}</span><div class="trk">`
           + `<div class="bar" style="width:${w.toFixed(2)}%;--i:${i};background:rgba(${CH.cmapAt(map, clamp((r.co2 - 400) / 1600, 0.05, 1))},0.8)"></div>`
           + `<span class="val${over ? " over" : ""}" style="left:${w.toFixed(2)}%;--i:${i}">${num(r.co2)}${soon}</span></div></div>`;
       }).join("");
@@ -270,7 +272,7 @@
   const S4 = {
     id: "s4",
     ok: (c) => c.colour && !!pickDay(c),
-    title: (c) => `최근 24시간 CO₂ · ${pickDay(c).label}`,
+    title: (c) => `최근 24시간 CO₂ · ${room(pickDay(c).label)}`,
     key: (c) => `최고 <b>${num(pickDay(c).peak)}</b> ppm`,
     html(c) {
       const d = pickDay(c), W = 1344, H = 836, L = 96, R = 40, T = 56, B = 64, n = d.pts.length;
@@ -352,7 +354,7 @@
       const cp = CH.devColor("purifier"), cf = CH.devColor("fan");
       const body = rows.map((r, i) => {
         const w = r.total / top * 100;
-        return `<div class="r k-rise" style="--i:${i}"><span class="nm">${esc(r.room)}</span><div class="trk">`
+        return `<div class="r k-rise" style="--i:${i}"><span class="nm">${room(r.room)}</span><div class="trk">`
           + `<div class="bar" style="width:${w.toFixed(2)}%;--i:${i}"><span style="width:${(r.p / r.total * 100).toFixed(2)}%;background:${cp}"></span><span style="flex:1;background:${cf}"></span></div>`
           + `<span class="val" style="left:${w.toFixed(2)}%;--i:${i}">${fmtWh(r.total)}</span></div></div>`;
       }).join("");
