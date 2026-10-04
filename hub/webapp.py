@@ -45,6 +45,8 @@ from pathlib import Path
 from time import perf_counter
 from urllib.parse import parse_qs, urlparse
 
+mimetypes.add_type("application/manifest+json", ".webmanifest")   # PWA manifest (iOS/Android 홈 화면 추가)
+
 HUB = Path(__file__).resolve().parent
 WEB = HUB / "web"
 MIN_GZIP = 1024
