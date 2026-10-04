@@ -293,3 +293,24 @@ def test_public_instance_is_monitoring_only(site):
     finally:
         srv.shutdown()
     assert get(f"{site['url']}/api/status")["public"] is False        # admin instance untouched
+
+
+def test_home_screen_icons_differ_by_instance(site):
+    """홈 화면 추가 아이콘: 관리자(기본) 인스턴스는 렌치 배지 아이콘·관리자 manifest, 공개 인스턴스는 일반 아이콘."""
+    admin = get(site["url"] + "/", raw=True)[1].decode("utf-8")
+    assert "/static/icons/admin-apple-touch-icon.png" in admin and "manifest-admin.webmanifest" in admin
+    assert 'content="공기질 관리"' in admin
+    srv, url = webapp.serve_in_thread(site["data"], public=True)
+    try:
+        pub = get(url + "/", raw=True)[1].decode("utf-8")
+        assert "/static/icons/apple-touch-icon.png" in pub and "admin-" not in pub
+        assert 'content="공기질"' in pub
+        for path, ctype in (("/static/icons/apple-touch-icon.png", "image/png"),
+                            ("/static/icons/admin-apple-touch-icon.png", "image/png"),
+                            ("/static/manifest.webmanifest", "application/manifest+json"),
+                            ("/static/manifest-admin.webmanifest", "application/manifest+json")):
+            req = urllib.request.Request(url + path, headers={"Accept-Encoding": "identity"})
+            with urllib.request.urlopen(req) as r:
+                assert r.status == 200 and r.headers.get("Content-Type").startswith(ctype), path
+    finally:
+        srv.shutdown()

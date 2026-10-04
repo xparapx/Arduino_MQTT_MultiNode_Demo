@@ -192,7 +192,14 @@ class Handler(BaseHTTPRequestHandler):
         if ctype.startswith("text/") or ctype in ("application/javascript", "application/json"):
             ctype += "; charset=utf-8"
         cache = "no-cache"          # css / js change with every deploy; a page load re-validates
-        self._send(200, p.read_bytes(), ctype, cache=cache)
+        body = p.read_bytes()
+        if p.name == "index.html" and not self.public:
+            # 관리자 인스턴스(8501)는 홈 화면 아이콘·이름을 관리자용(렌치 배지)으로 — 공개(8502)와 구별
+            body = (body.replace(b"/static/icons/apple-touch-icon.png", b"/static/icons/admin-apple-touch-icon.png")
+                        .replace(b"/static/icons/icon-192.png", b"/static/icons/admin-icon-192.png")
+                        .replace(b"/static/manifest.webmanifest", b"/static/manifest-admin.webmanifest")
+                        .replace('content="공기질"'.encode("utf-8"), 'content="공기질 관리"'.encode("utf-8")))
+        self._send(200, body, ctype, cache=cache)
 
     # ---- api ----------------------------------------------------------------------------
     def _api(self, name: str, q: dict) -> None:
