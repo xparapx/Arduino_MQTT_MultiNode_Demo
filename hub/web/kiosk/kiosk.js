@@ -470,6 +470,7 @@
   next();
   setInterval(() => {
     try {
+      fit();                                  // some kiosk shells never deliver a resize event
       const c = renderSide();
       if (seq.length && c.colour !== painted) { seq = []; pos = -1; kick(); }
     } catch (e) { warnOnce(e); }
