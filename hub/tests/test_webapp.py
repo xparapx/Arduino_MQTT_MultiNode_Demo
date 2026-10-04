@@ -2,6 +2,7 @@
 runs) and webapp.py end-to-end on an ephemeral port (JSON, static, CSV,
 reset guard)."""
 
+import http.client
 import json
 import shutil
 import sqlite3
@@ -314,3 +315,52 @@ def test_home_screen_icons_differ_by_instance(site):
                 assert r.status == 200 and r.headers.get("Content-Type").startswith(ctype), path
     finally:
         srv.shutdown()
+
+
+def test_kiosk_page(site):
+    """복도 송출 화면(/kiosk): 별도 페이지, 외부 호스트 의존 없음, 두 인스턴스가 같은 바이트."""
+    r, body = get(site["url"] + "/kiosk", raw=True)
+    page = body.decode("utf-8")
+    assert r.status == 200 and r.headers.get("Content-Type").startswith("text/html")
+    assert "kiosk/kiosk.js" in page and "/static/app.css" in page
+    assert "http://" not in page and "https://" not in page     # 송출 기기는 인터넷이 없을 수 있다
+    for path, ctype in (("/static/kiosk/kiosk.js", "javascript"),
+                        ("/static/kiosk/kiosk.css", "text/css")):
+        r, _ = get(site["url"] + path, raw=True)
+        assert r.status == 200 and ctype in r.headers.get("Content-Type"), path
+    assert b"cmapAt" in get(site["url"] + "/static/charts.js", raw=True)[1]    # kiosk용 export
+    # 라이브러리 예외는 키오스크 페이지에만: 메인 SPA 셸은 vendor/를 참조하지 않는다
+    assert b"vendor/" not in get(site["url"] + "/", raw=True)[1]
+    srv, url = webapp.serve_in_thread(site["data"], public=True)
+    try:
+        pub = get(url + "/kiosk", raw=True)[1]
+        assert pub == body and b"admin-" not in pub                  # 관리자 치환은 index.html 전용
+    finally:
+        srv.shutdown()
+
+
+def test_static_cache_and_font_type(site, tmp_path, monkeypatch):
+    """fonts/·vendor/는 파일명으로 버전을 고정하므로 장기 캐시, 그 외 정적 파일은 no-cache."""
+    r, _ = get(site["url"] + "/static/app.css", raw=True)
+    assert r.headers.get("Cache-Control") == "no-cache"
+    (tmp_path / "fonts").mkdir()
+    (tmp_path / "fonts" / "x.woff2").write_bytes(b"wOF2" + b"0" * 64)
+    (tmp_path / "plain.css").write_text("a{}", encoding="utf-8")
+    monkeypatch.setattr(webapp, "WEB", tmp_path)
+    r, _ = get(site["url"] + "/static/fonts/x.woff2", raw=True)
+    assert r.headers.get("Content-Type") == "font/woff2"
+    assert "immutable" in r.headers.get("Cache-Control")
+    # 판정은 요청 문자열이 아니라 해석된 경로 기준 — fonts/ 를 거쳐 나가는 경로는 장기 캐시가 아니다
+    con = http.client.HTTPConnection(site["url"].split("//")[1])
+    con.request("GET", "/static/fonts/../plain.css", headers={"Accept-Encoding": "identity"})
+    resp = con.getresponse()
+    assert resp.status == 200 and resp.getheader("Cache-Control") == "no-cache"
+    con.close()
+
+
+def test_kiosk_assets_need_no_external_host():
+    """송출 기기는 인터넷이 없을 수 있다 — 키오스크 자산은 외부 호스트를 참조하지 않는다."""
+    for name in ("kiosk.html", "kiosk/kiosk.css", "kiosk/kiosk.js"):
+        text = (webapp.WEB / name).read_text(encoding="utf-8")
+        for needle in ("http://", "https://", "@import", "url(//"):
+            assert needle not in text, (name, needle)

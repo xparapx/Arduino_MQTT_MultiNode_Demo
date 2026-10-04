@@ -476,5 +476,5 @@ const CH = (() => {
     return s + "</svg>";
   }
 
-  return { radar, box, hbars, trend, pbars, dowheat, weekbars, line, occBars, powerBars, devColor, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO, cvar, varColor };
+  return { radar, box, hbars, trend, pbars, dowheat, weekbars, line, occBars, powerBars, devColor, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO, cvar, varColor, cmap, cmapAt, CMAPS };
 })();

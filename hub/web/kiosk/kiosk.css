@@ -1,0 +1,157 @@
+/* Hallway display (/kiosk): fixed 1920x1080 stage, 43" at 2-3 m, no interaction.
+   Colours come from the app.css tokens (dark only). Motion: transform / opacity,
+   one-shot on slide entry; only the fan spin, the alert ring and the progress
+   segment run continuously. Nothing here is smaller than 24px. */
+html.kiosk, html.kiosk body { height: 100%; margin: 0; overflow: hidden; background: #000; cursor: none; }
+html.kiosk body { font-family: "IBM Plex Sans KR", system-ui, "Malgun Gothic", "Noto Sans CJK KR", sans-serif;
+  font-size: 24px; line-height: 1.3; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* grade palette: existing accent tokens (good / fair / bad), grey = no valid reading */
+.g-good { --gc: var(--green); } .g-mid { --gc: var(--orange); } .g-bad { --gc: var(--red); }
+.g-none { --gc: var(--dim); }
+
+#k-root { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0;
+  background: var(--bg); display: grid; grid-template-columns: 440px 1480px; overflow: hidden; }
+
+/* ---- side panel: always the same content ---------------------------------------- */
+#k-side { background: var(--side); border-right: 1px solid var(--grid); padding: 36px 32px 36px 48px;
+  display: flex; flex-direction: column; min-width: 0; }
+.k-brand { font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
+.k-brand small { display: block; font-size: 24px; font-weight: 500; color: var(--dim); }
+.k-clock { font-size: 112px; font-weight: 600; line-height: 1; margin-top: 22px; letter-spacing: -0.02em; }
+.k-date { font-size: 28px; font-weight: 500; color: var(--dim); margin-top: 8px; }
+.k-head { margin-top: 22px; padding: 16px 20px; border-radius: 10px; border: 1px solid var(--grid);
+  background: color-mix(in srgb, var(--gc, var(--dim)) 16%, var(--panel)); }
+.k-head .l { font-size: 24px; color: var(--dim); }
+.k-head .w { font-size: 60px; font-weight: 700; line-height: 1.15; color: var(--gc, var(--dim)); }
+.k-head .d { font-size: 26px; font-weight: 500; white-space: nowrap; }
+.k-list { margin-top: 18px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.k-row { flex: 1; display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--rowline); min-height: 0;
+  position: relative; }
+.k-row:first-child { border-top: 0; }
+.k-row .bar { width: 8px; height: 30px; border-radius: 4px; background: var(--gc); flex: none; }
+.k-row .nm { font-size: 28px; font-weight: 600; flex: 1; white-space: nowrap; }
+.k-row .nm { min-width: 0; overflow: hidden; }
+.k-row .gw { font-size: 26px; font-weight: 600; color: var(--gc); width: 64px; flex: none; white-space: nowrap; }
+.k-row .v { font-size: 30px; font-weight: 600; width: 96px; flex: none; text-align: right; }
+.k-row.g-none .v, .k-row.g-none .nm { color: var(--dim); }
+.k-fresh { margin-top: 14px; font-size: 24px; font-weight: 500; color: var(--dim); display: flex; align-items: center; gap: 12px; }
+.k-fresh.lost { color: var(--ink); }
+.k-fresh i { width: 14px; height: 14px; border-radius: 50%; background: var(--fc, var(--grid)); flex: none; }
+
+/* ---- stage ---------------------------------------------------------------------- */
+#k-main { padding: 32px 48px 0 40px; display: flex; flex-direction: column; min-width: 0; }
+#k-title { height: 92px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex: none; }
+#k-title h1 { font-size: 52px; font-weight: 700; margin: 0; letter-spacing: -0.01em; white-space: nowrap; }
+#k-title .k-key { font-size: 34px; font-weight: 600; color: var(--dim); white-space: nowrap; }
+#k-title .k-key b { color: var(--ink); font-weight: 700; }
+#k-stage { height: 868px; margin-top: 12px; position: relative; contain: strict; flex: none; }
+#k-main.out #k-title, #k-main.out #k-stage { opacity: 0; transform: translateX(-24px);
+  transition: opacity 240ms cubic-bezier(0.4, 0, 1, 1), transform 240ms cubic-bezier(0.4, 0, 1, 1); }
+#k-main.pre #k-title, #k-main.pre #k-stage { opacity: 0; transform: translateX(24px); }
+#k-main.in #k-title, #k-main.in #k-stage { opacity: 1; transform: none;
+  transition: opacity 300ms cubic-bezier(0.22, 0.75, 0.25, 1), transform 300ms cubic-bezier(0.22, 0.75, 0.25, 1); }
+#k-prog { height: 6px; margin: 22px 0 0; display: flex; gap: 8px; flex: none; }
+#k-prog span { flex: 1; background: var(--grid); border-radius: 3px; overflow: hidden; }
+#k-prog span i { display: block; height: 100%; background: var(--dim); transform: scaleX(0); transform-origin: 0 50%; }
+#k-prog span.done i { transform: scaleX(1); }
+#k-prog span.on i { animation: k-fill linear forwards; animation-duration: var(--dwell, 15s); }
+@keyframes k-fill { to { transform: scaleX(1); } }
+
+/* one-shot entry: cards rise with a 60 ms stagger (--i) */
+.k-rise { opacity: 0; transform: translateY(14px); }
+.go .k-rise { opacity: 1; transform: none;
+  transition: opacity 240ms ease-out, transform 240ms cubic-bezier(0.22, 0.75, 0.25, 1);
+  transition-delay: calc(120ms + var(--i, 0) * 60ms); }
+.k-panel { background: var(--panel); border: 1px solid var(--grid); border-radius: 12px; }
+.k-empty { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 34px; color: var(--dim); }
+
+/* alert ring (same language as hb-blink): breathing border, never a red fill */
+.k-alert::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; border: 3px solid var(--gc);
+  pointer-events: none; animation: k-ring 2.2s ease-in-out infinite; }
+@keyframes k-ring { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* ---- S1 status board: 4 x 2 tiles, fixed positions ------------------------------- */
+.s1 { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); gap: 24px; height: 100%; }
+.s1 .tile { position: relative; border-radius: 12px; border: 1px solid var(--grid); padding: 22px 24px;
+  background: color-mix(in srgb, var(--gc) 13%, var(--panel)); display: flex; flex-direction: column; min-width: 0; }
+.s1 .tile.g-none { background: var(--panel); }
+.s1 .top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.s1 .nm { font-size: 34px; font-weight: 700; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.s1 .gw { font-size: 40px; font-weight: 700; color: var(--gc); white-space: nowrap; flex: none; }
+.s1 .tile.g-none .gw { font-size: 24px; font-weight: 600; }
+.s1 .gauge { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+.s1 .gauge { contain: layout style; }
+.s1 .gauge svg { position: absolute; width: 256px; height: 256px; }
+.s1 .gauge .trk { stroke: var(--grid); }
+.s1 .gauge .arc { stroke: var(--gc); stroke-dashoffset: var(--len); }
+.go .s1 .gauge .arc { stroke-dashoffset: var(--off);
+  transition: stroke-dashoffset 900ms ease-out; transition-delay: calc(700ms + var(--i, 0) * 70ms); }   /* after the tiles have risen */
+.s1 .num { font-size: 64px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; min-width: 4ch; text-align: center; }
+.s1 .unit { font-size: 24px; color: var(--dim); text-align: center; white-space: nowrap; }
+.s1 .unit.why { color: var(--gc); font-weight: 600; }
+.s1 .tile.g-none .num { color: var(--dim); }
+.s1 .foot { display: flex; align-items: center; justify-content: space-between; min-height: 40px; font-size: 26px; color: var(--ink); white-space: nowrap; }
+html.kiosk .regime { font-size: 24px; padding: 3px 12px; border-radius: 7px; }
+html.kiosk .chipx { font-size: 24px; padding: 3px 14px; }
+
+/* ---- S2 devices ------------------------------------------------------------------ */
+.s2 { display: grid; grid-template-columns: 908px 1fr; gap: 24px; height: 100%; }
+.s2 .tbl2 { padding: 10px 28px; display: flex; flex-direction: column; }
+.s2 .hd, .s2 .rw { display: grid; grid-template-columns: 220px 1fr 1fr; align-items: center; gap: 16px; }
+.s2 .hd { height: 56px; font-size: 24px; color: var(--dim); flex: none; }
+.s2 .rw { flex: 1; border-top: 1px solid var(--rowline); min-height: 0; }
+.s2 .rw .nm { font-size: 34px; font-weight: 700; white-space: nowrap; }
+html.kiosk .fanchip { font-family: inherit; font-size: 30px; padding: 8px 22px; gap: 12px; border-width: 2px; justify-self: start; }
+html.kiosk .fanchip svg { width: 38px; height: 38px; stroke-width: 2; }
+html.kiosk .fanchip.run::after { display: none; }                 /* budget: spin only, no breathing ring */
+html.kiosk .fanchip small { font-size: 24px; font-weight: 500; color: var(--dim); }
+.s2 .tiles { display: grid; grid-template-rows: 1fr 1fr; gap: 24px; }
+.k-stat { padding: 28px 32px; display: flex; flex-direction: column; justify-content: center; }
+.k-stat .l { font-size: 30px; color: var(--dim); }
+.k-stat .v { font-size: 124px; font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; }
+.k-stat .v small { font-size: 42px; font-weight: 600; color: var(--dim); letter-spacing: 0; }
+.k-stat .d { font-size: 26px; color: var(--dim); white-space: nowrap; }
+
+/* ---- S3 CO2 comparison / S5 energy: horizontal bars that grow (scaleX) -------------- */
+.hb { padding: 26px 40px 20px 32px; height: 100%; display: flex; flex-direction: column; }
+.hb .rows { flex: 1; display: flex; flex-direction: column; position: relative; min-height: 0; }
+.hb .r { flex: 1; display: grid; grid-template-columns: 200px 1fr; align-items: center; min-height: 0; }
+.hb .r .nm { font-size: 34px; font-weight: 700; white-space: nowrap; }
+.hb .trk { position: relative; height: 54px; }
+.hb .bar { position: absolute; left: 0; top: 0; height: 100%; border-radius: 0 8px 8px 0; display: flex; overflow: hidden;
+  transform: scaleX(0); transform-origin: 0 50%; }
+.go .hb .bar { transform: none; transition: transform 900ms cubic-bezier(0.22, 0.75, 0.25, 1);
+  transition-delay: calc(300ms + var(--i, 0) * 50ms); }
+.hb .bar span { display: block; height: 100%; }
+.hb .val { position: absolute; top: 50%; transform: translateY(-50%); margin-left: 8px; padding: 0 8px; font-size: 34px; font-weight: 600;
+  white-space: nowrap; opacity: 0; z-index: 1; background: var(--panel); }   /* sits above the threshold line */
+.go .hb .val { opacity: 1; transition: opacity 300ms ease-out; transition-delay: calc(900ms + var(--i, 0) * 50ms); }
+.hb .val.over { font-weight: 700; }
+.hb .val em { font-style: normal; font-size: 26px; font-weight: 600; color: var(--orange); margin-left: 16px; }
+.hb .thr { position: absolute; top: 0; bottom: 0; width: 0; border-left: 3px dashed var(--red); }
+.hb .thr b { position: absolute; top: -8px; left: 12px; font-size: 26px; font-weight: 600; color: var(--red); white-space: nowrap; }
+.hb .lg { flex: none; font-size: 24px; color: var(--dim); display: flex; gap: 28px; align-items: center; padding-top: 12px; }
+.hb .lg i { display: inline-block; width: 24px; height: 24px; border-radius: 5px; vertical-align: -4px; margin-right: 10px; }
+
+/* ---- S4 today: one room's CO2 curve ------------------------------------------------ */
+.s4 { height: 100%; padding: 20px 24px 12px; }
+.s4 svg { width: 100%; height: 100%; display: block; }
+.s4 svg text { font-family: inherit; }
+.s4 .ln { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.go .s4 .ln { stroke-dashoffset: 0; transition: stroke-dashoffset 1400ms ease-out 300ms; }
+.s4 .fade { opacity: 0; }
+.go .s4 .fade { opacity: 1; transition: opacity 400ms ease-out 1500ms; }
+.go .s4 .fade.early { transition-delay: 200ms; }
+
+/* ---- stale / disconnected ---------------------------------------------------------- */
+#k-stage > * { transition: opacity 400ms ease-out; }
+html.kiosk.stale #k-stage > * { opacity: 0.7; }
+html.noanim *, html.noanim *::after { animation: none !important; transition: none !important; }
+html.noanim .k-rise, html.noanim .s4 .fade { opacity: 1; transform: none; }
+html.noanim .hb .val { opacity: 1; }
+html.noanim .hb .bar { transform: none; }
+html.noanim .s4 .ln { stroke-dashoffset: 0; }
+html.noanim .s1 .gauge .arc { stroke-dashoffset: var(--off); }
+#k-debug { position: absolute; right: 8px; bottom: 16px; font-size: 18px; color: var(--foot); background: var(--panel2);
+  padding: 4px 10px; border-radius: 6px; white-space: pre; }

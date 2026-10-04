@@ -6,6 +6,7 @@ library only.
 
 Routes
     GET  /                    web/index.html   (SPA shell -- hash-routed screens)
+    GET  /kiosk               web/kiosk.html   (hallway display, 1920x1080, no interaction)
     GET  /diagnosis           302 -> /#dx-regime (old page-2 bookmarks)
     GET  /static/<file>       web/<file> (incl. web/screens/*)
     GET  /api/status          sidebar / Home status (hub freshness, nodes, analyst runs, model)
@@ -46,11 +47,14 @@ from time import perf_counter
 from urllib.parse import parse_qs, urlparse
 
 mimetypes.add_type("application/manifest+json", ".webmanifest")   # PWA manifest (iOS/Android 홈 화면 추가)
+mimetypes.add_type("font/woff2", ".woff2")                         # kiosk self-hosted font (no internet on the display)
 
 HUB = Path(__file__).resolve().parent
 WEB = HUB / "web"
 MIN_GZIP = 1024
-PAGES = {"/": "index.html", "/index.html": "index.html"}
+PAGES = {"/": "index.html", "/index.html": "index.html",
+         "/kiosk": "kiosk.html"}     # hallway display: side panel + auto-rotating slides
+IMMUTABLE = ("fonts/", "vendor/")    # versioned by file name -> safe to cache for a year
 REDIRECTS = {"/diagnosis": "/#dx-regime", "/diagnosis.html": "/#dx-regime"}   # old page-2 bookmarks
 
 
@@ -192,6 +196,8 @@ class Handler(BaseHTTPRequestHandler):
         if ctype.startswith("text/") or ctype in ("application/javascript", "application/json"):
             ctype += "; charset=utf-8"
         cache = "no-cache"          # css / js change with every deploy; a page load re-validates
+        if p.relative_to(WEB.resolve()).as_posix().startswith(IMMUTABLE):   # resolved path, not the request
+            cache = "public, max-age=31536000, immutable"
         body = p.read_bytes()
         if p.name == "index.html" and not self.public:
             # 관리자 인스턴스(8501)는 홈 화면 아이콘·이름을 관리자용(렌치 배지)으로 — 공개(8502)와 구별

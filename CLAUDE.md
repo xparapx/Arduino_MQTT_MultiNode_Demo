@@ -17,6 +17,11 @@ Document structure (전역 규칙 적용, 2026-09-12):
 - 작업 이력·세션 인계 = `docs/WORKLOG.md` (구 PROGRESS.md, yyyy-mm 절, 최신이 위). 의미 있는 변경마다 갱신.
 - CLAUDE.md = 작업 규칙·설계 결정·현재 상태 요약 전용. 상세 경위는 WORKLOG로.
 
+Kiosk (복도 송출 화면, 2026-10-04):
+- `/kiosk` = `hub/web/kiosk.html` + `hub/web/kiosk/` — SPA와 분리된 다크 전용 1920×1080 페이지, 공개 인스턴스(8502)로 송출.
+- 색 등급(좋음/보통/나쁨)은 신뢰할 수 있는 실측이 있을 때만; 의심스러우면 회색. 새 슬라이드도 이 규칙을 따른다.
+- 외부 라이브러리 예외(Recharts 등)는 사용자 승인 + 송출 기기 실측 통과 시 `hub/web/vendor/`에만, 메인 SPA는 계속 무의존.
+
 Operating rules:
 - Board (`ssh q`): never edit files there; deploy by `git pull` only.
 - sudo on the board needs a password. Print any sudo / `systemctl restart|enable|daemon-reload`

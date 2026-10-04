@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko" data-theme="dark" class="kiosk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="kiosk-build" content="1">
+<title>교실 공기질 — 송출 화면</title>
+<link rel="icon" href="/static/icons/icon-192.png">
+<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/kiosk/kiosk.css">
+</head>
+<body>
+<div id="k-root">
+  <aside id="k-side">
+    <div class="k-brand">교실 공기질<small>실시간 모니터</small></div>
+    <div class="k-clock" id="k-clock">--:--</div>
+    <div class="k-date" id="k-date"></div>
+    <div class="k-head" id="k-head"></div>
+    <div class="k-list" id="k-list"></div>
+    <div class="k-fresh" id="k-fresh"></div>
+  </aside>
+  <main id="k-main">
+    <header id="k-title"><h1></h1><div class="k-key"></div></header>
+    <section id="k-stage" aria-live="off"></section>
+    <div id="k-prog"></div>
+  </main>
+  <div id="k-debug" hidden></div>
+</div>
+<script src="/static/app.js"></script>
+<script src="/static/charts.js"></script>
+<script src="/static/kiosk/kiosk.js"></script>
+</body>
+</html>
