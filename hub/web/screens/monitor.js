@@ -92,41 +92,23 @@
     el.innerHTML = h + `<div class="panel" style="margin-top:12px"><div class="tt" style="margin-bottom:8px">변수별 분포 — 최근 ${d.box_days || d.days}일</div><div class="boxrow">${boxes}</div><div style="text-align:center;margin-top:10px">${boxenLegend()}</div></div>`;
   }
 
-  // ---- 시계열&비전 -------------------------------------------------------------------
+  // ---- 시계열 -------------------------------------------------------------------
   function renderSeries(el) {
     const d = S.series;
     if (!d) { el.innerHTML = secMeta("") + '<div class="panel empty">데이터가 아직 없습니다.</div>'; return; }
     const opts = (S.live ? S.live.nodes : []).map((n) => `<option value="${esc(n.node)}"${n.node === d.node ? " selected" : ""}>${esc(n.label)} (${esc(n.node)})</option>`).join("");
     const thr = { co2: 1000, voc: 200 };
     const charts = Object.entries(d.series).map(([k, vals]) => { const m = d.metrics[k]; return `<div><div class="tt" style="${m.target ? `color:${cc(k)}` : ""}">${esc(m.label)} (${esc(m.unit)})${m.target ? " ★" : ""}</div>${CH.line(d.times, vals, cc(k), { threshold: thr[k], unit: m.unit, target: m.target, glow: m.target })}</div>`; }).join("");
-    el.innerHTML = secMeta("재실 탐지 포함 · 60 s 갱신 · 선택 상태 유지 · 최근 60 버킷 = 5시간")
-      + `<div class="panel"><div class="row" style="margin-bottom:10px"><span class="tt">노드 선택</span><select id="node-sel">${opts}</select><span class="tt">최근 ${d.times.length} 버킷</span>${visionChips((d.occupancy || {}).nodes)}</div>`
+    el.innerHTML = secMeta("60 s 갱신 · 선택 상태 유지 · 최근 60 버킷 = 5시간")
+      + `<div class="panel"><div class="row" style="margin-bottom:10px"><span class="tt">노드 선택</span><select id="node-sel">${opts}</select><span class="tt">최근 ${d.times.length} 버킷</span></div>`
       + (d.times.length ? `<div class="grid g6">${charts}</div>` : '<div class="empty">이 노드의 행이 없습니다</div>')
-      + `<div style="margin-top:12px">${visionPanel(d.occupancy, d.label)}</div>`
-      + '<p class="note">같은 교실(라벨) 비전 노드의 재실 탐지 — 깜빡이는 조준선은 최근 버킷 최대 인원 시점의 위치, 수치는 5분 버킷 통계(평균/중앙값/최대). 영상은 전송·저장되지 않습니다(좌표만 수집).</p></div>';
+      + '<p class="note">★ 변수는 ML 타깃 · 점선 = 기준(CO₂ 1,000 ppm · VOC 200)</p></div>';
     $("#node-sel", el).addEventListener("change", async (e) => {
       S.node = e.target.value;
       try { localStorage.setItem("aq-node", S.node); } catch (er) { /* ignore */ }
       await loadSeries(true);
       renderSeries(el);
     });
-  }
-  function visionPanel(o, label) {
-    if (!o || !o.available) {
-      const why = { "no occupancy table": "occupancy 테이블이 없습니다 — hub.py의 occ 구독을 확인하세요.", "no rows": "비전(재실) 데이터가 아직 없습니다.", "no vision node": `'${esc(label)}' 교실에 매핑된 비전 노드가 없습니다 — nodes.json에서 같은 라벨로 등록하세요.` };
-      return `<div class="info">${why[(o || {}).reason] || "비전 데이터 없음"}</div>`;
-    }
-    const cross = o.cents.length ? o.cents.map((c, i) => `<div class="ch" style="left:${(c[0] / o.w * 100).toFixed(1)}%;top:${(c[1] / o.w * 100).toFixed(1)}%;animation-delay:${(i * 0.15).toFixed(2)}s"><b></b></div>`).join("") : '<div class="none">버킷 내 탐지 없음</div>';
-    const chips = `<div class="chips"><div class="c2 acc"><div class="v">${num(o.occ, 1)}</div><div class="l">5분 평균</div></div><div class="c2"><div class="v">${num(o.occ_med)}</div><div class="l">중앙값</div></div><div class="c2"><div class="v">${num(o.occ_max)}</div><div class="l">최대</div></div><div class="c2"><div class="v">${num(o.n)}</div><div class="l">샘플 n</div></div></div>`;
-    return `<div class="vp"><div class="hd"><span>재실 탐지 — ${esc(o.label)} <span style="color:var(--dim)">(${esc(o.vision_node)})</span></span><span class="live" style="color:${o.stale ? "var(--red)" : "var(--green)"}">${o.stale ? `지연 · 마지막 ${esc(o.recv_time.slice(5, 16))}` : "LIVE"}</span></div>`
-      + `<div class="maprow"><div class="map">${cross}<span class="tag">CAMERA VIEW 4:3 · coords /${o.w}</span></div><div class="side2">${chips}<div class="tt" style="margin-bottom:6px">최근 버킷 추이 (평균 인원)</div><div class="bars">${CH.occBars(o.hist)}</div><div class="ft">조준선 = 최대 인원(${num(o.occ_max)}) 시점 위치 (4:3 프레임 상대좌표) · 버킷 ${esc(o.recv_time)} KST<br>영상 비전송 · 좌표만 수집 (온디바이스 추론)</div></div></div></div>`;
-  }
-  // vision node ON/OFF chips -- right end of the node-select row, every vision node
-  // regardless of which env node is selected (on = bucket within STALE_MIN)
-  function visionChips(vns) {
-    if (!vns || !vns.length) return "";
-    const on = vns.filter((v) => v.on).length;
-    return `<div class="vnodes"><span class="tt">비전 노드 ${on}/${vns.length} ON</span>${vns.map((v) => `<span class="vnc${v.on ? " on" : ""}" data-tip="${esc(v.node)} · 마지막 ${esc((v.last_kst || "—").slice(5, 16))} KST">${esc(v.room)}<i></i>${v.on ? "ON" : "OFF"}</span>`).join("")}</div>`;
   }
 
   // ---- 최근기록 (admin) --------------------------------------------------------------
@@ -161,7 +143,7 @@
     repaint() { renderStats(this.el); },
   });
   AQ.router.register({
-    name: "mon-series", group: "mon", label: "시계열&비전", icon: "series", color: "blue",
+    name: "mon-series", group: "mon", label: "시계열", icon: "series", color: "blue",
     activate() { this.un = store.sub("/api/live", 60000, async (d) => { onLive(d); await loadSeries(); renderSeries(this.el); }); },
     deactivate() { if (this.un) { this.un(); this.un = null; } },
     repaint() { renderSeries(this.el); },

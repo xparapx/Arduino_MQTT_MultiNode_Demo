@@ -185,28 +185,6 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .howto .sw.hat { background: repeating-linear-gradient(45deg, var(--foot) 0 1px, transparent 1px 4px); height: 5px; }
 .howto .sw.mk { width: 9px; height: 9px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 2px var(--panel); margin: 0 6px; }
 
-/* ---- vision panel ---- */
-.vp { background: var(--panel2); border-radius: 10px; padding: 12px 14px; }
-.vp .hd { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
-.vp .live { font-size: 10px; padding: 2px 9px; border-radius: 20px; border: 1px solid var(--grid); font-weight: 400; }
-.vp .chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; }
-.vp .c2 { background: var(--chip2-bg); border: 1px solid var(--chip2-bd); border-radius: 8px; padding: 4px 12px; text-align: center; flex: 1; }
-.vp .c2 .v { font-size: 19px; font-weight: 800; font-family: "IBM Plex Sans KR", system-ui, -apple-system, "Malgun Gothic", sans-serif; }
-.vp .c2.acc .v { color: var(--acc); }
-.vp .c2 .l { font-size: 9.5px; color: var(--dim); letter-spacing: 0.08em; }
-.vp .maprow { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; }
-.vp .map { position: relative; flex: 0 0 auto; height: 320px; width: auto; max-width: 100%; aspect-ratio: 4 / 3; background: var(--map-bg); border: 1px dashed var(--grid);
-  border-radius: 8px; overflow: hidden;
-  background-image: repeating-linear-gradient(0deg, transparent, transparent 23px, var(--map-line) 24px),
-                    repeating-linear-gradient(90deg, transparent, transparent 23px, var(--map-line) 24px); }
-.vp .ch { position: absolute; width: 38px; height: 38px; transform: translate(-50%, -50%); animation: vb 1.15s ease-in-out infinite; }
-.vp .ch::before { content: ''; position: absolute; left: 50%; top: -4px; bottom: -4px; width: 2px; background: var(--acc); transform: translateX(-50%); }
-.vp .ch::after { content: ''; position: absolute; top: 50%; left: -4px; right: -4px; height: 2px; background: var(--acc); transform: translateY(-50%); }
-.vp .ch b { position: absolute; inset: 9px; border: 2px solid var(--acc); border-radius: 50%; }
-.vp .none { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 12px; }
-.vp .tag { position: absolute; right: 8px; bottom: 6px; font-size: 9px; color: var(--foot); font-family: "IBM Plex Sans KR", system-ui, -apple-system, "Malgun Gothic", sans-serif; }
-@keyframes vb { 0%, 100% { opacity: 1; } 50% { opacity: 0.18; } }
-.vp .side2 { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
 /* fan chip -- physical device state from the plug (spins while actually running) */
 .fanchip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px; border-radius: 999px;
   font-size: 12.5px; font-weight: 700; font-family: "IBM Plex Mono", monospace;
@@ -247,18 +225,6 @@ svg.chart text.sans { font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
 .enrow .tt { white-space: nowrap; font-size: 15px; font-weight: 700; }
 .enrow .fanchip { margin-left: auto; font-size: 15px; padding: 5px 14px; gap: 7px; }
 .enrow .fanchip svg { width: 21px; height: 21px; }
-/* vision node ON / OFF chips -- right end of the node-select row (all vision nodes) */
-.vnodes { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
-.vnc { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
-  font-size: 10.5px; font-family: "IBM Plex Sans KR", system-ui, -apple-system, "Malgun Gothic", sans-serif;
-  background: var(--chip2-bg); border: 1px solid var(--chip2-bd); color: var(--dim); }
-.vnc i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); opacity: 0.5; }
-.vnc.on { color: var(--green); border-color: var(--chip-ok); }
-.vnc.on i { background: var(--green); opacity: 1; }
-.vp .bars { display: flex; align-items: flex-end; gap: 2px; height: 110px; }
-.vp .bars i { flex: 1; background: var(--bar); border-radius: 2px 2px 0 0; min-height: 2px; }
-.vp .bars i.now { background: var(--acc); }
-.vp .ft { font-size: 9.5px; color: var(--foot); margin-top: 8px; }
 
 /* ---- tooltip ---- */
 #tip { position: fixed; pointer-events: none; z-index: 50; background: var(--panel); color: var(--ink); border: 1px solid var(--grid);
@@ -375,10 +341,6 @@ svg.chart .hb-over { animation: hb-blink 2.2s ease-in-out infinite; }
   .boxrow .bx .tt { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .metric .v { font-size: 15px; }
   .tbl th, .tbl td { padding: 6px 6px; font-size: 11px; }
-  .vp .maprow { flex-direction: column; }
-  .vp .map { flex: 0 0 auto; width: 100%; height: auto; }
-  .vp .chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .vp .bars { height: 70px; }
   .act .do .achip.big { font-size: 16px; }
   .row { gap: 6px; } .btn { padding: 6px 10px; }
   .panel[style*="height"] { height: auto !important; }

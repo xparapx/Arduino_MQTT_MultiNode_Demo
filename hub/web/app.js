@@ -165,7 +165,6 @@ const AQ = (() => {
     set("#st-hub", s.fresh ? "● 수집 중" : "● 수신 지연", s.fresh ? "ok" : "bad");
     set("#st-last", s.hub_last_kst ? `${s.hub_last_kst} KST` : "—");
     set("#st-env", `${s.env_active} / ${s.env_total} 활성`, s.env_active < s.env_total ? "warn" : "");
-    set("#st-vis", `${s.vis_recent} / ${s.vis_total} (24h)`);
     set("#st-rows", `${num(s.readings_rows)} 행 · ${s.journal || "—"}`);
     set("#st-analyst", s.hourly_kst ? `● hourly ${s.hourly_kst}` : "○ 실행 없음", s.hourly_kst ? "ok" : "");
     set("#st-daily", `${s.daily_kst || "—"} · ${s.weekly_kst || "—"}`);

@@ -202,11 +202,6 @@ const CH = (() => {
     return s + "</svg>";
   }
 
-  function occBars(hist) {
-    if (!hist || !hist.length) return "";
-    const top = Math.max(1, ...hist.map((h) => h.occ_max || 0));
-    return hist.map((h, i) => `<i${i === hist.length - 1 ? ' class="now"' : ""} style="height:${Math.max(3, Math.round((h.occ || 0) / top * 100))}%" data-tip="${esc(h.recv_time)}\n평균 ${num(h.occ, 1)} · 최대 ${num(h.occ_max)}"></i>`).join("");
-  }
 
   /* 24h plug power bars: hist = [[bucket_epoch_utc, mean_W], ...] (5-min buckets,
      gaps = no sample). Bar colour = value on the device colormap (purifier =
@@ -476,5 +471,5 @@ const CH = (() => {
     return s + "</svg>";
   }
 
-  return { radar, box, hbars, trend, pbars, dowheat, weekbars, line, occBars, powerBars, devColor, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO, cvar, varColor, cmap, cmapAt, CMAPS };
+  return { radar, box, hbars, trend, pbars, dowheat, weekbars, line, powerBars, devColor, plane, band, matrix, corr, density, rc, bandCfg, bandZone, bandGauge, bandStrip, ZONE_KO, cvar, varColor, cmap, cmapAt, CMAPS };
 })();

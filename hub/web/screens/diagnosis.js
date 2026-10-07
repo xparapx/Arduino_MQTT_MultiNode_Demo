@@ -109,19 +109,6 @@
     return h;
   }
 
-  // ---- G: 재실 × CO₂ -----------------------------------------------------------------
-  function secG() {
-    const cfg = A.cfg, run = cfg.run;
-    let h = sec("people", "orange", "재실 × CO₂", `daily · (교실, ${cfg.regime.bucket_minutes}분 버킷) 정확 조인 · occ n ≥ ${cfg.occ_co2.min_occ_n} · ρ는 포화형 관계라 Spearman`);
-    const oc = A.occ_co2;
-    if (oc) {
-      const grows = oc.by_room.map((x) => ({ cells: [esc(x.room), num(x.n), x.rho === null ? "—" : x.rho.toFixed(4), x.slope === null ? "—" : num(x.slope, 1), x.last_bucket_kst ? `${esc(x.last_bucket_kst)}${x.stopped ? ` ${chip("중단", "warn")}` : ""}` : "—"] }));
-      h += `<div class="grid g3"><div class="panel">${metric("pooled Spearman ρ", oc.rho === null ? "—" : oc.rho.toFixed(2), `n = ${num(oc.n)} · 기울기 ${oc.slope === null ? "—" : num(oc.slope, 1)} ppm/인 (참고값)`)}<p class="note">중단 = 마지막 비전 버킷이 분석 창(${run.daily_window_days}일) 이전 · 비전 노드 ${oc.by_room.length}개 중 ${oc.by_room.filter((x) => x.stopped).length}개 중단</p></div>`
-        + `<div class="span2 panel">${grows.length ? table(["교실", "조인 행", "Spearman ρ", "기울기 (ppm/인)", "마지막 비전 버킷 (KST)"], grows) : '<div class="info">조인된 (교실, 버킷)이 없습니다 — 비전 노드 데이터 확인</div>'}</div></div>`;
-    } else h += '<div class="info">daily 실행 후 표시됩니다.</div>';
-    return h;
-  }
-
   // ---- H: 탐색 시각화 ----------------------------------------------------------------
   function secH() {
     const run = A.cfg.run;
@@ -157,7 +144,7 @@
     el.innerHTML = parts.map((f) => f()).join("");
   }
   function renderRegime(el) {
-    renderInto(el, [secB, secH, secG]);
+    renderInto(el, [secB, secH]);
     const ws = $("#within-sel", el);
     if (ws) ws.addEventListener("change", (e) => { within = e.target.value; renderRegime(el); });
   }

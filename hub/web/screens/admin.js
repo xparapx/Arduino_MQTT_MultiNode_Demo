@@ -15,7 +15,7 @@
       + metric("readings", `${num(s.readings_rows)} 행`, `journal ${esc(s.journal || "—")}`)
       + metric("hub 수신", s.fresh ? "● 수집 중" : "● 지연", s.hub_last_kst ? `${esc(s.hub_last_kst)} KST` : "—")
       + metric("analyst 실행", s.hourly_kst ? `hourly ${esc(s.hourly_kst)}` : "없음", `daily ${esc(s.daily_kst || "—")} · weekly ${esc(s.weekly_kst || "—")}`)
-      + metric("진단 모델", esc(s.model || "없음"), `환경 ${s.env_active}/${s.env_total} · 비전 ${s.vis_recent}/${s.vis_total}`)
+      + metric("진단 모델", esc(s.model || "없음"), `환경 노드 ${s.env_active}/${s.env_total} 활성`)
       + `</div></div>`;
   }
 
@@ -25,7 +25,7 @@
     const hours = [...Array(24).keys()].map((h) => `<option value="${h}">${String(h).padStart(2, "0")}:00</option>`).join("");
     return sec("export", "purple", "데이터 내보내기 (CSV)", "요청 시 생성 · 버튼을 누르기 전엔 쿼리 · 직렬화 없음")
       + `<div class="grid g2"><div class="panel"><div class="tt" style="margin-bottom:10px">DB = 영구 원본 · CSV = 그 순간의 사본. 준비 → 다운로드.</div>`
-      + `<div class="row"><button class="btn" data-export="all">전체 readings CSV 준비</button><button class="btn" data-export="merged">env × occupancy 병합 CSV 준비</button><button class="btn" data-export="occupancy">occupancy 원본 CSV 준비</button></div><div class="row" id="export-out" style="margin-top:10px"></div></div>`
+      + `<div class="row"><button class="btn" data-export="all">전체 readings CSV 준비</button></div><div class="row" id="export-out" style="margin-top:10px"></div></div>`
       + `<div class="panel"><div class="tt" style="margin-bottom:8px">Export by date range (KST)</div>`
       + (lo ? `<div class="row"><input type="date" id="r-sd" value="${lo}" min="${lo}" max="${hi}"><select id="r-sh">${hours}</select><span class="tt">→</span><input type="date" id="r-ed" value="${hi}" min="${lo}" max="${hi}"><select id="r-eh">${hours.replace('value="23"', 'value="23" selected')}</select></div><div class="row" style="margin-top:10px"><button class="btn" id="r-go">조회 · CSV 준비</button><span id="range-out"></span></div>`
              : '<div class="tt">데이터가 쌓이면 범위 내보내기가 가능합니다.</div>')

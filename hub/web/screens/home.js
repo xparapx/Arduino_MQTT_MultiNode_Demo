@@ -15,7 +15,7 @@
     return sec("pulse", "cyan", "시스템 상태", "60 s 갱신")
       + `<div class="panel"><div class="grid g4" style="gap:10px">`
       + metric("hub.py 수집", s.fresh ? "● 수집 중" : "● 수신 지연", s.hub_last_kst ? `마지막 수신 ${esc(s.hub_last_kst)} KST` : "수신 없음", s.fresh ? "green" : "red")
-      + metric("환경 노드", `${s.env_active} / ${s.env_total} 활성`, `비전 ${s.vis_recent} / ${s.vis_total} (24h)`, "cyan")
+      + metric("환경 노드", `${s.env_active} / ${s.env_total} 활성`, "최근 24h 수신 기준", "cyan")
       + metric("analyst.py", s.hourly_kst ? `hourly ${esc(s.hourly_kst)}` : "실행 없음", `daily ${esc(s.daily_kst || "—")} · weekly ${esc(s.weekly_kst || "—")}`, "blue")
       + metric("진단 모델", esc(s.model || "없음"), `readings ${num(s.readings_rows)} 행`, "purple")
       + `</div></div>`;
