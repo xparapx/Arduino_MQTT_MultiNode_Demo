@@ -46,6 +46,8 @@ for (const file of files) {
   await sleep(800);
   if (process.env.ROOT_FS) await evalJS(`(()=>{const st=document.createElement("style");st.textContent="html{font-size:${process.env.ROOT_FS} !important}";document.head.appendChild(st);return 1})()`);
   await sleep(500);
+  if (process.env.TEXT_SCALE) await evalJS(`(()=>{const k=${process.env.TEXT_SCALE};document.querySelectorAll("svg text").forEach(t=>{const f=parseFloat(t.getAttribute("font-size")||getComputedStyle(t).fontSize);t.setAttribute("font-size",(f*k).toFixed(2));t.style.fontSize=(f*k).toFixed(2)+"px";});return 1})()`);
+  await sleep(400);
   const box = await evalJS(`(()=>{const el=document.querySelector("svg");const r=el.getBoundingClientRect();return JSON.stringify({x:r.x,y:r.y,w:r.width,h:r.height})})()`);
   const B = JSON.parse(box); console.log("svg box", B);
   const rep = JSON.parse(await evalJS(`JSON.stringify({page:[document.documentElement.scrollWidth, document.documentElement.scrollHeight],
