@@ -48,3 +48,9 @@ sudo systemctl disable --now multinode_aq_analyst_{hourly,daily,weekly}.timer
 ```
 The `analysis` table can be emptied without touching collection or display
 (`DELETE FROM analysis`), see plan appendix A.
+
+## 설치 방식 주의 (2026-10-07)
+
+유닛은 반드시 `/etc/systemd/system/`에 **복사**해서 설치한다(`sudo cp hub/systemd/<unit> /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now <unit>`).
+`/home/arduino/...`로 가는 **심링크로 설치하면 안 된다** — 이 보드는 `/home`이 별도 파티션(`/dev/mmcblk0p69`)이라 부팅 시 systemd가 유닛을 읽는 시점에 링크 대상이 없어
+`Failed to open ... No such file or directory`로 유닛이 사라진다(plugwatch가 9/25~10/7 정지한 원인). `multinode_aq_plugwatch.service`는 10/7 복사 설치로 교체함.

@@ -43,6 +43,7 @@ SRC = "aq-plugwatch"          # RPC response topic prefix
 POLL_S = 60                   # GetStatus round for every configured plug
 WRITE_S = 15                  # state-file refresh + command-file check
 RECON_S = 60                  # auto mode: reconcile plugs to actuator_state
+CMD_MAX_AGE_S = 180           # plug_cmd.json older than this is dropped, not executed (2026-10-07: 6일 묵은 ALL ON이 재기동 직후 발행된 사고)
 OFFLINE_S = 180               # no message for this long -> online: false
 BUCKET_S = 300                # apower history: 5-min buckets ...
 HIST_N = 288                  # ... x 288 = 24 h
@@ -167,6 +168,10 @@ def run_command(client) -> bool:
         os.remove(CMD_PATH)
         return False
     os.remove(CMD_PATH)
+    age = time.time() - float(cmd.get("ts") or 0)
+    if age > CMD_MAX_AGE_S:
+        print(f"command dropped (stale, {age:.0f}s old): {cmd}")
+        return False
     if cmd.get("action") == "all":
         payload = "on" if cmd.get("on") else "off"
         for mac in MAC2LOC:
@@ -234,31 +239,36 @@ def shutdown(signum, frame):
 signal.signal(signal.SIGTERM, shutdown)
 signal.signal(signal.SIGINT, shutdown)
 
-client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="aq-plugwatch")
-client.username_pw_set(USERNAME, PASSWORD)
-client.tls_set()
-client.on_connect = on_connect
-client.on_message = on_message
-client.connect(BROKER, PORT, keepalive=60)
-client.loop_start()
+def main():
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="aq-plugwatch")
+    client.username_pw_set(USERNAME, PASSWORD)
+    client.tls_set()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect(BROKER, PORT, keepalive=60)
+    client.loop_start()
 
-print(f"plugwatch: {len(MAC2LOC)} plugs, poll {POLL_S}s, state -> {STATE_PATH}")
-# 명령 체크는 2초 주기(반응성), 상태 기록은 평시 15초 / 명령 직후 45초간 3초(SD 마모 억제)
-last_poll = 0.0
-last_write = 0.0
-last_recon = 0.0
-boost_until = 0.0
-while True:
-    now = time.monotonic()
-    if now - last_poll >= POLL_S:
-        last_poll = now
-        poll(client)
-    if run_command(client):
-        boost_until = now + 45
-    if now - last_write >= (3 if now < boost_until else WRITE_S):
-        last_write = now
-        write_state()                      # refreshes each device's "online" flag
-        if now - last_recon >= RECON_S:    # 자동 제어: 판정 상태로 수렴 (write 직후 = online 최신)
-            last_recon = now
-            reconcile(client)
-    time.sleep(2)
+    print(f"plugwatch: {len(MAC2LOC)} plugs, poll {POLL_S}s, state -> {STATE_PATH}")
+    # 명령 체크는 2초 주기(반응성), 상태 기록은 평시 15초 / 명령 직후 45초간 3초(SD 마모 억제)
+    last_poll = 0.0
+    last_write = 0.0
+    last_recon = 0.0
+    boost_until = 0.0
+    while True:
+        now = time.monotonic()
+        if now - last_poll >= POLL_S:
+            last_poll = now
+            poll(client)
+        if run_command(client):
+            boost_until = now + 45
+        if now - last_write >= (3 if now < boost_until else WRITE_S):
+            last_write = now
+            write_state()                      # refreshes each device's "online" flag
+            if now - last_recon >= RECON_S:    # 자동 제어: 판정 상태로 수렴 (write 직후 = online 최신)
+                last_recon = now
+                reconcile(client)
+        time.sleep(2)
+
+
+if __name__ == "__main__":      # import(테스트)만으로는 브로커에 접속하지 않는다
+    main()
