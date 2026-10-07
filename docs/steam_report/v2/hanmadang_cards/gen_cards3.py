@@ -62,6 +62,7 @@ I = {
  "gear": '<circle cx="50" cy="50" r="13"/><path d="M50 12v12M50 76v12M12 50h12M76 50h12M23 23l9 9M68 68l9 9M77 23l-9 9M32 68l-9 9"/>',
  "check": '<circle cx="50" cy="50" r="36"/><path d="M32 52l12 12 24-26"/>',
  "phone": '<rect x="30" y="8" width="40" height="84" rx="8"/><path d="M44 80h12"/>',
+ "kiosk": '<rect x="10" y="12" width="80" height="52" rx="6"/><path d="M50 64v18M32 82h36"/><path d="M22 28h22M22 40h40M22 52h14"/><circle cx="74" cy="30" r="6"/>',
 }
 
 # ================= c1 — 시스템 구축 =================
@@ -75,8 +76,7 @@ def arrow(label):
     return f'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-width:120px;gap:6px"><div class="arrow">▶</div><div class="d" style="text-align:center;line-height:1.15">{label}</div></div>'
 write("c1", 3600, 800, f"""<div class="wrap" style="gap:0;padding:26px 30px">
 <div style="display:flex;flex-direction:column;gap:18px;flex:0 0 820px">
-  {snode("sensor", P["blue"], "센서 노드 ×8", "UNO R4 WiFi<br>SEN55 · SCD30")}
-  {snode("camera", P["green"], "비전 노드 ×5", "FOMO 재실 탐지<br>영상 비저장")}
+  {snode("sensor", P["blue"], "센서 노드 ×8", "UNO R4 WiFi + Grove<br>SEN55 · SCD30")}
 </div>
 {arrow("MQTT · TLS<br>5분 평균")}
 {node("cloud", P["gray"], "브로커", "HiveMQ · 8883", 430)}
@@ -84,8 +84,9 @@ write("c1", 3600, 800, f"""<div class="wrap" style="gap:0;padding:26px 30px">
 {node("hub", P["orange"], "허브 UNO Q", "수집·SQLite·분석·웹<br>systemd 무인 운영", 760)}
 {arrow("명령 ↓ 전력 ↑")}
 <div style="display:flex;flex-direction:column;gap:18px;flex:0 0 820px">
-  {snode("plug", P["purple"], "플러그 ×16", "공청기 8 · 환풍기 8<br>전력 실측 · 스위치")}
+  {snode("plug", P["purple"], "플러그 ×16", "공청기 8 · 환풍기 8")}
   {snode("monitor", P["cyan"], "대시보드", "PC · 폰, 조회 전용")}
+  {snode("kiosk", P["yellow"], "복도 키오스크", "1학년 복도 DID 송출")}
 </div>
 </div>""")
 
@@ -129,13 +130,13 @@ s1 = stage("①", "패턴 분석", P["blue"],
            + cap("두 봉우리는 주중에만 · 주중 08–16시 <b>39%</b> 초과(방학 포함)"), tag="73일 · 157,744건")
 s2 = stage("②", "레짐 모델링", P["purple"],
            f'<img src="img/p_regime.png" style="width:100%;height:360px;object-fit:contain;background:#fff;border-radius:16px">'
-           + cap("4개 레짐: 청정 62·인체 15·물질 15·복합 9% · 탐지 1명당 <b>+194 ppm</b>"))
+           + cap("4개 레짐: 청정 62·인체 15·물질 15·복합 9% · 환기 회복 τ <b>42분</b>"))
 def qt(c, t, s):
     return f'<div style="background:{c};border-radius:18px;padding:6px 14px;line-height:1.05;display:flex;flex-direction:column;justify-content:center"><div class="k">{t}</div><div class="d">{s}</div></div>'
 s3 = stage("③", "인사이트", P["green"],
            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;min-height:0">'
            + qt(P["cyan"], "청정", "→ 유지") + qt(P["blue"], "인체", "→ 환풍기") + qt(P["orange"], "물질", "→ 공기청정기") + qt(P["red"], "복합", "→ 둘 다 가동")
-           + '</div>' + cap("<b>1,000/700 ppm</b> · 10분 · τ <b>42분</b>"))
+           + '</div>' + cap("<b>1,000/700 ppm</b> · 10분 · 환풍기 <b>38 W</b> vs 공청기 7 W"))
 write("c3", 3600, 800, f"""<div class="wrap" style="gap:14px;padding:16px 26px">{s1}<div class="arrow">▶</div>{s2}<div class="arrow">▶</div>{s3}</div>""")
 
 # ================= c4 — 제어 로직 3단계 (넓고 낮은 셀) =================

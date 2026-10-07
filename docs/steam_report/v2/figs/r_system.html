@@ -4,19 +4,18 @@ html,body{height:100%} body{word-break:keep-all}
 .fill{position:relative;display:grid;grid-template-columns:42mm 16mm 40mm 16mm 42mm;grid-template-rows:1fr 1fr;gap:3mm 0}
 .box{display:flex;flex-direction:column;justify-content:center;gap:.2mm}
 .box .h{font-weight:700}
-#sen{grid-column:1;grid-row:1} #vis{grid-column:1;grid-row:2} #hub{grid-column:3;grid-row:1/3} #dash{grid-column:5;grid-row:1} #plug{grid-column:5;grid-row:2}
+#sen{grid-column:1;grid-row:1/3} #hub{grid-column:3;grid-row:1/3} #dash{grid-column:5;grid-row:1} #plug{grid-column:5;grid-row:2}
 #hub{border-color:var(--ink);border-width:.45mm;gap:.5mm}
 #plug{border-color:var(--rg-clean);border-width:.45mm;background:var(--rg-clean-bg)}
 .c-pm{--rc:var(--pm)} .c-fan{--rc:var(--fan)} .c-pur{--rc:var(--purifier)}
 .chips{display:flex;gap:1mm;flex-wrap:wrap;margin-top:.5mm}
 #ov{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
 </style></head><body><div class="fig">
-<div class="t">시스템 구성 — 측정·허브·제어·표시 <span class="sub">검정: 데이터 흐름, 청록: 명령·전력</span></div>
+<div class="t">시스템 구성 — 측정·허브·제어·공유 <span class="sub">검정: 데이터 흐름, 청록: 명령·전력</span></div>
 <div class="fill">
- <div class="panel box" id="sen" data-fit="sen"><div class="h">센서 노드 ×8</div><div>UNO R4 WiFi</div><div>SEN55 · SCD30</div><div class="chips"><span class="chip c-co2">CO₂</span><span class="chip c-voc">VOC</span><span class="chip c-pm">먼지</span></div></div>
- <div class="panel box" id="vis" data-fit="vis"><div class="h">비전 노드 ×5</div><div>Nicla Vision · FOMO</div><div>영상 비전송, <b>인원 수만</b></div></div>
+ <div class="panel box" id="sen" data-fit="sen"><div class="h">센서 노드 ×8</div><div>UNO R4 WiFi + Grove</div><div>SEN55 · SCD30</div><div>5분 평균 · 자동 복구</div><div class="chips"><span class="chip c-co2">CO₂</span><span class="chip c-voc">VOC</span><span class="chip c-pm">먼지</span></div></div>
  <div class="panel box" id="hub" data-fit="hub"><div class="h">허브 UNO Q</div><div>MQTT 수집 → SQLite</div><div>품질 검사</div><div>레짐 판정 (GMM)</div><div>제어 추론</div><div>웹 대시보드</div></div>
- <div class="panel box" id="dash" data-fit="dash"><div class="h">대시보드</div><div>PC·폰, 조회 전용 공개</div><div>실시간 상태·진단</div></div>
+ <div class="panel box" id="dash" data-fit="dash"><div class="h">대시보드 · 복도 키오스크</div><div>PC·폰 조회 전용 공개</div><div>1학년 복도 DID 송출</div></div>
  <div class="panel box" id="plug" data-fit="plug"><div class="h">스마트플러그 ×16</div><div class="chips"><span class="chip c-pur"><span class="dot"></span>공청기 8</span><span class="chip c-fan"><span class="dot"></span>환풍기 8</span></div><div>전력 실측 · 원격 제어</div></div>
  <svg id="ov"></svg>
 </div></div>
@@ -32,9 +31,8 @@ function arrow(a,b,c,o={}){const hl=6.2*U,w=1.8*U;let d,ang;
  const h=document.createElementNS(NS,'path');h.setAttribute('d',`M${b[0]} ${b[1]} L${b[0]-cs*hl-s*hl*.6} ${b[1]-s*hl+cs*hl*.6} L${b[0]-cs*hl+s*hl*.6} ${b[1]-s*hl-cs*hl*.6} Z`);h.setAttribute('fill',c);svg.appendChild(h);}
 function label(x,y,t,c,bold){const e=document.createElementNS(NS,'text');e.setAttribute('x',x);e.setAttribute('y',y);e.setAttribute('text-anchor','middle');e.setAttribute('dominant-baseline','middle');e.setAttribute('fill',c);if(bold)e.setAttribute('font-weight','700');e.textContent=t;svg.appendChild(e);}
 function draw(){svg.innerHTML='';const ink=C('--ink'),mint=C('--rg-clean'),dim=C('--dim');const lh=14*1.3*U;
- const a1=pt('sen','r'),h1=pt('hub','l',.3);arrow(a1,h1,ink,{curve:1});
- const a2=pt('vis','r'),h2=pt('hub','l',.7);arrow(a2,h2,ink,{curve:1});
- const gx=(a1[0]+h1[0])/2,gy=(h1[1]+h2[1])/2;label(gx,gy-lh*1.1,'MQTT',dim,1);label(gx,gy,'(TLS)',dim);label(gx,gy+lh*1.1,'5분 평균',dim);
+ const a1=pt('sen','r'),h1=pt('hub','l',.5);arrow(a1,h1,ink,{curve:1});
+ const gx=(a1[0]+h1[0])/2,gy=h1[1];label(gx,gy-lh*1.1,'MQTT',dim,1);label(gx,gy,'(TLS)',dim);label(gx,gy+lh*1.1,'5분 평균',dim);
  const d1=pt('hub','r',.22),d2=pt('dash','l',.5);arrow(d1,d2,ink,{curve:1});label((d1[0]+d2[0])/2,Math.min(d1[1],d2[1])-lh*.75,'조회',dim);
  const c1=pt('hub','r',.62),c2=pt('plug','l',.3);arrow(c1,c2,mint,{curve:1});label((c1[0]+c2[0])/2,Math.min(c1[1],c2[1])-lh*.7,'명령',mint,1);
  const e1=pt('plug','l',.72),e2=pt('hub','r',.86);arrow(e1,e2,mint,{curve:1,dash:1});label((e1[0]+e2[0])/2,Math.max(e1[1],e2[1])+lh*.7,'전력',mint,1);}

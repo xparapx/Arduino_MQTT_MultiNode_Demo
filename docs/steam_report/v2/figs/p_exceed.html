@@ -13,7 +13,7 @@
 const PX=96/25.4, root=document.documentElement, KIND=root.dataset.kind, P=(KIND==='p'||KIND==='m'), M=(KIND==='m'), U=KIND==='p'?1.65:(KIND==='m'?0.72:1);
 const cs=getComputedStyle(root), C=n=>cs.getPropertyValue(n).trim();
 const K={co2:C('--co2'),co2deep:C('--co2-deep'),ink:C('--ink'),dim:C('--dim'),grid:C('--grid'),row:C('--rowline'),thr:C('--thr'),
- bar:C('--bar'),acc:C('--acc'),green:C('--green'),panel2:C('--panel2'),
+ bar:C('--bar'),acc:C('--acc'),green:C('--green'),panel2:C('--panel2'),pur:C('--purifier'),fan:C('--fan'),blue:C('--blue'),
  rg:{clean:C('--rg-clean'),matter:C('--rg-matter'),human:C('--rg-human'),mixed:C('--rg-mixed')},
  rgbg:{clean:C('--rg-clean-bg'),matter:C('--rg-matter-bg'),human:C('--rg-human-bg'),mixed:C('--rg-mixed-bg')}};
 const FS=parseFloat(getComputedStyle(document.body).fontSize);
@@ -51,22 +51,19 @@ function bars(g,f,sx,sy,items,o={}){ // items [{x,v,label,color}]
   if(it.label!=null) T(g,x,(it.ytop!=null?it.ytop:sy(it.v))-FS*0.35,it.label,{a:'middle',c:it.lc||K.ink,w:500,halo:1}); } }
 /* ---------------- 1. 수업일 하루 ---------------- */
 function draw_day(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{},svg);
- const co2=D.co2.map(([t,v])=>[tm(t),v]), occ=D.occ.map(([t,v])=>[tm(t),v]);
+ const co2=D.co2.map(([t,v])=>[tm(t),v]);
  const ticks=[500,1000,1500,2000], f=frame(0,0,W,H,{yLabels:ticks.map(fmt),yTitle:1,xLabels:1,right:FS*0.9});
  const sx=lin(0,1440,f.x0,f.x1), sy=lin(400,2000,f.y1,f.y0);
  yAxis(g,f,sy,ticks,{title:'CO₂ (ppm)'}); xAxis(g,f,sx,[0,4,8,12,16,20].map(h=>h*60),{fmt:m=>String(m/60).padStart(2,'0')+'시'});
- const omax=Math.max(...occ.map(p=>p[1])), so=lin(0,omax,f.y1,f.y1-(f.y1-f.y0)*0.34);
- E('path',{d:stepArea(occ,sx,so,f.y1,5),fill:K.bar,opacity:0.9},g);
- if(P){ const lx=f.x1-FS*0.2, ly=f.y1-FS*1.9; const t=T(g,lx,ly,'재실 인원',{a:'end',c:K.dim,halo:1}); const w=t.getComputedTextLength();
-  T(g,lx,ly+FS*1.2,'(탐지)',{a:'end',c:K.dim,halo:1});
-  E('rect',{x:lx-w-FS*1.15,y:ly-FS*0.72,width:FS*0.8,height:FS*0.8,fill:K.bar,rx:mm(0.3)},g); }
- else T(g,sx(7*60+25),so(1.1)+FS*0.35,'재실 인원(탐지)',{a:'end',c:K.dim,halo:1});
+ // 수업 시간대(08–16시) 띠
+ E('rect',{x:sx(8*60),y:f.y0,width:sx(16*60)-sx(8*60),height:f.y1-f.y0,fill:K.panel2},g);
+ T(g,sx(12*60),f.y0+FS*0.9,P?'수업 08–16시':'수업 시간 08–16시',{a:'middle',c:K.dim});
  thrLine(g,f,sy(1000),P?'1,000 ppm':'기준 1,000 ppm',{x:f.x0+FS*0.3,a:'start'});
  // 10분 넘게 비는 구간(결측)은 선을 끊는다
  let d='', prev=null; for(const [t,v] of co2){ d+=(prev==null||t-prev>10?'M':'L')+sx(t).toFixed(1)+' '+sy(v).toFixed(1); prev=t; }
  E('path',{d,fill:'none',stroke:K.co2,'stroke-width':LW,'stroke-linejoin':'round','stroke-linecap':'round'},g);
  T(g,sx(12*60+52),sy(735)+FS*1.15,'점심',{a:'middle',c:K.dim,halo:1});
- T(g,sx(9*60+5),sy(1204)-FS*0.45,'1교시',{a:'middle',c:K.dim,halo:1});
+ T(g,sx(9*60+5),sy(1204)-FS*0.45,P?'1교시 +7 ppm/분':'1교시 740→1,204 ppm (약 7 ppm/분)',{a:'middle',c:K.dim,halo:1});
  const ax=f.x1, ay=sy(1975);
  T(g,ax,ay,'하교 후',{a:'end',c:K.dim,halo:1}); T(g,ax,ay+FS*1.2,'완만한 감소',{a:'end',c:K.dim,halo:1});
 }
@@ -85,7 +82,7 @@ function draw_hourly(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{}
   T(g,f.x0+FS*0.4,f.y0+FS*0.9,name,{w:700});
   if(!i){ T(g,sx(10.6),sy(1270),P?'가운데 50%':'가운데 50% 범위',{a:'middle',c:K.co2deep,halo:1}); T(g,sx(20.3),sy(640)-FS*0.45,'중앙값',{a:'middle',c:K.co2deep,halo:1,w:600}); }
   else { const cx=(f.x0+f.x1)/2; if(P) T(g,cx,sy(760),'종일 약 470 ppm',{a:'middle',c:K.dim,halo:1});
-   else { T(g,cx,sy(800),'하루 종일 약 470 ppm',{a:'middle',c:K.dim,halo:1}); T(g,cx,sy(800)+FS*1.25,'(재실 없음)',{a:'middle',c:K.dim,halo:1}); } }
+   else { T(g,cx,sy(800),'하루 종일 약 470 ppm',{a:'middle',c:K.dim,halo:1}); T(g,cx,sy(800)+FS*1.25,'(빈 교실)',{a:'middle',c:K.dim,halo:1}); } }
  });
 }
 /* ---------------- 3. 교실별 초과율 ---------------- */
@@ -210,6 +207,36 @@ function draw_decay(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{},
   const kx=f.x1-FS*0.2, ky=f.y0+FS*0.3; const t=T(g,kx,ky,Math.round(D.tau_med)+'분',{a:'end',b:'hanging',w:700,c:K.green}); t.setAttribute('style','font-size:calc(var(--fs-t)*1.5);letter-spacing:-0.02em');
   T(g,kx,ky+FS*2.6,'τ 중앙값 · 520건',{a:'end',b:'hanging',c:K.dim}); }
  else { const lw=W*0.55; decayCase(g,0,0,lw,H); decayRooms(g,lw+FS*1.0,0,W-lw-FS*1.0,H); }
+}
+/* ---------------- 7. 전력 사용량 비교 ---------------- */
+function energyBars(g,x,y,W,H,o={}){ const rooms=Object.keys(D.en.rooms), vals=rooms.map(r=>D.en.rooms[r]), top=Math.max(...vals.map(v=>v.purifier+v.fan));
+ const step=top>400?200:100, ymax=Math.ceil(top/step)*step+step, ticks=[]; for(let v=0;v<=ymax-step*0.5;v+=step) ticks.push(v);
+ const f=frame(x,y,W,H,{yLabels:ticks.map(fmt),yTitle:1,xLabels:1,right:FS*0.4});
+ const sx=lin(-0.5,rooms.length-0.5,f.x0,f.x1), sy=lin(0,ymax,f.y1,f.y0), bw=(f.x1-f.x0)/rooms.length*0.62;
+ yAxis(g,f,sy,ticks,{title:o.yTitle||'적산 전력량 (Wh)'}); xAxis(g,f,sx,rooms.map((r,i)=>i),{fmt:i=>M?String(i+1):D.kr[rooms[i]]});
+ rooms.forEach((r,i)=>{ const v=D.en.rooms[r], xx=sx(i), yp=sy(v.purifier), yf=sy(v.purifier+v.fan);
+  if(v.purifier>0) E('rect',{x:xx-bw/2,y:yp,width:bw,height:f.y1-yp,fill:K.pur},g);
+  if(v.fan>0) E('rect',{x:xx-bw/2,y:yf,width:bw,height:yp-yf,fill:K.fan,rx:mm(0.3*U)},g);
+  if(!M) T(g,xx,yf-FS*0.35,fmt(v.purifier+v.fan),{a:'middle',c:K.ink,w:500,halo:1}); });
+ // 범례
+ const lx=f.x0+FS*0.4, ly=f.y0+FS*0.3, sq=FS*0.8;
+ E('rect',{x:lx,y:ly,width:sq,height:sq,fill:K.fan,rx:mm(0.25)},g); T(g,lx+sq+FS*0.35,ly+sq/2,'환풍기',{b:'middle',c:K.ink});
+ const w1=tw('환풍기')+sq+FS*1.6; E('rect',{x:lx+w1,y:ly,width:sq,height:sq,fill:K.pur,rx:mm(0.25)},g); T(g,lx+w1+sq+FS*0.35,ly+sq/2,'공기청정기',{b:'middle',c:K.ink});
+ return f;
+}
+function draw_energy(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{},svg), e=D.en;
+ if(M){ energyBars(g,0,0,W,H,{yTitle:'Wh · 1~8반'}); return; }
+ if(P){ const f=energyBars(g,0,0,W,H);
+  const kx=f.x1-FS*0.2, ky=f.y0+FS*0.3; const t=T(g,kx,ky,'×'+Math.round(e.fan_w/e.purifier_w),{a:'end',b:'hanging',w:700,c:K.fan}); t.setAttribute('style','font-size:calc(var(--fs-t)*1.5);letter-spacing:-0.02em');
+  T(g,kx,ky+FS*2.6,'환풍기 '+e.fan_w+' W · 공청기 '+e.purifier_w+' W',{a:'end',b:'hanging',c:K.dim}); return; }
+ const lw=W*0.66; energyBars(g,0,0,lw,H);
+ // 오른쪽: 1시간 가동 시 전력량 비교
+ const x0=lw+FS*1.4, w=W-x0, ticks=[0,10,20,30,40];
+ const f=frame(x0,0,w,H,{yLabels:ticks.map(String),yTitle:1,xLabels:1,xTitle:1,right:FS*0.4});
+ const sx=lin(-0.5,1.5,f.x0,f.x1), sy=lin(0,45,f.y1,f.y0), bw=(f.x1-f.x0)/2*0.5;
+ yAxis(g,f,sy,ticks,{title:'1시간 가동 시 (Wh)'}); xAxis(g,f,sx,[0,1],{fmt:i=>['환풍기','공기청정기'][i],title:'플러그 실측 유효전력'});
+ [[0,e.fan_w,K.fan],[1,e.purifier_w,K.pur]].forEach(([i,v,c])=>{ E('rect',{x:sx(i)-bw/2,y:sy(v),width:bw,height:f.y1-sy(v),fill:c,rx:mm(0.3)},g); T(g,sx(i),sy(v)-FS*0.35,v+' Wh',{a:'middle',w:600,halo:1}); });
+ T(g,sx(1),sy(20),'약 '+Math.round(e.fan_w/e.purifier_w)+'배',{a:'middle',c:K.dim,halo:1,w:600});
 }
 function run(fn){ const svg=document.querySelector('svg'); const go=()=>{ while(svg.firstChild) svg.removeChild(svg.firstChild); fn(svg); };
  go(); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(go); }

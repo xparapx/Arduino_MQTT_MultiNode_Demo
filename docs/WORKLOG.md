@@ -6,6 +6,12 @@
 
 ## 2026-10
 
+### 비전 노드 UI 제거 · 성과발표회 보고서 v3 / 한마당 포스터 v8 (2026-10-07)
+
+- **비전(재실 감지) 노드 운영 종료(사용자 결정, 잦은 오류)**: 웹앱에서 관련 화면 전부 제거 — 사이드바·홈·관리 상태의 비전 수, 시계열 화면의 재실 패널·ON/OFF 칩(화면 이름 "시계열"), 진단 G(재실×CO₂), occupancy CSV 버튼, `charts.occBars`, CSS. API(`/api/series occupancy`, `/api/status vis_*`)·DB·analyst는 그대로(테스트 129 passed). 보드 git pull 완료(정적 파일은 재시작 불필요).
+- 보고서 v3·포스터·한마당 v8: 비전 내용 전부 제거, 복도 키오스크(DID) 절·그림(보드 실화면 캡처), 플러그 전력 적산 비교(9/18~10/7, 환풍기 ≈ 공청기 5배) 추가. 상세 `docs/steam_report/HANDOFF.md` -1절. 저장소 사본 `docs/steam_report/v2/`(figs·out·img·hanmadang_cards 갱신, occ 그림 삭제).
+- 플러그 energy 실측 참고: 9/25~10/6 plugwatch 정지 구간은 결측, 수집일만 합산.
+
 ### plugwatch 복구(심링크 유닛 → 복사 설치) + analyst daily 수정 + 묵은 명령 가드 (2026-10-07)
 
 - **plugwatch 정지 원인 확정**: 유닛이 `/etc/systemd/system/…service → /home/arduino/multinode_aq/hub/systemd/…` 심링크로 설치돼 있었고, 이 보드는 `/home`이 별도 파티션(`mmcblk0p69`)이라 부팅 시 systemd가 유닛을 읽는 시점에 대상이 없어 "Failed to open … No such file"(9/27 22:08 부팅 저널)로 유닛이 사라짐. 9/25 첫 정지 시점 저널은 보관 한도 밖. 사용자 sudo로 **복사 설치**(rm 링크 → cp → daemon-reload → enable --now) 후 active. `hub/systemd/README.md`에 주의 기록.

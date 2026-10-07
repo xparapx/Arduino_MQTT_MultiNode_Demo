@@ -1,14 +1,14 @@
 <!doctype html>
-<html lang="ko" data-kind="r" data-w="159" data-h="62">
-<head><meta charset="utf-8"><title>r_hourly</title>
+<html lang="ko" data-kind="r" data-w="159" data-h="60">
+<head><meta charset="utf-8"><title>r_energy</title>
 <link rel="stylesheet" href="../design/base.css">
 <style>html,body{height:100%} .fill svg{width:100%;height:100%}</style>
 </head>
 <body><div class="fig">
-<div class="t">주중·주말 시간대별 CO₂ 분포 비교 <span class="sub">(73일 · 8개 교실 · 시간대별 중앙값과 가운데 50% 범위)</span></div>
+<div class="t">교실별 전력 사용량과 장치별 소비 전력 비교 <span class="sub">(플러그 전력 적산 · 9/18~10/7 수집일)</span></div>
 <div class="fill" data-fit="plot"><svg width="100%" height="100%"></svg></div>
 </div>
-<script>const D={"hourly":{"weekday":[[0,455,508,672],[1,450,502,656],[2,447,502,636],[3,445,500,615],[4,443,501,597],[5,444,501,583],[6,443,500,577],[7,445,500,573],[8,485,614,885],[9,488,725,1519],[10,482,737,1680],[11,472,776,1634],[12,477,735,1581],[13,474,739,1203],[14,475,921,1831],[15,474,808,1679],[16,468,761,1686],[17,470,717,1332],[18,467,660,1125],[19,462,628,986],[20,464,572,847],[21,472,561,815],[22,474,548,776],[23,468,530,731]],"weekend":[[0,434,491,563],[1,435,491,565],[2,435,491,551],[3,436,491,546],[4,438,494,547],[5,440,495,545],[6,443,496,542],[7,442,491,536],[8,439,486,536],[9,439,478,531],[10,438,473,526],[11,436,468,523],[12,433,464,517],[13,427,459,511],[14,423,454,505],[15,422,451,500],[16,417,450,500],[17,414,449,499],[18,412,449,503],[19,413,455,499],[20,414,459,504],[21,422,464,507],[22,425,467,509],[23,425,468,514]]}};
+<script>const D={"en":{"rooms":{"CLASS_01":{"purifier":60.3,"fan":380.9,"days":5},"CLASS_02":{"purifier":36.7,"fan":206.9,"days":6},"CLASS_03":{"purifier":126.6,"fan":316.4,"days":5},"CLASS_04":{"purifier":39.6,"fan":531.9,"days":7},"CLASS_05":{"purifier":0.8,"fan":5.7,"days":5},"CLASS_06":{"purifier":23.5,"fan":267.8,"days":7},"CLASS_07":{"purifier":112.8,"fan":375.0,"days":7},"CLASS_08":{"purifier":196.8,"fan":2.1,"days":5}},"since":"2026-09-18","until":"2026-10-07","fan_w":38,"purifier_w":7,"note":"fan_w/purifier_w = 2026-09-19 일괄 시험 실측(환풍기 약 38 W, 공기청정기 저소음 약 7 W). 9/25~10/6 plugwatch 정지로 결측."},"kr":{"CLASS_01":"1반","CLASS_02":"2반","CLASS_03":"3반","CLASS_04":"4반","CLASS_05":"5반","CLASS_06":"6반","CLASS_07":"7반","CLASS_08":"8반"}};
 
 const PX=96/25.4, root=document.documentElement, KIND=root.dataset.kind, P=(KIND==='p'||KIND==='m'), M=(KIND==='m'), U=KIND==='p'?1.65:(KIND==='m'?0.72:1);
 const cs=getComputedStyle(root), C=n=>cs.getPropertyValue(n).trim();
@@ -241,5 +241,5 @@ function draw_energy(svg){ const W=svg.clientWidth,H=svg.clientHeight,g=E('g',{}
 function run(fn){ const svg=document.querySelector('svg'); const go=()=>{ while(svg.firstChild) svg.removeChild(svg.firstChild); fn(svg); };
  go(); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(go); }
 
-run(draw_hourly);
+run(draw_energy);
 </script></body></html>
