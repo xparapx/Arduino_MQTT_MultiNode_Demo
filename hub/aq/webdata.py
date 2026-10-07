@@ -66,7 +66,7 @@ PLAUSIBLE = {"pm2p5": (0, 1000), "pm10p0": (0, 2000), "co2": (300, 5000),
              "voc": (1, 500), "scd_temp": (-20, 60), "scd_hum": (0, 100)}
 TARGET_KEYS = ["co2", "voc"]
 NODE_PALETTE = ["#FF5CA8", "#8B7CFF", "#00E5B0", "#FFB300",
-                "#4DD2FF", "#C4FF4D", "#FF8A5C", "#EAEAEA"]
+                "#4DD2FF", "#C4FF4D", "#FF8A5C", "#C77DFF"]
 ANALYSIS_COLS = ("id", "run_at", "scope", "win_start", "win_end", "model_ver", "payload")
 
 

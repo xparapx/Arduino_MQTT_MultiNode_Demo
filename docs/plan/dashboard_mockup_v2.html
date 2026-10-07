@@ -196,7 +196,7 @@ h1{font-size:20px;font-weight:600;margin:0 0 4px}.sub{color:var(--dim);font-size
 <script>
 const $=s=>document.querySelector(s);
 // ---- real node table (INVENTORY) ----
-const PAL=["#FF5CA8","#8B7CFF","#00E5B0","#FFB300","#4DD2FF","#C4FF4D","#FF8A5C","#EAEAEA"];
+const PAL=["#FF5CA8","#8B7CFF","#00E5B0","#FFB300","#4DD2FF","#C4FF4D","#FF8A5C","#C77DFF"];
 const nodes=[
  {nm:"CLASS_01",id:"node_D0C12C",down:"다운 21h",co2:null,voc:null,pm25:null,pm10:null,t:null,h:null,reg:null,dw:"—"},
  {nm:"CLASS_02",id:"node_4C22A7",co2:512,voc:214,pm25:14.8,pm10:22,t:27.0,h:61,reg:"matter",dw:"3h 10m"},
@@ -274,7 +274,7 @@ $("#fc").innerHTML=[["CLASS_05","#4DD2FF",[.3,.36,.42,.5,.56,.62,.66],.66,"1,184
 // occ x co2
 (function(){const W=460,H=260,L=50,R=14,T=14,B=36;const px=x=>L+(x/8)*(W-L-R),py=y=>H-B-((y-400)/1600)*(H-T-B);let seed=5;const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280};
  let s=`<rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="#1e222b"/>`;for(let i=0;i<=8;i+=2)s+=`<text x="${px(i)}" y="${H-B+14}" font-size="10" fill="#aab2bd" text-anchor="middle" font-family="IBM Plex Mono">${i}</text>`;[400,800,1200,1600,2000].forEach(v=>s+=`<text x="${L-6}" y="${py(v)+4}" font-size="10" fill="#aab2bd" text-anchor="end" font-family="IBM Plex Mono">${v}</text>`);
- const col={CLASS_01:"#FF5CA8",CLASS_03:"#00E5B0",CLASS_08:"#EAEAEA"};Object.entries(col).forEach(([nm,c])=>{for(let i=0;i<60;i++){const o=Math.floor(rnd()*7);const y=450+o*75+ (rnd()-.5)*220 + (nm==="CLASS_03"?60:0);s+=`<circle cx="${px(o+(rnd()-.5)*.6)}" cy="${py(Math.min(2000,y))}" r="2.2" fill="${c}" opacity=".45"/>`}});
+ const col={CLASS_01:"#FF5CA8",CLASS_03:"#00E5B0",CLASS_08:"#C77DFF"};Object.entries(col).forEach(([nm,c])=>{for(let i=0;i<60;i++){const o=Math.floor(rnd()*7);const y=450+o*75+ (rnd()-.5)*220 + (nm==="CLASS_03"?60:0);s+=`<circle cx="${px(o+(rnd()-.5)*.6)}" cy="${py(Math.min(2000,y))}" r="2.2" fill="${c}" opacity=".45"/>`}});
  s+=`<line x1="${px(0)}" y1="${py(450)}" x2="${px(7)}" y2="${py(450+7*74)}" stroke="#e6e8ec" stroke-dasharray="4 3"/><text x="${px(4.5)}" y="${py(450+4.5*74)-8}" font-size="10" fill="#e6e8ec" font-family="IBM Plex Mono">+74 ppm/인 (CLASS_01)</text>`;
  s+=`<text x="${(L+W-R)/2}" y="${H-4}" font-size="10" fill="#aab2bd" text-anchor="middle" font-family="IBM Plex Sans KR">재실 인원 (occ 5분 평균)</text><text transform="translate(12 ${(T+H-B)/2}) rotate(-90)" font-size="10" fill="#aab2bd" text-anchor="middle" font-family="IBM Plex Sans KR">CO₂ (ppm)</text>`;$("#occ").innerHTML=s})();
 // corr heatmap

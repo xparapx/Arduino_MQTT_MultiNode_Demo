@@ -20,7 +20,7 @@
   /* 장치 — 공기청정기 = Tealgrn, 환풍기 = Blues (웹앱 에너지 차트) */
   --purifier: #38b2a3; --fan: #4292c6;
   /* 노드(교실) 8색 */
-  --n1: #d6338a; --n2: #6a5bd9; --n3: #00a67f; --n4: #cc8f00; --n5: #1e9fd6; --n6: #5a9e2f; --n7: #c2410c; --n8: #4f6d9e;
+  --n1: #d6338a; --n2: #6a5bd9; --n3: #00a67f; --n4: #cc8f00; --n5: #1e9fd6; --n6: #5a9e2f; --n7: #c2410c; --n8: #8e3fd6;
   --thr: var(--red);            /* 기준선 1,000 ppm */
   --font: "IBM Plex Sans KR", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
 }
