@@ -187,9 +187,9 @@ def band_slots(sm: pd.Series, buckets: pd.Series, cfg: dict) -> list[dict]:
     d["slot"] = d["t"].dt.floor(f"{slot}min")
     out = []
     for s, g in d.groupby("slot", sort=True):
-        vals = [v for v in g["regime"] if v is not None]
-        out.append({"bucket": s.strftime(TS_FMT),
-                    "regime": (pd.Series(vals).mode().iloc[0] if vals else None)})
+        vals = [v for v in g["regime"] if v is not None and v == v]      # None/NaN 제외 (NaN만 있으면 mode()가 비어 IndexError)
+        mode = pd.Series(vals, dtype=object).mode() if vals else pd.Series(dtype=object)
+        out.append({"bucket": s.strftime(TS_FMT), "regime": (mode.iloc[0] if len(mode) else None)})
     return out
 
 
