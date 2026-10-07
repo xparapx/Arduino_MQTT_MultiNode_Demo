@@ -1,0 +1,29 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": { "title": "데이터 기반 제어 로직 프로세스", "quality_profile": "showcase", "animation": "none", "legend": { "mode": "hidden" } },
+  "lanes": [
+    { "id": "flow", "label": "측정 → 판정 → 집행" },
+    { "id": "guard", "label": "안전 원칙", "variant": "exception" }
+  ],
+  "mainPath": ["measure", "qc", "judge", "act"],
+  "nodes": [
+    { "id": "measure", "lane": "flow", "col": 0, "type": "frontend", "label": "① 측정 → 수집", "sublabel": "센서 ×8 · 5분 평균 · SQLite", "width": 150 },
+    { "id": "qc", "lane": "flow", "col": 1, "type": "security", "label": "② 품질 검사", "sublabel": "유효율 95% 이상만 판정", "width": 150 },
+    { "id": "judge", "lane": "flow", "col": 2, "type": "backend", "label": "레짐 판정 → 규칙", "sublabel": "GMM 4개 레짐 · 1,000/700 ppm", "width": 170 },
+    { "id": "act", "lane": "flow", "col": 3, "type": "cloud", "label": "③ 실물 비교 → 스위치", "sublabel": "다를 때만 명령 · 플러그 ×16", "width": 170 },
+    { "id": "hold", "lane": "guard", "col": 1, "type": "security", "label": "판정 생략", "sublabel": "이전 상태 유지", "width": 150 },
+    { "id": "split", "lane": "guard", "col": 3, "type": "security", "label": "판정·집행 분리", "sublabel": "한쪽 정지 시 무동작", "width": 170 }
+  ],
+  "edges": [
+    { "from": "measure", "to": "qc", "label": "MQTT/TLS" },
+    { "from": "qc", "to": "judge", "label": "통과" },
+    { "from": "judge", "to": "act", "label": "목표 상태 기록" },
+    { "from": "qc", "to": "hold", "label": "미통과", "role": "error" },
+    { "from": "split", "to": "act", "label": "파일로만 연결", "role": "return", "variant": "dashed" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "흐름", "items": ["매시간 품질 검사 → 레짐 판정 → 규칙으로 목표 상태 기록", "60초마다 실물과 비교해 다를 때만 명령"] },
+    { "dot": "rose", "title": "안전 원칙", "items": ["유효율 95% 미만이면 판정 생략, 이전 상태 유지", "판정·집행은 파일로만 연결 — 한쪽이 멈춰도 엉뚱한 명령 없음"] }
+  ]
+}

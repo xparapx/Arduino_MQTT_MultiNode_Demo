@@ -44,6 +44,8 @@ for (const file of files) {
   await sleep(600);
   await evalJS(`(()=>{try{document.documentElement.setAttribute("data-theme","light");document.documentElement.classList.remove("dark");localStorage.setItem("archify-theme","light");}catch(e){} return 1})()`);
   await sleep(800);
+  if (process.env.ROOT_FS) await evalJS(`(()=>{const st=document.createElement("style");st.textContent="html{font-size:${process.env.ROOT_FS} !important}";document.head.appendChild(st);return 1})()`);
+  await sleep(500);
   const box = await evalJS(`(()=>{const el=document.querySelector("svg");const r=el.getBoundingClientRect();return JSON.stringify({x:r.x,y:r.y,w:r.width,h:r.height})})()`);
   const B = JSON.parse(box); console.log("svg box", B);
   const rep = JSON.parse(await evalJS(`JSON.stringify({page:[document.documentElement.scrollWidth, document.documentElement.scrollHeight],
