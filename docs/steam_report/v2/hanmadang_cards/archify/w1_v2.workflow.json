@@ -1,0 +1,109 @@
+{
+ "schema_version": 2,
+ "diagram_type": "workflow",
+ "meta": {
+  "title": "① 측정 → 수집",
+  "quality_profile": "showcase",
+  "animation": "none",
+  "legend": {
+   "mode": "hidden"
+  }
+ },
+ "lanes": [
+  {
+   "id": "room",
+   "label": "교실"
+  },
+  {
+   "id": "cloud",
+   "label": "클라우드"
+  },
+  {
+   "id": "board",
+   "label": "허브 UNO Q"
+  }
+ ],
+ "mainPath": [
+  "sense",
+  "pub",
+  "broker",
+  "hub",
+  "db"
+ ],
+ "nodes": [
+  {
+   "id": "sense",
+   "lane": "room",
+   "col": 0,
+   "type": "frontend",
+   "label": "센서 측정",
+   "sublabel": "5분 평균",
+   "width": 120
+  },
+  {
+   "id": "pub",
+   "lane": "room",
+   "col": 1,
+   "type": "frontend",
+   "label": "MQTT 발행",
+   "sublabel": "TLS",
+   "width": 120
+  },
+  {
+   "id": "broker",
+   "lane": "cloud",
+   "col": 1,
+   "type": "external",
+   "label": "브로커",
+   "sublabel": "HiveMQ 8883",
+   "width": 120
+  },
+  {
+   "id": "hub",
+   "lane": "board",
+   "col": 1,
+   "type": "backend",
+   "label": "허브 수집",
+   "sublabel": "구독",
+   "width": 120
+  },
+  {
+   "id": "db",
+   "lane": "board",
+   "col": 2,
+   "type": "database",
+   "label": "SQLite 저장",
+   "sublabel": "readings",
+   "width": 120
+  }
+ ],
+ "edges": [
+  {
+   "from": "sense",
+   "to": "pub"
+  },
+  {
+   "from": "pub",
+   "to": "broker"
+  },
+  {
+   "from": "broker",
+   "to": "hub"
+  },
+  {
+   "from": "hub",
+   "to": "db",
+   "label": "쓰기"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "emerald",
+   "title": "수집",
+   "items": [
+    "센서 → 브로커 → 허브 한 길",
+    "DB에 쓰는 것은 허브 하나"
+   ]
+  }
+ ]
+}

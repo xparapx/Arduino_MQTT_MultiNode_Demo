@@ -1,0 +1,113 @@
+{
+ "schema_version": 2,
+ "diagram_type": "workflow",
+ "meta": {
+  "title": "③ 실물 비교 → 스위치",
+  "quality_profile": "showcase",
+  "animation": "none",
+  "legend": {
+   "mode": "hidden"
+  }
+ },
+ "lanes": [
+  {
+   "id": "plan",
+   "label": "비교 (60초)"
+  },
+  {
+   "id": "act",
+   "label": "집행"
+  },
+  {
+   "id": "skip",
+   "label": "무동작",
+   "variant": "exception"
+  }
+ ],
+ "mainPath": [
+  "read",
+  "diff",
+  "switch",
+  "verify"
+ ],
+ "nodes": [
+  {
+   "id": "read",
+   "lane": "plan",
+   "col": 0,
+   "type": "database",
+   "label": "목표 상태 읽기",
+   "sublabel": "actuator_state",
+   "width": 130
+  },
+  {
+   "id": "diff",
+   "lane": "plan",
+   "col": 1,
+   "type": "security",
+   "label": "실물과 비교",
+   "sublabel": "플러그 보고값",
+   "width": 130
+  },
+  {
+   "id": "switch",
+   "lane": "act",
+   "col": 1,
+   "type": "cloud",
+   "label": "스위치 명령",
+   "sublabel": "MQTT RPC",
+   "width": 120
+  },
+  {
+   "id": "verify",
+   "lane": "act",
+   "col": 2,
+   "type": "backend",
+   "label": "전력 검증",
+   "sublabel": "5 W 이상 = 가동",
+   "width": 130
+  },
+  {
+   "id": "same",
+   "lane": "skip",
+   "col": 2,
+   "type": "security",
+   "label": "명령 생략",
+   "sublabel": "이미 같음",
+   "width": 120
+  }
+ ],
+ "edges": [
+  {
+   "from": "read",
+   "to": "diff"
+  },
+  {
+   "from": "diff",
+   "to": "switch",
+   "label": "다름"
+  },
+  {
+   "from": "switch",
+   "to": "verify",
+   "label": "실측"
+  },
+  {
+   "from": "diff",
+   "to": "same",
+   "label": "같음",
+   "role": "error",
+   "variant": "dashed"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "emerald",
+   "title": "집행",
+   "items": [
+    "다를 때만 명령",
+    "전력으로 실제 가동 확인"
+   ]
+  }
+ ]
+}

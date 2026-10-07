@@ -1,0 +1,111 @@
+{
+ "schema_version": 2,
+ "diagram_type": "workflow",
+ "meta": {
+  "title": "② 품질 검사 → 판정",
+  "quality_profile": "showcase",
+  "animation": "none",
+  "legend": {
+   "mode": "hidden"
+  }
+ },
+ "lanes": [
+  {
+   "id": "gate",
+   "label": "품질 게이트"
+  },
+  {
+   "id": "model",
+   "label": "모델·규칙"
+  },
+  {
+   "id": "hold",
+   "label": "보류",
+   "variant": "exception"
+  }
+ ],
+ "mainPath": [
+  "qc",
+  "regime",
+  "rules",
+  "state"
+ ],
+ "nodes": [
+  {
+   "id": "qc",
+   "lane": "gate",
+   "col": 0,
+   "type": "security",
+   "label": "품질 검사",
+   "sublabel": "유효율 95% 이상",
+   "width": 130
+  },
+  {
+   "id": "regime",
+   "lane": "model",
+   "col": 1,
+   "type": "backend",
+   "label": "레짐 판정",
+   "sublabel": "GMM 4개 레짐",
+   "width": 120
+  },
+  {
+   "id": "rules",
+   "lane": "model",
+   "col": 2,
+   "type": "backend",
+   "label": "규칙",
+   "sublabel": "1,000/700 ppm",
+   "width": 120
+  },
+  {
+   "id": "state",
+   "lane": "model",
+   "col": 3,
+   "type": "database",
+   "label": "목표 상태",
+   "sublabel": "actuator_state",
+   "width": 130
+  },
+  {
+   "id": "keep",
+   "lane": "hold",
+   "col": 1,
+   "type": "security",
+   "label": "판정 생략",
+   "sublabel": "이전 상태 유지",
+   "width": 130
+  }
+ ],
+ "edges": [
+  {
+   "from": "qc",
+   "to": "regime",
+   "label": "통과"
+  },
+  {
+   "from": "regime",
+   "to": "rules"
+  },
+  {
+   "from": "rules",
+   "to": "state",
+   "label": "ON/OFF"
+  },
+  {
+   "from": "qc",
+   "to": "keep",
+   "label": "미통과",
+   "role": "error"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "rose",
+   "title": "보류",
+   "items": [
+    "검사에 떨어지면 판정하지 않는다"
+   ]
+  }
+ ]
+}
