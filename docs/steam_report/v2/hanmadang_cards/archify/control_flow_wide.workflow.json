@@ -1,0 +1,186 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "데이터 기반 제어 로직 프로세스",
+    "quality_profile": "showcase",
+    "animation": "none",
+    "legend": {
+      "mode": "hidden"
+    }
+  },
+  "lanes": [
+    {
+      "id": "flow",
+      "label": "측정 → 판정 → 집행"
+    },
+    {
+      "id": "guard",
+      "label": "안전 원칙",
+      "variant": "exception"
+    }
+  ],
+  "phases": [
+    {
+      "id": "p1",
+      "label": "① 측정·수집",
+      "fromCol": 0,
+      "toCol": 0
+    },
+    {
+      "id": "p2",
+      "label": "② 품질 검사 → 레짐 판정 → 규칙 (analyst, 매시간)",
+      "fromCol": 1,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "p3",
+      "label": "③ 실물 비교 → 스위치 (plugwatch, 60초)",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "measure",
+    "qc",
+    "regime",
+    "rules",
+    "compare",
+    "switch"
+  ],
+  "nodes": [
+    {
+      "id": "measure",
+      "lane": "flow",
+      "col": 0,
+      "type": "frontend",
+      "label": "센서 ×8 → 허브",
+      "sublabel": "5분 평균 · SQLite",
+      "width": 130
+    },
+    {
+      "id": "qc",
+      "lane": "flow",
+      "col": 1,
+      "type": "security",
+      "label": "품질 검사",
+      "sublabel": "유효율 95% 이상",
+      "tag": "게이트",
+      "width": 120
+    },
+    {
+      "id": "regime",
+      "lane": "flow",
+      "col": 2,
+      "type": "backend",
+      "label": "레짐 판정",
+      "sublabel": "GMM 4개 레짐",
+      "width": 120
+    },
+    {
+      "id": "rules",
+      "lane": "flow",
+      "col": 3,
+      "type": "backend",
+      "label": "규칙·목표 상태",
+      "sublabel": "1,000/700 ppm · 10분",
+      "width": 140
+    },
+    {
+      "id": "compare",
+      "lane": "flow",
+      "col": 4,
+      "type": "backend",
+      "label": "실물 상태 비교",
+      "sublabel": "플러그 보고값 vs 목표",
+      "width": 130
+    },
+    {
+      "id": "switch",
+      "lane": "flow",
+      "col": 5,
+      "type": "cloud",
+      "label": "스위치 명령",
+      "sublabel": "다를 때만 발행",
+      "tag": "플러그 ×16",
+      "width": 120
+    },
+    {
+      "id": "hold",
+      "lane": "guard",
+      "col": 1,
+      "type": "security",
+      "label": "판정 생략",
+      "sublabel": "이전 상태 유지",
+      "width": 120
+    },
+    {
+      "id": "split",
+      "lane": "guard",
+      "col": 4,
+      "type": "security",
+      "label": "판정·집행 분리",
+      "sublabel": "한쪽 정지 시 무동작",
+      "width": 130
+    }
+  ],
+  "edges": [
+    {
+      "from": "measure",
+      "to": "qc",
+      "label": "MQTT/TLS"
+    },
+    {
+      "from": "qc",
+      "to": "regime",
+      "label": "통과"
+    },
+    {
+      "from": "regime",
+      "to": "rules"
+    },
+    {
+      "from": "rules",
+      "to": "compare",
+      "label": "actuator_state"
+    },
+    {
+      "from": "compare",
+      "to": "switch",
+      "label": "불일치만"
+    },
+    {
+      "from": "qc",
+      "to": "hold",
+      "label": "미통과",
+      "role": "error"
+    },
+    {
+      "from": "split",
+      "to": "compare",
+      "label": "파일로만 연결",
+      "role": "return",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "흐름",
+      "items": [
+        "매시간 품질 검사 → 레짐 판정 → 규칙으로 목표 상태 기록",
+        "60초마다 실물과 비교해 다를 때만 명령"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "안전 원칙",
+      "items": [
+        "유효율 95% 미만이면 판정 생략, 이전 상태 유지",
+        "판정·집행은 파일로만 연결 — 한쪽이 멈춰도 엉뚱한 명령 없음"
+      ]
+    }
+  ]
+}
