@@ -8,6 +8,7 @@
 - 정본: `…_학생버전_v3.hwpx`(그림 14장: 재실 그림 삭제, r_energy·r_kiosk 추가, 연구 문제 4개 재편성 1 패턴·2 레짐/감쇠·3 제어+전력·4 공유), `2. 제출 양식(포스터 3종)_공주고_MintCap_v8.hwpx`(사진⑥=키오스크 실화면, 활동1·3·5 문구, 카드 c1 키오스크 노드, 활동5 그림 m_energy, 수필 Q&A에서 카메라 삭제), `차트_v3/` + zip.
 - 생성기: `v2/make_v3.py`(v2 빌더에서 치환 생성 — 이름 포함, 비공개), `poster3/make_v8.py`, `v2/patch_figs_v3.py`(손그림 치환), `build_charts.py` energy 차트(`data.json["energy"]` ← `data/plugs_live.json`), `poster3/capture_kiosk.mjs`(ssh 터널 18502→보드 8502, `/kiosk?slides=sN&anim=0` 1920×1080).
 - 대시보드 화면 재캡처: 보드 스냅샷(10/2)을 9/23 06:00 UTC로 잘라 `enviz/sensor_data.db` + 저장소 `hub/nodes.json`(실 노드 ID) + 플러그 픽스처 시각을 +26일 이동 → `run_frozen.py` BASE 9/23 15:00 KST. 캡션 "9월 23일 15시 데이터로 재현(보드 스냅샷), 플러그 상태는 시험값".
+- v3.2(10-08): ④절을 쉬운 말로 다시 쓰고 archify 흐름도(그림 5, `archify/maint_flow.workflow.json`, TEXT_SCALE 1.4 캡처·내용 크롭) 삽입 → 뒤 그림 번호 +1(make_v3.py가 본문 참조를 자동 재번호).
 - v3.1(10-08): 2장에 '연구 방법 ④ — 시스템 유지·보수·운용과 개선 방법(Claude Code·SSH·GitHub)' 절 추가, 남색(#1F4E9C) charPr 복제로 구분(사용자 검토용 색, 확정 후 검정으로 되돌릴 수 있음).
 - 미확인: 한/글 조판(포스터 방법·과정 칸 추정 166/173mm, 결과 167/173mm), 한마당 1쪽 사진⑥ 셀의 키오스크 그림 크기.
 
