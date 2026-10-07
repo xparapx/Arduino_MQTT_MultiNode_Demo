@@ -6,6 +6,15 @@
 
 ## 2026-10
 
+### plugwatch 복구(심링크 유닛 → 복사 설치) + analyst daily 수정 + 묵은 명령 가드 (2026-10-07)
+
+- **plugwatch 정지 원인 확정**: 유닛이 `/etc/systemd/system/…service → /home/arduino/multinode_aq/hub/systemd/…` 심링크로 설치돼 있었고, 이 보드는 `/home`이 별도 파티션(`mmcblk0p69`)이라 부팅 시 systemd가 유닛을 읽는 시점에 대상이 없어 "Failed to open … No such file"(9/27 22:08 부팅 저널)로 유닛이 사라짐. 9/25 첫 정지 시점 저널은 보관 한도 밖. 사용자 sudo로 **복사 설치**(rm 링크 → cp → daemon-reload → enable --now) 후 active. `hub/systemd/README.md`에 주의 기록.
+- 재기동 직후 10/1 수동 모드의 `plug_cmd.json`(전체 ON)이 6일 만에 발행됨 → 자동 모드 reconcile이 1분 내 판정 상태로 되돌림(저널 `auto: … -> OFF` 10건). 재발 방지: `CMD_MAX_AGE_S=180` 초과 명령 폐기 + 브로커 접속을 `main()`으로 분리(테스트가 import만으로 접속하지 않도록). 테스트 2건 추가.
+- 제어 모드 수동(10/1~) → **자동**으로 복귀(API). 플러그 15/16 접속(CLASS_03 공기청정기 OFFLINE).
+- `analyst daily`가 10/5·10/6 실패(`band_slots` NaN만 있는 슬롯 → `mode().iloc[0]` IndexError) → 수정·회귀 테스트, 보드 수동 재실행 72행 기록.
+- 센서 `node_B80DC8`(8반) 9/29부터 무수신 — 전원 확인 필요(미조치).
+- 보드 접속 조건: 교무실 PC는 SSID `wi_cne_class_S_2.4G`에서만 테일넷이 붙음(사용자 확인).
+
 ### 복도 송출 화면 `/kiosk` P1 — 사이드 패널 + 자동 회전 슬라이드 5장 (2026-10-04)
 
 DID 소프트웨어 대신 **두 번째 UNO Q의 리눅스 브라우저(키오스크 모드)** 로 송출하기로 하고(사용자 결정), 비전문가용 1920×1080 전용 화면을 추가. 설계는 세 전문가 서브에이전트(데이터 커뮤니케이션 · 키오스크 UX/모션 · 프런트엔드)로 분담했고 같은 구성으로 P1 리뷰까지 수행.
