@@ -55,6 +55,7 @@ MIN_GZIP = 1024
 PAGES = {"/": "index.html", "/index.html": "index.html",
          "/kiosk": "kiosk.html"}     # hallway display: side panel + auto-rotating slides
 IMMUTABLE = ("fonts/", "vendor/")    # versioned by file name -> safe to cache for a year
+KIOSK_HOST = "aq-kiosk."          # Cloudflare hostname whose root is the kiosk, not the SPA
 REDIRECTS = {"/diagnosis": "/#dx-regime", "/diagnosis.html": "/#dx-regime"}   # old page-2 bookmarks
 
 
@@ -111,6 +112,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if url.path.startswith("/api/"):
                 self._api(url.path[5:], q)
+            elif url.path == "/" and self.headers.get("Host", "").startswith(KIOSK_HOST):
+                self._static("kiosk.html")
             elif url.path in PAGES:
                 self._static(PAGES[url.path])
             elif url.path in REDIRECTS:
