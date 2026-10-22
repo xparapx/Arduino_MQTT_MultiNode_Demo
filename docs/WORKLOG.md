@@ -6,6 +6,13 @@
 
 ## 2026-10
 
+### Cloudflare Tunnel 외부 공개 — aq / aq-kiosk / aq-admin.kjhs-lab.com (2026-10-22)
+- 보드(aqhub)에 cloudflared(arm64 .deb) + `cloudflared service install <토큰>`(사용자 sudo). 경로: aq·aq-kiosk → HTTP localhost:8502, aq-admin → HTTP localhost:8501.
+- aq-admin은 Access 자체 호스팅 앱 + `teacher-only` 정책(계정 기본 IdP = 이메일 PIN). 확인: aq-admin `/`·`/api/*` 302 → cloudflareaccess 로그인, aq·aq-kiosk 200, 공개 `/api/export` 403.
+- 웹: `aq-kiosk.` 호스트의 `/`가 kiosk.html(97ab867·bcf6c2f, 테스트 130 통과).
+- 토큰 설치 함정: 붙여넣기에 명령어 앞부분·뒤 군더더기가 섞여 `illegal base64`/`invalid character 'r'`. 해결 = `read -rs T` → base64 문자만 남김 → `eyJ`부터 자름 → base64 -d 가 JSON이 될 때까지 끝을 한 글자씩 제거(정상 184자).
+- 가정: 키오스크 판별은 Host 접두사 `aq-kiosk.`; Tailscale 경로(aqhub:8501/8502)는 병행 유지. 학교 Wi‑Fi에서 `aq-admin` SNI 차단 여부는 미확인.
+
 ### 비전 노드 UI 제거 · 성과발표회 보고서 v3 / 한마당 포스터 v8 (2026-10-07)
 
 - **비전(재실 감지) 노드 운영 종료(사용자 결정, 잦은 오류)**: 웹앱에서 관련 화면 전부 제거 — 사이드바·홈·관리 상태의 비전 수, 시계열 화면의 재실 패널·ON/OFF 칩(화면 이름 "시계열"), 진단 G(재실×CO₂), occupancy CSV 버튼, `charts.occBars`, CSS. API(`/api/series occupancy`, `/api/status vis_*`)·DB·analyst는 그대로(테스트 129 passed). 보드 git pull 완료(정적 파일은 재시작 불필요).

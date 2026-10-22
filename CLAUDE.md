@@ -24,6 +24,11 @@ Kiosk (복도 송출 화면, 2026-10-04):
 - 색 등급(좋음/보통/나쁨)은 신뢰할 수 있는 실측이 있을 때만; 의심스러우면 회색. 새 슬라이드도 이 규칙을 따른다.
 - 외부 라이브러리 예외(Recharts 등)는 사용자 승인 + 송출 기기 실측 통과 시 `hub/web/vendor/`에만, 메인 SPA는 계속 무의존.
 
+외부 공개 (Cloudflare Tunnel, 2026-10-22):
+- 보드 cloudflared 시스템 서비스(토큰 방식, 사용자 sudo 설치) → `aq.kjhs-lab.com`·`aq-kiosk.kjhs-lab.com` = HTTP `localhost:8502`, `aq-admin.kjhs-lab.com` = HTTP `localhost:8501`.
+- `aq-admin`은 CF Access `teacher-only` 정책(이메일 PIN) 필수 — Access 없이 8501을 매핑하지 않는다. `aq-kiosk.` 호스트의 `/`는 키오스크(`webapp.py KIOSK_HOST`).
+- kjhs-lab.com의 `admin.`은 Traffic 몫. 토큰 붙여넣기는 제어 문자가 섞이므로 base64 정리 후 설치(WORKLOG 10-22).
+
 Operating rules:
 - Board (`ssh q`): never edit files there; deploy by `git pull` only.
 - sudo on the board needs a password. Print any sudo / `systemctl restart|enable|daemon-reload`
