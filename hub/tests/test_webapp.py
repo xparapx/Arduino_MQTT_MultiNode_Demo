@@ -366,8 +366,8 @@ def test_kiosk_assets_need_no_external_host():
             assert needle not in text, (name, needle)
 
 
+def test_kiosk_hostname_root(site):
     """aq-kiosk.kjhs-lab.com 루트는 키오스크, 다른 호스트의 루트는 SPA."""
-    """aq-kiosk.kjhs-lab.com(Cloudflare 경로)은 루트에서 바로 키오스크 — 다른 호스트의 루트는 SPA."""
     hdr = {"Host": "aq-kiosk.kjhs-lab.com", "Accept-Encoding": "identity"}
     req = urllib.request.Request(site["url"] + "/", headers=hdr)
     with urllib.request.urlopen(req, timeout=30) as r:
