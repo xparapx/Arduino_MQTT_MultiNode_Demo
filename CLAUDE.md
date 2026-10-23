@@ -29,6 +29,11 @@ Kiosk (복도 송출 화면, 2026-10-04):
 - `aq-admin`은 CF Access `teacher-only` 정책(이메일 PIN) 필수 — Access 없이 8501을 매핑하지 않는다. `aq-kiosk.` 호스트의 `/`는 키오스크(`webapp.py KIOSK_HOST`).
 - kjhs-lab.com의 `admin.`은 Traffic 몫. 토큰 붙여넣기는 제어 문자가 섞이므로 base64 정리 후 설치(WORKLOG 10-22).
 
+Claude Code 자동화 (2026-10-23 채택, 모두 **사용자 호출 전용** — 메인 세션이 임의로 띄우지 않는다):
+- 서브에이전트 `.claude/agents/`: `board-doctor`(보드·공개 주소 읽기 점검), `invariant-reviewer`(불변 조건 검토), `display-reviewer`(화면 감수), `analysis-auditor`(분석 검산). 전부 읽기 전용 — 검증하는 쪽과 고치는 쪽을 분리.
+- 입구는 스킬 `/doctor`·`/review-invariants`·`/review-display`·`/audit-analysis`(`disable-model-invocation: true`). 서브에이전트끼리는 소통하지 않고 결과만 메인에 돌려준다.
+- hook: `git commit` 전 pytest(`.claude/hooks/precommit_tests.py`). 배포·sudo·플러그 실물 테스트는 자동화하지 않는다.
+
 Operating rules:
 - Board (`ssh q`): never edit files there; deploy by `git pull` only.
 - sudo on the board needs a password. Print any sudo / `systemctl restart|enable|daemon-reload`

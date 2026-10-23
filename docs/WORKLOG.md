@@ -6,6 +6,13 @@
 
 ## 2026-10
 
+### 사용자 호출 전용 서브에이전트 4종 + 스킬 입구 (2026-10-23)
+- `.claude/agents/`: board-doctor(보드·공개 주소 읽기 점검, sonnet) · invariant-reviewer(불변 조건 9항목, opus) · display-reviewer(화면 감수 6항목, opus, 브라우저 읽기) · analysis-auditor(분석 검산 8항목, sonnet). 전부 읽기 전용 도구 — 검증과 수정을 분리.
+- `.claude/skills/` `/doctor`·`/review-invariants`·`/review-display`·`/audit-analysis`, `disable-model-invocation: true` — 메인 세션이 임의로 띄우지 못하고 사용자만 호출. 서브에이전트끼리 소통 없음(결과만 메인으로).
+- 검증: 정의문을 범용 에이전트로 실행 — doctor: 서비스 5 active, fresh true(5.7분), 노드 8/8, 플러그 16 online, 공개 주소 200/200/302, 명령 20·실패 0. reviewer: 위반 없음, 130 passed, 추가 줄 ruff 오류 0. (새 정의는 세션 재시작 후 이름으로 인식.)
+- settings.json allow 추가: git diff/log, ssh q curl localhost, curl 공개 주소, pytest·ruff. 넓은 `ssh q "*` 는 넣었다가 제거.
+- 가정: 키오스크 때 쓴 '전문가 셋'은 display-reviewer(UX·문구·정직성)와 invariant-reviewer(프런트엔드 코드)로 흡수, 별도 에이전트로 늘리지 않음. 배포·sudo·플러그 실물 테스트는 자동화 제외.
+
 ### Cloudflare Tunnel 외부 공개 — aq / aq-kiosk / aq-admin.kjhs-lab.com (2026-10-22)
 - 보드(aqhub)에 cloudflared(arm64 .deb) + `cloudflared service install <토큰>`(사용자 sudo). 경로: aq·aq-kiosk → HTTP localhost:8502, aq-admin → HTTP localhost:8501.
 - aq-admin은 Access 자체 호스팅 앱 + `teacher-only` 정책(계정 기본 IdP = 이메일 PIN). 확인: aq-admin `/`·`/api/*` 302 → cloudflareaccess 로그인, aq·aq-kiosk 200, 공개 `/api/export` 403.

@@ -8,6 +8,12 @@
       "Bash(ssh q curl -s http://localhost*)",
       "Bash(node --check *)",
       "Bash(git fetch*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(ssh q curl -s localhost*)",
+      "Bash(curl -s -o /dev/null -w * https://aq*.kjhs-lab.com*)",
+      "Bash(uv run --directory hub pytest*)",
+      "Bash(uv run ruff check*)",
       "mcp__Claude_Browser__read_console_messages",
       "mcp__Claude_Browser__preview_logs"
     ],
